@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: machine_card
+      POSTGRES_USER: machine_card
+      POSTGRES_PASSWORD: machine_card
+      TZ: Asia/Jakarta
+    ports:
+      - "5432:5432"
+    volumes:
+      - machine_card_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U machine_card -d machine_card"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  machine_card_data:
