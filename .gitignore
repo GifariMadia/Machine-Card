@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+*.log
+coverage/
+.DS_Store
+playwright-report/
+test-results/
+bin/
+*.exe
+.audit-backups/
+scratch/
+tmp/
+Doc/
+*.tsbuildinfo

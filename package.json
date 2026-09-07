@@ -1,0 +1,15 @@
+{
+  "name": "machine-card",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "concurrently -n api,web -c green,cyan \"npm run dev -w @machine-card/api\" \"npm run dev -w @machine-card/web\"",
+    "tunnel": "cloudflared tunnel --protocol http2 --url http://localhost:5173",
+    "build": "npm run build -w @machine-card/api && npm run build -w @machine-card/web",
+    "test": "npm run test -w @machine-card/api && npm run test -w @machine-card/web",
+    "db:migrate": "npm run db:migrate -w @machine-card/api",
+    "db:seed": "npm run db:seed -w @machine-card/api"
+  },
+  "devDependencies": { "concurrently": "^9.1.2" }
+}
