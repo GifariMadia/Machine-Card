@@ -48,3 +48,53 @@ CREATE TABLE breakdown (
     tanggal DATE NOT NULL,
     bulan VARCHAR(20) GENERATED ALWAYS AS (EXTRACT(YEAR FROM tanggal)::INTEGER::TEXT || '-' || LPAD(EXTRACT(MONTH FROM tanggal)::INTEGER::TEXT, 2, '0')) STORED,
     shift SMALLINT NOT NULL CHECK (shift BETWEEN 1 AND 3),
+    id_mesin BIGINT NOT NULL REFERENCES mesin(id_mesin),
+    section VARCHAR(100) NOT NULL,
+    keterangan TEXT NOT NULL,
+    id_operator BIGINT NOT NULL REFERENCES pengguna(id_pengguna),
+    kode_produk VARCHAR(50),
+    no_batch VARCHAR(50),
+    waktu_mulai TIMESTAMPTZ NOT NULL,
+    waktu_selesai TIMESTAMPTZ,
+    durasi_jam NUMERIC(12,4) GENERATED ALWAYS AS (EXTRACT(EPOCH FROM (waktu_selesai - waktu_mulai)) / 3600.0) STORED,
+    no_work_request VARCHAR(50),
+    tipe_wo VARCHAR(30),
+    kategori_breakdown VARCHAR(100),
+    FOREIGN KEY (id_work, id_mesin) REFERENCES open_work(id_work, id_mesin),
+    CHECK (waktu_selesai IS NULL OR waktu_selesai >= waktu_mulai)
+);
+
+CREATE TABLE laporan_shift (
+    id_laporan BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    tanggal DATE NOT NULL,
+    shift SMALLINT NOT NULL CHECK (shift BETWEEN 1 AND 3),
+    catatan_umum TEXT,
+    UNIQUE (tanggal, shift)
+);
+
+CREATE TABLE anggota_shift (
+    id_laporan BIGINT NOT NULL REFERENCES laporan_shift(id_laporan),
+    id_pengguna BIGINT NOT NULL REFERENCES pengguna(id_pengguna),
+    PRIMARY KEY (id_laporan, id_pengguna)
+);
+
+CREATE TABLE catatan_pengerjaan (
+    id_catatan BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id_work BIGINT NOT NULL REFERENCES open_work(id_work),
+    id_laporan BIGINT NOT NULL REFERENCES laporan_shift(id_laporan),
+    id_teknisi BIGINT NOT NULL REFERENCES pengguna(id_pengguna),
+    waktu_mulai TIMESTAMPTZ NOT NULL,
+    waktu_selesai TIMESTAMPTZ,
+    tindakan TEXT NOT NULL,
+    catatan_lanjutan TEXT,
+    status_setelah_pengerjaan VARCHAR(20) NOT NULL DEFAULT 'OPEN' CHECK (status_setelah_pengerjaan IN ('OPEN', 'DONE')),
+    FOREIGN KEY (id_laporan, id_teknisi) REFERENCES anggota_shift(id_laporan, id_pengguna),
+    CHECK (waktu_selesai IS NULL OR waktu_selesai >= waktu_mulai),
+    CHECK (status_setelah_pengerjaan <> 'DONE' OR waktu_selesai IS NOT NULL)
+);
+
+CREATE TABLE master_part (
+    id_part BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nama_part VARCHAR(150) NOT NULL CHECK (BTRIM(nama_part) <> ''),
+    spesifikasi TEXT NOT NULL CHECK (BTRIM(spesifikasi) <> '')
+);
