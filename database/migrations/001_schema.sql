@@ -98,3 +98,51 @@ CREATE TABLE master_part (
     nama_part VARCHAR(150) NOT NULL CHECK (BTRIM(nama_part) <> ''),
     spesifikasi TEXT NOT NULL CHECK (BTRIM(spesifikasi) <> '')
 );
+CREATE UNIQUE INDEX uq_master_part_nama_spesifikasi ON master_part (LOWER(BTRIM(nama_part)), LOWER(BTRIM(spesifikasi)));
+
+CREATE TABLE aturan_lifetime (
+    id_aturan BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nama_aturan VARCHAR(100) NOT NULL UNIQUE,
+    persentase_batas_penggantian NUMERIC(5,2) NOT NULL CHECK (persentase_batas_penggantian > 0 AND persentase_batas_penggantian <= 100),
+    persentase_awal_peringatan NUMERIC(5,2) NOT NULL CHECK (persentase_awal_peringatan > 0 AND persentase_awal_peringatan < 100),
+    aktif BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE part_mesin (
+    id_part_mesin BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id_mesin BIGINT NOT NULL REFERENCES mesin(id_mesin),
+    id_part BIGINT NOT NULL REFERENCES master_part(id_part),
+    posisi_part VARCHAR(100) NOT NULL DEFAULT 'UMUM' CHECK (BTRIM(posisi_part) <> ''),
+    klasifikasi VARCHAR(50) CHECK (klasifikasi IS NULL OR BTRIM(klasifikasi) <> ''),
+    lifetime_hari NUMERIC(10,2) CHECK (lifetime_hari > 0),
+    id_aturan BIGINT REFERENCES aturan_lifetime(id_aturan),
+    status_kelengkapan VARCHAR(20) GENERATED ALWAYS AS (CASE WHEN klasifikasi IS NOT NULL AND lifetime_hari IS NOT NULL AND id_aturan IS NOT NULL THEN 'LENGKAP' ELSE 'BELUM_DIATUR' END) STORED
+);
+CREATE UNIQUE INDEX uq_part_mesin_posisi ON part_mesin (id_mesin, id_part, LOWER(BTRIM(posisi_part)));
+
+CREATE TABLE penggantian_part (
+    id_penggantian BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id_catatan BIGINT NOT NULL REFERENCES catatan_pengerjaan(id_catatan),
+    id_part_mesin BIGINT NOT NULL REFERENCES part_mesin(id_part_mesin),
+    waktu_penggantian TIMESTAMPTZ NOT NULL,
+    jumlah INTEGER NOT NULL DEFAULT 1 CHECK (jumlah > 0),
+    keterangan TEXT
+);
+
+CREATE FUNCTION validasi_mesin_penggantian_part() RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE mesin_work BIGINT; mesin_part BIGINT;
+BEGIN
+    SELECT ow.id_mesin INTO mesin_work FROM catatan_pengerjaan cp JOIN open_work ow ON ow.id_work = cp.id_work WHERE cp.id_catatan = NEW.id_catatan;
+    SELECT pm.id_mesin INTO mesin_part FROM part_mesin pm WHERE pm.id_part_mesin = NEW.id_part_mesin;
+    IF mesin_work IS NULL OR mesin_part IS NULL OR mesin_work <> mesin_part THEN RAISE EXCEPTION 'Mesin pada penggantian part harus sama dengan mesin open work'; END IF;
+    RETURN NEW;
+END; $$;
+CREATE TRIGGER trg_validasi_mesin_penggantian_part BEFORE INSERT OR UPDATE ON penggantian_part FOR EACH ROW EXECUTE FUNCTION validasi_mesin_penggantian_part();
+
+CREATE INDEX idx_open_work_mesin_status ON open_work(id_mesin, status);
+CREATE INDEX idx_breakdown_mesin_mulai ON breakdown(id_mesin, waktu_mulai);
+CREATE INDEX idx_catatan_work ON catatan_pengerjaan(id_work);
+CREATE INDEX idx_catatan_laporan ON catatan_pengerjaan(id_laporan);
+CREATE INDEX idx_penggantian_part_terbaru ON penggantian_part(id_part_mesin, waktu_penggantian DESC);
+
+COMMIT;
