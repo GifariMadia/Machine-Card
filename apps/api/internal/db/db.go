@@ -598,3 +598,125 @@ func (r *PostgresRepo) GetBreakdownAnalytics(ctx context.Context) (*domain.Break
 		closedCnt int
 		totalDt   float64
 		handovers int
+	)
+	err := r.pool.QueryRow(ctx, globalQuery).Scan(&totalCnt, &openCnt, &closedCnt, &totalDt, &handovers)
+	if err != nil {
+		return nil, fmt.Errorf("query global analytics error: %w", err)
+	}
+
+	analytics.TotalIncidents = totalCnt
+	analytics.OpenIncidents = openCnt
+	analytics.ClosedIncidents = closedCnt
+	analytics.TotalDowntimeHours = totalDt
+	analytics.ShiftHandoverStats.TotalHandovers = handovers
+	if totalCnt > 0 {
+		analytics.ShiftHandoverStats.HandoverPercent = float64(handovers) / float64(totalCnt) * 100.0
+		analytics.MTTROperationalHours = totalDt / float64(totalCnt)
+	}
+
+	// Total jam kerja teknisi
+	var totalRepairHours float64
+	techQuery := `
+		SELECT COALESCE(SUM(EXTRACT(EPOCH FROM (waktu_selesai - waktu_mulai)) / 3600.0), 0)
+		FROM catatan_pengerjaan
+		WHERE waktu_selesai IS NOT NULL
+	`
+	_ = r.pool.QueryRow(ctx, techQuery).Scan(&totalRepairHours)
+	analytics.TotalRepairHours = totalRepairHours
+	if closedCnt > 0 && totalRepairHours > 0 {
+		analytics.MTTRTechnicalHours = totalRepairHours / float64(closedCnt)
+	}
+
+	// Perhitungan MTBF & Availability
+	// Total planned operating hours (misal: 30 hari x 24 jam x 43 mesin aktif = 30960 jam pabrik)
+	var activeMachinesCount int
+	_ = r.pool.QueryRow(ctx, "SELECT COUNT(*)::int FROM mesin WHERE status_mesin = 'AKTIF'").Scan(&activeMachinesCount)
+	if activeMachinesCount == 0 {
+		activeMachinesCount = 43
+	}
+
+	totalPlannedHours := float64(activeMachinesCount) * 720.0 // 30 hari
+	totalOperatingHours := totalPlannedHours - totalDt
+	if totalOperatingHours < 0 {
+		totalOperatingHours = 0
+	}
+
+	if totalCnt > 0 {
+		analytics.MTBFHours = totalOperatingHours / float64(totalCnt)
+	} else {
+		analytics.MTBFHours = 720.0
+	}
+
+	if totalPlannedHours > 0 {
+		analytics.AvailabilityPercent = (totalOperatingHours / totalPlannedHours) * 100.0
+	}
+
+	// 2. Statistik Berdasarkan Section / Area
+	areaRows, err := r.pool.Query(ctx, `
+		SELECT m.section, COUNT(b.id_breakdown)::int AS cnt,
+		       COALESCE(SUM(EXTRACT(EPOCH FROM (COALESCE(ow.waktu_mesin_beroperasi, ow.waktu_ditutup, NOW()) - b.waktu_mulai)) / 3600.0), 0) AS dt
+		FROM mesin m
+		LEFT JOIN open_work ow ON ow.id_mesin = m.id_mesin
+		LEFT JOIN breakdown b ON b.id_work = ow.id_work
+		GROUP BY m.section
+		ORDER BY cnt DESC, dt DESC
+	`)
+	if err == nil {
+		defer areaRows.Close()
+		for areaRows.Next() {
+			var item domain.AreaStatItem
+			if err := areaRows.Scan(&item.Section, &item.Count, &item.TotalDowntimeHours); err == nil {
+				if item.Count > 0 {
+					item.MTTRHours = item.TotalDowntimeHours / float64(item.Count)
+				}
+				analytics.AreaStats = append(analytics.AreaStats, item)
+			}
+		}
+	}
+
+	// 3. Top Mesin Berdasarkan Frekuensi Breakdown & Total Downtime (Pareto)
+	machineRows, err := r.pool.Query(ctx, `
+		SELECT m.id_mesin, m.nama_mesin, m.kode_mesin, m.section, COUNT(b.id_breakdown)::int AS cnt,
+		       COALESCE(SUM(EXTRACT(EPOCH FROM (COALESCE(ow.waktu_mesin_beroperasi, ow.waktu_ditutup, NOW()) - b.waktu_mulai)) / 3600.0), 0) AS dt
+		FROM mesin m
+		JOIN open_work ow ON ow.id_mesin = m.id_mesin
+		JOIN breakdown b ON b.id_work = ow.id_work
+		GROUP BY m.id_mesin
+		ORDER BY cnt DESC, dt DESC
+		LIMIT 10
+	`)
+	if err == nil {
+		defer machineRows.Close()
+		for machineRows.Next() {
+			var m domain.MachineStatItem
+			if err := machineRows.Scan(&m.IDMesin, &m.NamaMesin, &m.KodeMesin, &m.Section, &m.IncidentCount, &m.TotalDowntimeHours); err == nil {
+				if m.IncidentCount > 0 {
+					m.MTTRHours = m.TotalDowntimeHours / float64(m.IncidentCount)
+					m.MTBFHours = (720.0 - m.TotalDowntimeHours) / float64(m.IncidentCount)
+				}
+				analytics.TopMachines = append(analytics.TopMachines, m)
+			}
+		}
+	}
+
+	// 4. Statistik Berdasarkan Kategori Gangguan
+	catRows, err := r.pool.Query(ctx, `
+		SELECT COALESCE(b.kategori_breakdown, 'Umum') AS cat, COUNT(*)::int AS cnt,
+		       COALESCE(SUM(EXTRACT(EPOCH FROM (COALESCE(ow.waktu_mesin_beroperasi, ow.waktu_ditutup, NOW()) - b.waktu_mulai)) / 3600.0), 0) AS dt
+		FROM breakdown b
+		JOIN open_work ow ON ow.id_work = b.id_work
+		GROUP BY cat
+		ORDER BY cnt DESC
+	`)
+	if err == nil {
+		defer catRows.Close()
+		for catRows.Next() {
+			var cat domain.CategoryStatItem
+			if err := catRows.Scan(&cat.Category, &cat.Count, &cat.TotalDowntimeHours); err == nil {
+				analytics.CategoryStats = append(analytics.CategoryStats, cat)
+			}
+		}
+	}
+
+	return analytics, nil
+}
