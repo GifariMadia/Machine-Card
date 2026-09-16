@@ -238,3 +238,123 @@ func (r *PostgresRepo) CreateOpenWork(ctx context.Context, req domain.OpenWorkRe
 	`
 	err = tx.QueryRow(ctx, insertWorkQuery, ticketNumber, req.IDMesin, idPengguna, strings.TrimSpace(req.Keterangan)).
 		Scan(&res.IDWork, &res.NomorWork, &res.Status, &res.WaktuDibuka)
+	if err != nil {
+		return nil, fmt.Errorf("insert open_work error: %w", err)
+	}
+
+	insertBreakdownQuery := `
+		INSERT INTO breakdown
+		  (id_work, tanggal, shift, id_mesin, section, keterangan, id_operator,
+		   kode_produk, no_batch, waktu_mulai, waktu_selesai, no_work_request, tipe_wo, kategori_breakdown)
+		VALUES ($1, ($8::timestamptz AT TIME ZONE 'Asia/Jakarta')::date, $2, $3, $4, $5, $6,
+		        $7, $9, $8::timestamptz, $10::timestamptz, $11, $12, $13)
+	`
+	_, err = tx.Exec(ctx, insertBreakdownQuery,
+		res.IDWork,
+		req.Shift,
+		req.IDMesin,
+		section,
+		strings.TrimSpace(req.Keterangan),
+		idPengguna,
+		req.KodeProduk,
+		req.WaktuMulai,
+		req.NoBatch,
+		req.WaktuSelesai,
+		req.NoWorkRequest,
+		req.TipeWO,
+		req.KategoriBreakdown,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("insert breakdown error: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit error: %w", err)
+	}
+
+	return &res, nil
+}
+
+// CloseOpenWorkByOperator: Operator di lapangan (bisa operator dari shift berikutnya) menutup tiket setelah mesin beroperasi kembali
+func (r *PostgresRepo) CloseOpenWorkByOperator(ctx context.Context, req domain.OpenWorkCloseRequest) (*domain.DetailedTicketItem, error) {
+	if r.pool == nil {
+		return nil, ErrDegraded
+	}
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction error: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Validasi operator penutup (bisa dari shift yang sama atau shift lanjutan)
+	var (
+		idPenutup   int64
+		namaPenutup string
+	)
+	err = tx.QueryRow(ctx, "SELECT id_pengguna, nama FROM pengguna WHERE username = $1 AND peran = 'OPERATOR' AND aktif = TRUE",
+		strings.ToUpper(strings.TrimSpace(req.NIKOperator))).Scan(&idPenutup, &namaPenutup)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrForbidden
+		}
+		return nil, fmt.Errorf("check operator error: %w", err)
+	}
+
+	// Temukan tiket dan lock baris (pessimistic + optimistic concurrency check - Bab 19)
+	var (
+		idWork              int64
+		nomorWork           string
+		idMesin             int64
+		currentStatus       string
+		currentVersion      int
+		waktuDibuka         time.Time
+		waktuMulaiBreakdown time.Time
+		shiftLapor          int
+	)
+	findQuery := `
+		SELECT ow.id_work, ow.nomor_work, ow.id_mesin, ow.status, COALESCE(ow.version, 1), ow.waktu_dibuka, b.waktu_mulai, b.shift
+		FROM open_work ow
+		JOIN breakdown b ON b.id_work = ow.id_work
+		WHERE (($1::bigint > 0 AND ow.id_work = $1) OR ($1::bigint = 0 AND ow.nomor_work = $2))
+          AND ($2 = '' OR ow.nomor_work = $2)
+		FOR UPDATE OF ow
+	`
+	err = tx.QueryRow(ctx, findQuery, req.IDWork, req.NomorWork).
+		Scan(&idWork, &nomorWork, &idMesin, &currentStatus, &currentVersion, &waktuDibuka, &waktuMulaiBreakdown, &shiftLapor)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("find ticket error: %w", err)
+	}
+
+	// Validasi State Machine (Bab 17): tiket CLOSED tidak boleh ditutup ulang
+	if err := domain.ValidateTicketTransition(currentStatus, "CLOSED", "OPERATOR"); err != nil {
+		return nil, ErrConflict
+	}
+
+	// Validasi Optimistic Concurrency (Bab 19 & Lab 2)
+	if req.ExpectedVersion != nil && *req.ExpectedVersion != currentVersion {
+		return nil, ErrConflict
+	}
+
+	// Tentukan waktu mesin beroperasi kembali
+	waktuResume := time.Now().UTC()
+	if req.WaktuMesinBeroperasi != "" {
+		if parsed, err := time.Parse(time.RFC3339, req.WaktuMesinBeroperasi); err == nil {
+			waktuResume = parsed
+		}
+	}
+
+	// Validasi Invariant Waktu (Bab 2 & Bab 18): waktu mesin beroperasi >= waktu mulai breakdown
+	if waktuResume.Before(waktuMulaiBreakdown) || waktuResume.After(time.Now().UTC()) {
+		return nil, domain.ErrInvalidTimeline
+	}
+
+	// Hitung durasi perbaikan teknisi (jika ada catatan pengerjaan)
+	var techDurationHours *float64
+	row := tx.QueryRow(ctx, `
+		SELECT EXTRACT(EPOCH FROM (waktu_selesai - waktu_mulai)) / 3600.0
+		FROM catatan_pengerjaan
+		WHERE id_work = $1 AND waktu_selesai IS NOT NULL
