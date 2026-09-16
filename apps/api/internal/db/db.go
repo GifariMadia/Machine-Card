@@ -358,3 +358,123 @@ func (r *PostgresRepo) CloseOpenWorkByOperator(ctx context.Context, req domain.O
 		SELECT EXTRACT(EPOCH FROM (waktu_selesai - waktu_mulai)) / 3600.0
 		FROM catatan_pengerjaan
 		WHERE id_work = $1 AND waktu_selesai IS NOT NULL
+		ORDER BY waktu_selesai DESC
+		LIMIT 1
+	`, idWork)
+	var dur float64
+	if err := row.Scan(&dur); err == nil {
+		techDurationHours = &dur
+	}
+
+	// Update open_work dengan conditional status & increment version (Bab 19)
+	newVersion := currentVersion + 1
+	updateWorkQuery := `
+		UPDATE open_work
+		SET status = 'CLOSED',
+		    version = $1,
+		    id_penutup = $2,
+		    shift_penutup = $3,
+		    waktu_mesin_beroperasi = $4,
+		    waktu_ditutup = CURRENT_TIMESTAMP,
+		    catatan_closing_operator = $5
+		WHERE id_work = $6 AND status <> 'CLOSED'
+	`
+	cmdTag, err := tx.Exec(ctx, updateWorkQuery, newVersion, idPenutup, req.Shift, waktuResume, strings.TrimSpace(req.CatatanClosing), idWork)
+	if err != nil {
+		return nil, fmt.Errorf("update open_work error: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return nil, ErrConflict
+	}
+
+	// Update breakdown
+	updateBreakdownQuery := `
+		UPDATE breakdown
+		SET waktu_mesin_beroperasi = $1,
+		    id_operator_penutup = $2,
+		    shift_penutup = $3,
+		    waktu_selesai = COALESCE(waktu_selesai, $1),
+		    durasi_perbaikan_teknisi_jam = $4,
+		    version = COALESCE(version, 1) + 1
+		WHERE id_work = $5
+	`
+	_, err = tx.Exec(ctx, updateBreakdownQuery, waktuResume, idPenutup, req.Shift, techDurationHours, idWork)
+	if err != nil {
+		return nil, fmt.Errorf("update breakdown error: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit error: %w", err)
+	}
+
+	downtimeMinutes := waktuResume.Sub(waktuMulaiBreakdown).Minutes()
+	isHandover := req.Shift != shiftLapor
+	resumeStr := waktuResume.Format(time.RFC3339)
+	closingNotes := strings.TrimSpace(req.CatatanClosing)
+
+	return &domain.DetailedTicketItem{
+		IDWork:               idWork,
+		NomorWork:            nomorWork,
+		IDMesin:              idMesin,
+		Status:               "CLOSED",
+		Version:              newVersion,
+		PenutupNIK:           &req.NIKOperator,
+		PenutupNama:          &namaPenutup,
+		ShiftPenutup:         &req.Shift,
+		WaktuMesinBeroperasi: &resumeStr,
+		CatatanClosing:       &closingNotes,
+		DurasiDowntimeMenit:  &downtimeMinutes,
+		IsShiftHandover:      isHandover,
+	}, nil
+}
+
+// ListOpenWorks: Mengambil daftar tiket breakdown dengan rincian timeline pelapor, teknisi, dan penutup
+func (r *PostgresRepo) ListOpenWorks(ctx context.Context, status, machine, section string, limit int) ([]domain.DetailedTicketItem, error) {
+	if r.pool == nil {
+		return nil, ErrDegraded
+	}
+
+	var values []any
+	var filters []string
+
+	if status != "" && status != "ALL" {
+		values = append(values, status)
+		filters = append(filters, fmt.Sprintf("ow.status = $%d", len(values)))
+	}
+
+	if machine != "" {
+		values = append(values, "%"+machine+"%")
+		pos := len(values)
+		filters = append(filters, fmt.Sprintf("(m.nama_mesin ILIKE $%d OR m.kode_mesin ILIKE $%d)", pos, pos))
+	}
+
+	if section != "" && section != "Semua kategori" {
+		values = append(values, section)
+		filters = append(filters, fmt.Sprintf("m.section = $%d", len(values)))
+	}
+
+	values = append(values, limit)
+	limitPos := len(values)
+
+	whereClause := ""
+	if len(filters) > 0 {
+		whereClause = "WHERE " + strings.Join(filters, " AND ")
+	}
+
+	query := fmt.Sprintf(`
+		SELECT ow.id_work, ow.nomor_work, ow.id_mesin, m.kode_mesin, m.nama_mesin, m.section,
+		       p_pembuat.username AS pelapor_nik, p_pembuat.nama AS pelapor_nama, b.shift AS shift_lapor,
+		       b.waktu_mulai AS waktu_mulai_breakdown, b.keterangan, COALESCE(b.kategori_breakdown, 'Umum') AS kategori_breakdown,
+		       b.tipe_wo, COALESCE(b.kode_produk, '') AS kode_produk, COALESCE(b.no_batch, '') AS no_batch,
+		       COALESCE(b.no_work_request, '') AS no_work_request, ow.status,
+		       cp.waktu_mulai AS waktu_mulai_teknisi, cp.waktu_selesai AS waktu_selesai_teknisi,
+		       p_tek.username AS teknisi_nik, p_tek.nama AS teknisi_nama, cp.tindakan AS tindakan_teknisi,
+		       p_tutup.username AS penutup_nik, p_tutup.nama AS penutup_nama, ow.shift_penutup,
+		       ow.waktu_mesin_beroperasi, ow.catatan_closing_operator
+		FROM open_work ow
+		JOIN breakdown b ON b.id_work = ow.id_work
+		JOIN mesin m ON m.id_mesin = ow.id_mesin
+		JOIN pengguna p_pembuat ON p_pembuat.id_pengguna = ow.id_pembuat
+		LEFT JOIN pengguna p_tutup ON p_tutup.id_pengguna = ow.id_penutup
+		LEFT JOIN LATERAL (
+		    SELECT cp.waktu_mulai, cp.waktu_selesai, cp.id_teknisi, cp.tindakan
