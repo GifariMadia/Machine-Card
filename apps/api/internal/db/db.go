@@ -478,3 +478,123 @@ func (r *PostgresRepo) ListOpenWorks(ctx context.Context, status, machine, secti
 		LEFT JOIN pengguna p_tutup ON p_tutup.id_pengguna = ow.id_penutup
 		LEFT JOIN LATERAL (
 		    SELECT cp.waktu_mulai, cp.waktu_selesai, cp.id_teknisi, cp.tindakan
+		    FROM catatan_pengerjaan cp
+		    WHERE cp.id_work = ow.id_work
+		    ORDER BY cp.waktu_mulai DESC, cp.id_catatan DESC
+		    LIMIT 1
+		) cp ON TRUE
+		LEFT JOIN pengguna p_tek ON p_tek.id_pengguna = cp.id_teknisi
+		%s
+		ORDER BY ow.waktu_dibuka DESC
+		LIMIT $%d
+	`, whereClause, limitPos)
+
+	rows, err := r.pool.Query(ctx, query, values...)
+	if err != nil {
+		return nil, fmt.Errorf("query open works error: %w", err)
+	}
+	defer rows.Close()
+
+	var tickets []domain.DetailedTicketItem
+	for rows.Next() {
+		var (
+			t              domain.DetailedTicketItem
+			waktuBreakdown time.Time
+			waktuTekStart  *time.Time
+			waktuTekEnd    *time.Time
+			waktuResume    *time.Time
+			tekNIK         *string
+			tekNama        *string
+			tindakanTek    *string
+			penutupNIK     *string
+			penutupNama    *string
+			shiftPenutup   *int
+			catatanClosing *string
+		)
+
+		err := rows.Scan(
+			&t.IDWork, &t.NomorWork, &t.IDMesin, &t.KodeMesin, &t.NamaMesin, &t.Section,
+			&t.PelaporNIK, &t.PelaporNama, &t.ShiftLapor,
+			&waktuBreakdown, &t.Keterangan, &t.KategoriBreakdown,
+			&t.TipeWO, &t.KodeProduk, &t.NoBatch,
+			&t.NoWorkRequest, &t.Status,
+			&waktuTekStart, &waktuTekEnd,
+			&tekNIK, &tekNama, &tindakanTek,
+			&penutupNIK, &penutupNama, &shiftPenutup,
+			&waktuResume, &catatanClosing,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan ticket row error: %w", err)
+		}
+
+		t.WaktuMulaiBreakdown = waktuBreakdown.Format(time.RFC3339)
+		if waktuTekStart != nil {
+			s := waktuTekStart.Format(time.RFC3339)
+			t.WaktuMulaiTeknisi = &s
+			respMin := waktuTekStart.Sub(waktuBreakdown).Minutes()
+			t.DurasiResponMenit = &respMin
+		}
+		if waktuTekEnd != nil {
+			s := waktuTekEnd.Format(time.RFC3339)
+			t.WaktuSelesaiTeknisi = &s
+			if waktuTekStart != nil {
+				repMin := waktuTekEnd.Sub(*waktuTekStart).Minutes()
+				t.DurasiPerbaikanMenit = &repMin
+			}
+		}
+		if waktuResume != nil {
+			s := waktuResume.Format(time.RFC3339)
+			t.WaktuMesinBeroperasi = &s
+			dtMin := waktuResume.Sub(waktuBreakdown).Minutes()
+			t.DurasiDowntimeMenit = &dtMin
+		}
+
+		t.TeknisiNIK = tekNIK
+		t.TeknisiNama = tekNama
+		t.TindakanTeknisi = tindakanTek
+		t.PenutupNIK = penutupNIK
+		t.PenutupNama = penutupNama
+		t.ShiftPenutup = shiftPenutup
+		t.CatatanClosing = catatanClosing
+
+		if shiftPenutup != nil && *shiftPenutup != t.ShiftLapor {
+			t.IsShiftHandover = true
+		}
+
+		tickets = append(tickets, t)
+	}
+
+	if tickets == nil {
+		tickets = []domain.DetailedTicketItem{}
+	}
+	return tickets, nil
+}
+
+// GetBreakdownAnalytics: Menghitung metrik MTTR, MTBF, Tren Breakdown, Distribusi Area, Mesin, dan Jenis Gangguan
+func (r *PostgresRepo) GetBreakdownAnalytics(ctx context.Context) (*domain.BreakdownAnalytics, error) {
+	if r.pool == nil {
+		return nil, ErrDegraded
+	}
+
+	analytics := &domain.BreakdownAnalytics{
+		AreaStats:     []domain.AreaStatItem{},
+		TopMachines:   []domain.MachineStatItem{},
+		CategoryStats: []domain.CategoryStatItem{},
+	}
+
+	// 1. Metrik Global
+	globalQuery := `
+		SELECT COUNT(*)::int AS total,
+		       COUNT(*) FILTER (WHERE status = 'OPEN' OR status = 'IN_PROGRESS')::int AS open_cnt,
+		       COUNT(*) FILTER (WHERE status = 'CLOSED')::int AS closed_cnt,
+		       COALESCE(SUM(EXTRACT(EPOCH FROM (COALESCE(waktu_mesin_beroperasi, waktu_ditutup, NOW()) - waktu_dibuka)) / 3600.0), 0) AS total_downtime,
+		       COUNT(*) FILTER (WHERE shift_penutup IS NOT NULL AND shift_penutup <> b.shift)::int AS handovers
+		FROM open_work ow
+		JOIN breakdown b ON b.id_work = ow.id_work
+	`
+	var (
+		totalCnt  int
+		openCnt   int
+		closedCnt int
+		totalDt   float64
+		handovers int
