@@ -118,3 +118,123 @@ func (r *PostgresRepo) ListMachines(ctx context.Context, _ string, search, categ
 		%s
 		GROUP BY m.id_mesin
 		ORDER BY m.nama_mesin
+		LIMIT $%d
+	`, whereClause, limitPos)
+
+	rows, err := r.pool.Query(ctx, query, values...)
+	if err != nil {
+		return nil, fmt.Errorf("query machines error: %w", err)
+	}
+	defer rows.Close()
+
+	var machines []domain.Machine
+	for rows.Next() {
+		var m domain.Machine
+		if err := rows.Scan(&m.IDMesin, &m.KodeMesin, &m.NamaMesin, &m.Kategori, &m.Status, &m.JumlahPart); err != nil {
+			return nil, fmt.Errorf("scan machine row error: %w", err)
+		}
+		machines = append(machines, m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("machines iteration error: %w", err)
+	}
+
+	if machines == nil {
+		machines = []domain.Machine{}
+	}
+	return machines, nil
+}
+
+func (r *PostgresRepo) ListMonitoring(ctx context.Context, status string, limit int) ([]domain.MonitoringItem, error) {
+	if r.pool == nil {
+		return nil, ErrDegraded
+	}
+
+	query := `
+		SELECT id_part_mesin, id_mesin, nama_mesin, section, nama_part, spesifikasi, posisi_part,
+		       klasifikasi, lifetime_hari, waktu_penggantian, interval_penggantian_hari,
+		       waktu_awal_peringatan, waktu_wajib_ganti, status_lifetime
+		FROM monitoring_lifetime_part
+		WHERE ($1 = '' OR status_lifetime = $1)
+		ORDER BY CASE status_lifetime WHEN 'TMS' THEN 1 WHEN 'MENDEKATI_BATAS' THEN 2 WHEN 'BELUM_DAPAT_DIHITUNG' THEN 3 ELSE 4 END,
+		         nama_mesin, nama_part
+		LIMIT $2
+	`
+
+	rows, err := r.pool.Query(ctx, query, status, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query monitoring error: %w", err)
+	}
+	defer rows.Close()
+
+	var items []domain.MonitoringItem
+	for rows.Next() {
+		var item domain.MonitoringItem
+		if err := rows.Scan(
+			&item.IDPartMesin, &item.IDMesin, &item.NamaMesin, &item.Section, &item.NamaPart, &item.Spesifikasi,
+			&item.PosisiPart, &item.Klasifikasi, &item.LifetimeHari, &item.WaktuPenggantian,
+			&item.IntervalPenggantianHari, &item.WaktuAwalPeringatan, &item.WaktuWajibGanti, &item.StatusLifetime,
+		); err != nil {
+			return nil, fmt.Errorf("scan monitoring row error: %w", err)
+		}
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("monitoring iteration error: %w", err)
+	}
+
+	if items == nil {
+		items = []domain.MonitoringItem{}
+	}
+	return items, nil
+}
+
+// CreateOpenWork: Operator yang aktif dapat melaporkan open work untuk SEMUA mesin di pabrik
+func (r *PostgresRepo) CreateOpenWork(ctx context.Context, req domain.OpenWorkRequest) (*domain.OpenWorkResult, error) {
+	if r.pool == nil {
+		return nil, ErrDegraded
+	}
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction error: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Validasi operator aktif (tidak lagi dibatasi akses_mesin spesifik)
+	var (
+		idPengguna int64
+		nama       string
+	)
+	err = tx.QueryRow(ctx, "SELECT id_pengguna, nama FROM pengguna WHERE username = $1 AND peran = 'OPERATOR' AND aktif = TRUE",
+		strings.ToUpper(strings.TrimSpace(req.NIKPelapor))).Scan(&idPengguna, &nama)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrForbidden
+		}
+		return nil, fmt.Errorf("check operator error: %w", err)
+	}
+
+	// Ambil section mesin
+	var section string
+	err = tx.QueryRow(ctx, "SELECT section FROM mesin WHERE id_mesin = $1", req.IDMesin).Scan(&section)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("check machine error: %w", err)
+	}
+
+	now := time.Now().UTC()
+	ticketNumber := fmt.Sprintf("OW-%s-%06d", now.Format("20060102"), now.UnixMilli()%1000000)
+
+	var res domain.OpenWorkResult
+	insertWorkQuery := `
+		INSERT INTO open_work (nomor_work, id_mesin, id_pembuat, jenis_pekerjaan, keluhan_atau_pekerjaan)
+		VALUES ($1, $2, $3, 'BREAKDOWN', $4)
+		RETURNING id_work, nomor_work, status, waktu_dibuka
+	`
+	err = tx.QueryRow(ctx, insertWorkQuery, ticketNumber, req.IDMesin, idPengguna, strings.TrimSpace(req.Keterangan)).
+		Scan(&res.IDWork, &res.NomorWork, &res.Status, &res.WaktuDibuka)
