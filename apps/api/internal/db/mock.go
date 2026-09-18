@@ -153,3 +153,159 @@ func (m *MockRepo) ListMonitoring(ctx context.Context, status string, limit int)
 
 	var results []domain.MonitoringItem
 	for _, item := range m.Monitoring {
+		if status != "" && item.StatusLifetime != status {
+			continue
+		}
+		results = append(results, item)
+		if len(results) >= limit {
+			break
+		}
+	}
+	return results, nil
+}
+
+func (m *MockRepo) CreateOpenWork(ctx context.Context, req domain.OpenWorkRequest) (*domain.OpenWorkResult, error) {
+	if m.Degraded {
+		return nil, ErrDegraded
+	}
+	if m.OpenWorkFunc != nil {
+		return m.OpenWorkFunc(ctx, req)
+	}
+
+	// Any valid operator format OPRxxxx is accepted
+	if !strings.HasPrefix(strings.ToUpper(req.NIKPelapor), "OPR") {
+		return nil, ErrForbidden
+	}
+
+	return &domain.OpenWorkResult{
+		IDWork:      1001,
+		NomorWork:   "OW-20261016-123456",
+		Status:      "OPEN",
+		WaktuDibuka: time.Now(),
+	}, nil
+}
+
+func (m *MockRepo) CloseOpenWorkByOperator(ctx context.Context, req domain.OpenWorkCloseRequest) (*domain.DetailedTicketItem, error) {
+	if m.Degraded {
+		return nil, ErrDegraded
+	}
+
+	if !strings.HasPrefix(strings.ToUpper(req.NIKOperator), "OPR") {
+		return nil, ErrForbidden
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ClosedKeys == nil {
+		m.ClosedKeys = make(map[string]int)
+	}
+
+	ticketKey := strings.TrimSpace(req.NomorWork)
+	if ticketKey == "" {
+		ticketKey = fmt.Sprintf("ID-%d", req.IDWork)
+	}
+
+	currentVer := 1
+	if existingVer, alreadyClosed := m.ClosedKeys[ticketKey]; alreadyClosed {
+		_ = existingVer
+		return nil, ErrConflict
+	}
+
+	if req.ExpectedVersion != nil && *req.ExpectedVersion != currentVer {
+		return nil, ErrConflict
+	}
+
+	newVersion := currentVer + 1
+	m.ClosedKeys[ticketKey] = newVersion
+
+	closingNotes := req.CatatanClosing
+	resumeTime := req.WaktuMesinBeroperasi
+	if resumeTime == "" {
+		resumeTime = time.Now().Format(time.RFC3339)
+	}
+	penutupNIK := req.NIKOperator
+	penutupNama := "Operator Lapangan"
+	shiftPenutup := req.Shift
+	downtimeMin := 90.0
+
+	return &domain.DetailedTicketItem{
+		IDWork:               req.IDWork,
+		NomorWork:            req.NomorWork,
+		Status:               "CLOSED",
+		Version:              newVersion,
+		PenutupNIK:           &penutupNIK,
+		PenutupNama:          &penutupNama,
+		ShiftPenutup:         &shiftPenutup,
+		WaktuMesinBeroperasi: &resumeTime,
+		CatatanClosing:       &closingNotes,
+		DurasiDowntimeMenit:  &downtimeMin,
+		IsShiftHandover:      req.Shift != 1,
+	}, nil
+}
+
+func (m *MockRepo) ListOpenWorks(ctx context.Context, status, machine, section string, limit int) ([]domain.DetailedTicketItem, error) {
+	if m.Degraded {
+		return nil, ErrDegraded
+	}
+
+	var results []domain.DetailedTicketItem
+	for _, t := range m.OpenWorks {
+		if status != "" && status != "ALL" && t.Status != status {
+			continue
+		}
+		if machine != "" {
+			s := strings.ToLower(machine)
+			if !strings.Contains(strings.ToLower(t.NamaMesin), s) && !strings.Contains(strings.ToLower(t.KodeMesin), s) {
+				continue
+			}
+		}
+		if section != "" && section != "Semua kategori" && t.Section != section {
+			continue
+		}
+		results = append(results, t)
+		if len(results) >= limit {
+			break
+		}
+	}
+	return results, nil
+}
+
+func (m *MockRepo) GetBreakdownAnalytics(ctx context.Context) (*domain.BreakdownAnalytics, error) {
+	if m.Degraded {
+		return nil, ErrDegraded
+	}
+
+	return &domain.BreakdownAnalytics{
+		TotalIncidents:       15,
+		OpenIncidents:        2,
+		ClosedIncidents:      13,
+		TotalDowntimeHours:   24.5,
+		TotalRepairHours:     14.2,
+		MTTROperationalHours: 1.63,
+		MTTRTechnicalHours:   1.09,
+		MTBFHours:            48.2,
+		AvailabilityPercent:  96.8,
+		AreaStats: []domain.AreaStatItem{
+			{Section: "Filling", Count: 8, TotalDowntimeHours: 14.0, MTTRHours: 1.75},
+			{Section: "Packaging", Count: 5, TotalDowntimeHours: 7.5, MTTRHours: 1.50},
+			{Section: "Compounding", Count: 2, TotalDowntimeHours: 3.0, MTTRHours: 1.50},
+		},
+		TopMachines: []domain.MachineStatItem{
+			{IDMesin: 1, NamaMesin: "Ilapak 1", KodeMesin: "ILA-01", Section: "Filling", IncidentCount: 4, TotalDowntimeHours: 7.2, MTTRHours: 1.8, MTBFHours: 42.0},
+			{IDMesin: 2, NamaMesin: "Chimei 10A/Jinsung 3", KodeMesin: "CHI-01", Section: "Packaging", IncidentCount: 3, TotalDowntimeHours: 4.5, MTTRHours: 1.5, MTBFHours: 58.0},
+		},
+		CategoryStats: []domain.CategoryStatItem{
+			{Category: "Pneumatik & Mekanik", Count: 6, TotalDowntimeHours: 10.5},
+			{Category: "Sensor & Elektrik", Count: 5, TotalDowntimeHours: 8.0},
+			{Category: "Cutting / Sealing", Count: 4, TotalDowntimeHours: 6.0},
+		},
+		ShiftHandoverStats: struct {
+			TotalHandovers  int     `json:"total_handovers"`
+			HandoverPercent float64 `json:"handover_percent"`
+		}{
+			TotalHandovers:  4,
+			HandoverPercent: 26.6,
+		},
+	}, nil
+}
