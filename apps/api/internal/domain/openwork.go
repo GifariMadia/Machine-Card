@@ -123,3 +123,128 @@ func ValidateTicketTransition(currentStatus, targetStatus, actorRole string) err
 
 	if from == "CLOSED" {
 		return fmt.Errorf("%w: tiket sudah berstatus CLOSED dan tidak dapat diubah lagi", ErrInvalidTransition)
+	}
+
+	if to == "CLOSED" && role != "" && role != "OPERATOR" && role != "ADMIN" {
+		return fmt.Errorf("%w: penutupan akhir tiket (mesin beroperasi) hanya boleh dilakukan oleh OPERATOR atau ADMIN", ErrInvalidTransition)
+	}
+
+	validTargets, ok := map[string][]string{
+		"OPEN":              {"IN_PROGRESS", "PENDING", "SELESAI_PERBAIKAN", "CLOSED", "MENUNGGU_PART", "MENUNGGU_DUKUNGAN"},
+		"IN_PROGRESS":       {"PENDING", "SELESAI_PERBAIKAN", "CLOSED", "MENUNGGU_PART", "MENUNGGU_DUKUNGAN"},
+		"PENDING":           {"IN_PROGRESS", "SELESAI_PERBAIKAN", "CLOSED", "MENUNGGU_PART"},
+		"MENUNGGU_PART":     {"IN_PROGRESS", "PENDING", "SELESAI_PERBAIKAN"},
+		"MENUNGGU_DUKUNGAN": {"IN_PROGRESS", "PENDING", "SELESAI_PERBAIKAN"},
+		"SELESAI_PERBAIKAN": {"CLOSED", "IN_PROGRESS"},
+	}[from]
+
+	if !ok {
+		return fmt.Errorf("%w: status awal '%s' tidak dikenali", ErrInvalidTransition, from)
+	}
+
+	for _, allowed := range validTargets {
+		if allowed == to {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("%w: transisi dari '%s' ke '%s' tidak diizinkan", ErrInvalidTransition, from, to)
+}
+
+// ValidateTimelineInvariant memastikan invariant waktu: waktu selesai/beroperasi >= waktu mulai breakdown (Bab 2 & Bab 17).
+func ValidateTimelineInvariant(startISO, endISO string) error {
+	s := strings.TrimSpace(startISO)
+	e := strings.TrimSpace(endISO)
+	if s == "" || e == "" {
+		return nil
+	}
+
+	startTime, err1 := parseFlexibleTime(s)
+	endTime, err2 := parseFlexibleTime(e)
+	if err1 != nil || err2 != nil {
+		return nil
+	}
+
+	if endTime.Before(startTime) {
+		return fmt.Errorf("%w (%s < %s)", ErrInvalidTimeline, endTime.Format(time.RFC3339), startTime.Format(time.RFC3339))
+	}
+	return nil
+}
+
+func parseFlexibleTime(raw string) (time.Time, error) {
+	layouts := []string{
+		time.RFC3339Nano,
+		time.RFC3339,
+		"2006-01-02T15:04:05",
+		"2006-01-02T15:04",
+	}
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, raw); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unrecognized time format: %s", raw)
+}
+
+type AreaStatItem struct {
+	Section            string  `json:"section"`
+	Count              int     `json:"count"`
+	TotalDowntimeHours float64 `json:"total_downtime_hours"`
+	MTTRHours          float64 `json:"mttr_hours"`
+}
+
+type MachineStatItem struct {
+	IDMesin            int64   `json:"id_mesin"`
+	NamaMesin          string  `json:"nama_mesin"`
+	KodeMesin          string  `json:"kode_mesin"`
+	Section            string  `json:"section"`
+	IncidentCount      int     `json:"incident_count"`
+	TotalDowntimeHours float64 `json:"total_downtime_hours"`
+	MTTRHours          float64 `json:"mttr_hours"`
+	MTBFHours          float64 `json:"mtbf_hours"`
+}
+
+type CategoryStatItem struct {
+	Category           string  `json:"category"`
+	Count              int     `json:"count"`
+	TotalDowntimeHours float64 `json:"total_downtime_hours"`
+}
+
+type BreakdownAnalytics struct {
+	TotalIncidents       int                `json:"total_incidents"`
+	OpenIncidents        int                `json:"open_incidents"`
+	ClosedIncidents      int                `json:"closed_incidents"`
+	TotalDowntimeHours   float64            `json:"total_downtime_hours"`
+	TotalRepairHours     float64            `json:"total_repair_hours"`
+	MTTROperationalHours float64            `json:"mttr_operational_hours"`
+	MTTRTechnicalHours   float64            `json:"mttr_technical_hours"`
+	MTBFHours            float64            `json:"mtbf_hours"`
+	AvailabilityPercent  float64            `json:"availability_percent"`
+	AreaStats            []AreaStatItem     `json:"area_stats"`
+	TopMachines          []MachineStatItem  `json:"top_machines"`
+	CategoryStats        []CategoryStatItem `json:"category_stats"`
+	ShiftHandoverStats   struct {
+		TotalHandovers  int     `json:"total_handovers"`
+		HandoverPercent float64 `json:"handover_percent"`
+	} `json:"shift_handover_stats"`
+}
+
+type MonitoringItem struct {
+	IDPartMesin             int64      `json:"id_part_mesin"`
+	IDMesin                 int64      `json:"id_mesin"`
+	NamaMesin               string     `json:"nama_mesin"`
+	Section                 string     `json:"section"`
+	NamaPart                string     `json:"nama_part"`
+	Spesifikasi             string     `json:"spesifikasi"`
+	PosisiPart              string     `json:"posisi_part"`
+	Klasifikasi             *string    `json:"klasifikasi"`
+	LifetimeHari            *float64   `json:"lifetime_hari"`
+	WaktuPenggantian        *time.Time `json:"waktu_penggantian"`
+	IntervalPenggantianHari *float64   `json:"interval_penggantian_hari"`
+	WaktuAwalPeringatan     *time.Time `json:"waktu_awal_peringatan"`
+	WaktuWajibGanti         *time.Time `json:"waktu_wajib_ganti"`
+	StatusLifetime          string     `json:"status_lifetime"`
+}
+
+// ComponentTargetCalculation merepresentasikan kalkulasi target penggantian komponen (URS 2.3 & 2.4).
+type ComponentTargetCalculation struct {
