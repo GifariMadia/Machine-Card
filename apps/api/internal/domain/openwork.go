@@ -248,3 +248,131 @@ type MonitoringItem struct {
 
 // ComponentTargetCalculation merepresentasikan kalkulasi target penggantian komponen (URS 2.3 & 2.4).
 type ComponentTargetCalculation struct {
+	IDPartMesin      int64    `json:"id_part_mesin"`
+	NamaPart         string   `json:"nama_part"`
+	NomorPart        *string  `json:"nomor_part,omitempty"`
+	PosisiPart       string   `json:"posisi_part"`
+	DasarPerhitungan string   `json:"dasar_perhitungan"` // "KALENDER" | "JAM_OPERASI"
+	IntervalTarget   float64  `json:"interval_target"`
+	Satuan           string   `json:"satuan"` // "Hari" | "Jam Operasi"
+	NilaiTerpakai    float64  `json:"nilai_terpakai"`
+	TargetTanggal    *string  `json:"target_tanggal,omitempty"`
+	TargetJamOperasi *float64 `json:"target_jam_operasi,omitempty"`
+	IsDataLengkap    bool     `json:"is_data_lengkap"`
+	AlasanDataKurang *string  `json:"alasan_data_kurang,omitempty"`
+	PernyataanTarget string   `json:"pernyataan_target"`
+}
+
+// PreventiveMaintenanceItem merepresentasikan jadwal & realisasi PM terencana (URS 3.3).
+type PreventiveMaintenanceItem struct {
+	IDPM                     string  `json:"id_pm"`
+	NomorPM                  string  `json:"nomor_pm"`
+	IDMesin                  int64   `json:"id_mesin"`
+	KodeMesin                string  `json:"kode_mesin"`
+	NamaMesin                string  `json:"nama_mesin"`
+	Periode                  string  `json:"periode"` // 'Mingguan' | 'Bulanan' | '3 Bulanan' | 'Tahunan'
+	Kegiatan                 string  `json:"kegiatan"`
+	TanggalJatuhTempo        string  `json:"tanggal_jatuh_tempo"`
+	TanggalSelesaiAktual     *string `json:"tanggal_selesai_aktual,omitempty"`
+	PelaksanaNIK             *string `json:"pelaksana_nik,omitempty"`
+	PelaksanaNama            *string `json:"pelaksana_nama,omitempty"`
+	HasilTemuan              *string `json:"hasil_temuan,omitempty"`
+	Status                   string  `json:"status"` // 'TERJADWAL' | 'DALAM_PENGERJAAN' | 'SELESAI' | 'TERLAMBAT' | 'DIRESCHEDULE'
+	AlasanReschedule         *string `json:"alasan_reschedule,omitempty"`
+	TanggalSebelumReschedule *string `json:"tanggal_sebelum_reschedule,omitempty"`
+}
+
+// MachineOperatingHours merepresentasikan data waktu operasi aktual mesin yang diverifikasi SPV (URS 3.6).
+type MachineOperatingHours struct {
+	IDMesin          int64   `json:"id_mesin"`
+	KodeMesin        string  `json:"kode_mesin"`
+	NamaMesin        string  `json:"nama_mesin"`
+	PeriodeBulan     string  `json:"periode_bulan"`
+	JamOperasiAktual float64 `json:"jam_operasi_aktual"`
+	IsVerifiedBySPV  bool    `json:"is_verified_by_spv"`
+	VerifiedByNIK    string  `json:"verified_by_nik"`
+	VerifiedByNama   string  `json:"verified_by_nama"`
+	VerifiedAt       string  `json:"verified_at"`
+}
+
+// =========================================================================
+// URS 8.1: REVIEW DAN PERBAIKAN DATA (AUDIT TRAIL, KOREKSI PENGUKURAN, VOID ONLY)
+// =========================================================================
+
+var (
+	ErrUnauthorizedModification = errors.New("pengguna tidak memiliki wewenang untuk mengubah atau membatalkan catatan")
+	ErrReasonRequired           = errors.New("alasan perubahan/pembatalan wajib diisi untuk kepatuhan audit ALCOA")
+	ErrPermanentDeletionBlocked = errors.New("penghapusan permanen tidak diizinkan; catatan hanya dapat dibatalkan (void) dengan jejak audit")
+)
+
+// DataCorrectionAuditEntry mencatat jejak audit perbaikan/koreksi data pengukuran (URS 8.1).
+type DataCorrectionAuditEntry struct {
+	IDAudit            string   `json:"id_audit"`
+	EntityType         string   `json:"entity_type"` // 'BREAKDOWN_TICKET' | 'OPERATING_HOURS' | 'SHIFT_REPORT'
+	EntityID           string   `json:"entity_id"`
+	FieldChanged       string   `json:"field_changed"`
+	BeforeValue        string   `json:"before_value"`
+	AfterValue         string   `json:"after_value"`
+	Reason             string   `json:"reason"`
+	ChangedByNIK       string   `json:"changed_by_nik"`
+	ChangedByNama      string   `json:"changed_by_nama"`
+	ChangedByRole      string   `json:"changed_by_role"`
+	ChangedAt          string   `json:"changed_at"`
+	ImpactedIndicators []string `json:"impacted_indicators"`
+}
+
+// ShiftReportRevisionEntry mencatat riwayat revisi laporan shift yang sudah terkirim (URS 8.1 Klausul 5).
+type ShiftReportRevisionEntry struct {
+	RevisionNo       int      `json:"revision_no"`
+	OriginalReportID string   `json:"original_report_id"`
+	Shift            string   `json:"shift"`
+	Date             string   `json:"date"`
+	RevisedByNIK     string   `json:"revised_by_nik"`
+	RevisedByNama    string   `json:"revised_by_nama"`
+	RevisedAt        string   `json:"revised_at"`
+	RevisionReason   string   `json:"revision_reason"`
+	ChangesSummary   string   `json:"changes_summary"`
+	DeliveryHistory  []string `json:"delivery_history"`
+}
+
+// ValidateRecordCancellation memvalidasi kewenangan pembatalan (void) catatan operasional (URS 8.1 Klausul 1 & 6).
+func ValidateRecordCancellation(actorRole, reason string) error {
+	role := strings.ToUpper(strings.TrimSpace(actorRole))
+	if role != "SUPERVISOR" && role != "ADMIN" {
+		return fmt.Errorf("%w: hanya SUPERVISOR atau ADMIN yang dapat membatalkan catatan", ErrUnauthorizedModification)
+	}
+	if strings.TrimSpace(reason) == "" {
+		return fmt.Errorf("%w: pembatalan catatan operasional harus disertai alasan audit", ErrReasonRequired)
+	}
+	return nil
+}
+
+// ValidateDataCorrection memvalidasi kewenangan koreksi data pengukuran (URS 8.1 Klausul 1, 2, 3).
+func ValidateDataCorrection(actorRole, reason, fieldName, beforeVal, afterVal string) error {
+	role := strings.ToUpper(strings.TrimSpace(actorRole))
+	if role != "SUPERVISOR" && role != "ADMIN" {
+		return fmt.Errorf("%w: hanya SUPERVISOR atau ADMIN yang dapat melakukan koreksi data pengukuran", ErrUnauthorizedModification)
+	}
+	if strings.TrimSpace(reason) == "" {
+		return fmt.Errorf("%w: koreksi data pengukuran harus disertai alasan perubahan", ErrReasonRequired)
+	}
+	if strings.TrimSpace(fieldName) == "" {
+		return errors.New("nama field yang dikoreksi tidak boleh kosong")
+	}
+	if strings.TrimSpace(beforeVal) == strings.TrimSpace(afterVal) {
+		return errors.New("nilai sesudah koreksi tidak boleh sama persis dengan nilai sebelum koreksi")
+	}
+	return nil
+}
+
+// ValidateReportRevision memvalidasi kewenangan revisi laporan terkirim (URS 8.1 Klausul 5).
+func ValidateReportRevision(actorRole, reason string) error {
+	role := strings.ToUpper(strings.TrimSpace(actorRole))
+	if role != "SUPERVISOR" && role != "ADMIN" {
+		return fmt.Errorf("%w: revisi laporan shift hanya boleh dilakukan oleh SUPERVISOR atau ADMIN", ErrUnauthorizedModification)
+	}
+	if strings.TrimSpace(reason) == "" {
+		return fmt.Errorf("%w: revisi laporan shift terkirim wajib mencantumkan alasan revisi", ErrReasonRequired)
+	}
+	return nil
+}
