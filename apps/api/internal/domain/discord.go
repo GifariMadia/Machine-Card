@@ -418,3 +418,222 @@ func FormatDiscordShiftReport(data ShiftReportData) DiscordPayload {
 				for idx, item := range items {
 					formatted = append(formatted, formatSingleTicketLine(item, idx+1))
 				}
+				joined := strings.Join(formatted, "\n\n")
+				areaFields = append(areaFields, DiscordField{
+					Name:   ad.label,
+					Value:  truncate(joined, 1020),
+					Inline: false,
+				})
+			}
+		}
+	} else {
+		ticketLines := "_Tidak ada pekerjaan breakdown / PM terbuka (Nihil)._"
+		if len(tickets) > 0 {
+			var formatted []string
+			for idx, t := range tickets {
+				formatted = append(formatted, formatSingleTicketLine(t, idx+1))
+			}
+			ticketLines = strings.Join(formatted, "\n\n")
+		}
+		areaFields = append(areaFields, DiscordField{
+			Name:   "Daftar Aktivitas & Pekerjaan Maintenance :",
+			Value:  truncate(ticketLines, 1020),
+			Inline: false,
+		})
+	}
+
+	teamMemberDisplay := "Tim Teknisi Shift"
+	if len(data.TeamMembers) > 0 {
+		teamMemberDisplay = strings.Join(data.TeamMembers, ", ")
+	} else if len(data.AssignedTechnicians) > 0 {
+		var parts []string
+		for _, t := range data.AssignedTechnicians {
+			if t.Name != "" {
+				parts = append(parts, t.Name)
+			} else if t.NIK != "" {
+				parts = append(parts, t.NIK)
+			}
+		}
+		if len(parts) > 0 {
+			teamMemberDisplay = strings.Join(parts, ", ")
+		}
+	}
+
+	headerTag := fmt.Sprintf("LAPORAN SHIFT %s — ENGINEERING MAINTENANCE", sched.Shift)
+	if data.IsLateSubmission {
+		headerTag = fmt.Sprintf("LAPORAN SHIFT %s SUSULAN (OVERTIME COMPLETED)", sched.Shift)
+	} else if isPendingReport {
+		headerTag = fmt.Sprintf("NOTIFIKASI LAPORAN SHIFT %s PENDING (BELUM LENGKAP)", sched.Shift)
+	}
+
+	nowISO := time.Now().UTC().Format(time.RFC3339)
+
+	statusValue := "**LENGKAP & TERKIRIM OTOMATIS**"
+	if isPendingReport {
+		statusValue = "**PENDING** (Menunggu Kelengkapan)"
+	} else if data.IsLateSubmission {
+		actTime := data.ActualInputTime
+		if actTime == "" {
+			actTime = "Tercatat"
+		}
+		statusValue = fmt.Sprintf("**LENGKAP SUSULAN**\nInput: %s", actTime)
+	}
+
+	var fields []DiscordField
+	fields = append(fields,
+		DiscordField{
+			Name:   "Supervisor Pemantau Shift (SPV Maintenance)",
+			Value:  fmt.Sprintf("%s (%s)", data.SupervisorName, data.SupervisorNIK),
+			Inline: true,
+		},
+		DiscordField{
+			Name:   "Shift & Jam Operasional",
+			Value:  fmt.Sprintf("%s (%s)\n**%s WIB**", sched.Label, dayCategory, sched.TimeRange),
+			Inline: true,
+		},
+		DiscordField{
+			Name:   "Status Laporan Shift",
+			Value:  statusValue,
+			Inline: true,
+		},
+	)
+	fields = append(fields, areaFields...)
+
+	fields = append(fields,
+		DiscordField{
+			Name:   "Ringkasan Laporan Teknisi & Operasional Mesin",
+			Value:  fmt.Sprintf("%s\n• Mesin Tanpa Gangguan Dalam Penanganan: **%d** | Pekerjaan Open Lintas Shift: **%d**", finalSummary, data.ActiveMachinesCount, data.BreakdownCount),
+			Inline: false,
+		},
+	)
+
+	handoverOrMissingName := "Catatan Serah-Terima Shift (Handover)"
+	handoverOrMissingValue := finalHandover
+	if isPendingReport {
+		handoverOrMissingName = "Kekurangan Catatan Wajib"
+		var missingLines []string
+		for _, m := range missingItems {
+			missingLines = append(missingLines, "• "+m)
+		}
+		handoverOrMissingValue = strings.Join(missingLines, "\n")
+	}
+
+	fields = append(fields, DiscordField{
+		Name:   handoverOrMissingName,
+		Value:  handoverOrMissingValue,
+		Inline: false,
+	})
+
+	return DiscordPayload{
+		Username:  "B7 Machine Card Bot",
+		AvatarURL: "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/factory.png",
+		Embeds: []DiscordEmbed{
+			{
+				Title:       fmt.Sprintf("%s %s (%s)", statusEmoji, headerTag, sched.TimeRange),
+				Description: fmt.Sprintf("**PT BINTANG TOEDJOE** · Engineering Maintenance Site %s\n**Tanggal :** %s · **Anggota Shift :** `%s`", data.Plant, data.Date, teamMemberDisplay),
+				Color:       color,
+				Fields:      fields,
+				Footer: DiscordFooter{
+					Text: fmt.Sprintf("PT Bintang Toedjoe • Engineering Pulogadung • Akhir Shift %s WIB • %s", sched.TriggerTime, nowISO),
+				},
+				Timestamp: nowISO,
+			},
+		},
+	}
+}
+
+// ValidateDiscordWebhookURL memvalidasi URL agar bebas dari celah SSRF (Bab 27):
+// Hanya mengizinkan HTTPS ke host resmi Discord dan path /api/webhooks/.
+func ValidateDiscordWebhookURL(rawURL string) error {
+	clean := strings.TrimSpace(rawURL)
+	if clean == "" || strings.Contains(clean, "simulate") || strings.Contains(clean, "example.com") {
+		return nil
+	}
+
+	parsed, err := url.Parse(clean)
+	if err != nil {
+		return fmt.Errorf("%w: format URL tidak valid", ErrUnsafeWebhookURL)
+	}
+
+	if strings.ToLower(parsed.Scheme) != "https" {
+		return fmt.Errorf("%w: wajib menggunakan protokol HTTPS", ErrUnsafeWebhookURL)
+	}
+
+	host := strings.ToLower(parsed.Hostname())
+	allowedHosts := map[string]bool{
+		"discord.com":        true,
+		"discordapp.com":     true,
+		"ptb.discord.com":    true,
+		"canary.discord.com": true,
+	}
+	if !allowedHosts[host] {
+		return fmt.Errorf("%w: host '%s' ditolak", ErrUnsafeWebhookURL, host)
+	}
+
+	if !strings.HasPrefix(parsed.Path, "/api/webhooks/") {
+		return fmt.Errorf("%w: path harus diawali /api/webhooks/", ErrUnsafeWebhookURL)
+	}
+
+	return nil
+}
+
+func SendDiscordShiftReport(ctx context.Context, webhookURL string, data ShiftReportData) (*DiscordReportResult, error) {
+	payload := FormatDiscordShiftReport(data)
+	reportStatus, missingItems := EvaluateShiftCompleteness(data)
+
+	// Simulation mode
+	cleanURL := strings.TrimSpace(webhookURL)
+	if cleanURL == "" || strings.Contains(cleanURL, "simulate") || strings.Contains(cleanURL, "example.com") {
+		msg := "Laporan Shift Otomatis & Summary Status Maintenance berhasil dikirim pada jadwal akhir shift (Mock Mode)!"
+		if reportStatus == ShiftReportStatusPending {
+			msg = "Laporan Shift berstatus PENDING: Notifikasi pengingat dikirim ke teknisi & SPV tanpa menghambat shift berikutnya."
+		} else if data.IsLateSubmission {
+			msg = "Laporan Shift Susulan (Overtime) berhasil diverifikasi ulang dan dikirim otomatis ke Discord (Mock Mode)!"
+		}
+
+		return &DiscordReportResult{
+			Success:      true,
+			Simulated:    true,
+			ReportStatus: reportStatus,
+			MissingItems: missingItems,
+			Message:      msg,
+			Payload:      payload,
+		}, nil
+	}
+
+	if err := ValidateDiscordWebhookURL(cleanURL); err != nil {
+		return nil, err
+	}
+
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("gagal serialize discord payload: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cleanURL, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("gagal membuat request discord: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("koneksi discord webhook error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return nil, fmt.Errorf("Discord Webhook gagal (%d): %s", resp.StatusCode, string(respBytes))
+	}
+
+	return &DiscordReportResult{
+		Success:      true,
+		Simulated:    false,
+		ReportStatus: reportStatus,
+		MissingItems: missingItems,
+		Message:      "Laporan shift otomatis berhasil dikirimkan ke channel Discord!",
+		Payload:      payload,
+	}, nil
+}
