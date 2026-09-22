@@ -98,3 +98,101 @@ func TestGetShiftSchedule(t *testing.T) {
 
 func TestEvaluateShiftCompleteness(t *testing.T) {
 	f := false
+	tr := true
+	pendingEvalStatus, missingItems := domain.EvaluateShiftCompleteness(domain.ShiftReportData{
+		SupervisorName: "Petrus Juan Teranggani",
+		SupervisorNIK:  "SPV0001",
+		Department:     "Engineering Maintenance",
+		Plant:          "Pulogadung",
+		Shift:          "1",
+		Date:           "18/09/2026",
+		AssignedTechnicians: []domain.AssignedTechnicianStatus{
+			{NIK: "TKN0001", Name: "Budi Santoso", HasReported: true},
+			{NIK: "TKN0002", Name: "Andi Wijaya", HasReported: false, IsNihil: &f},
+		},
+	})
+
+	if pendingEvalStatus != domain.ShiftReportStatusPending {
+		t.Errorf("Status = %s; want PENDING", pendingEvalStatus)
+	}
+	if len(missingItems) != 1 {
+		t.Errorf("Missing items count = %d; want 1", len(missingItems))
+	}
+
+	completeEvalStatus, missingComplete := domain.EvaluateShiftCompleteness(domain.ShiftReportData{
+		SupervisorName: "Petrus Juan Teranggani",
+		SupervisorNIK:  "SPV0001",
+		Department:     "Engineering Maintenance",
+		Plant:          "Pulogadung",
+		Shift:          "1",
+		Date:           "18/09/2026",
+		AssignedTechnicians: []domain.AssignedTechnicianStatus{
+			{NIK: "TKN0001", Name: "Budi Santoso", HasReported: true},
+			{NIK: "TKN0002", Name: "Andi Wijaya", HasReported: false, IsNihil: &tr},
+		},
+	})
+
+	if completeEvalStatus != domain.ShiftReportStatusComplete {
+		t.Errorf("Status = %s; want COMPLETE", completeEvalStatus)
+	}
+	if len(missingComplete) != 0 {
+		t.Errorf("Missing items count = %d; want 0", len(missingComplete))
+	}
+}
+
+func TestFormatDiscordShiftReportAutoSummary(t *testing.T) {
+	payload := domain.FormatDiscordShiftReport(domain.ShiftReportData{
+		SupervisorName:      "Petrus Juan Teranggani",
+		SupervisorNIK:       "SPV0001",
+		Department:          "Engineering Maintenance Pulogadung",
+		Plant:               "Pulogadung",
+		Shift:               "2",
+		DayCategory:         domain.DayCategoryWeekday,
+		Date:                "18/09/2026",
+		ActiveMachinesCount: 42,
+		BreakdownCount:      0,
+	})
+
+	if !strings.Contains(payload.Embeds[0].Title, "SHIFT 2") || !strings.Contains(payload.Embeds[0].Title, "15:00 - 22:30") {
+		t.Errorf("Title does not contain SHIFT 2 / 15:00 - 22:30: %s", payload.Embeds[0].Title)
+	}
+
+	foundSummary := false
+	for _, f := range payload.Embeds[0].Fields {
+		if strings.Contains(f.Name, "Laporan Teknisi") && strings.Contains(f.Value, "AUTO-GENERATED SISTEM") {
+			foundSummary = true
+		}
+	}
+	if !foundSummary {
+		t.Error("Auto-generated summary not found in fields")
+	}
+}
+
+func TestSendDiscordShiftReportSimulation(t *testing.T) {
+	result, err := domain.SendDiscordShiftReport(context.Background(), "https://discord.com/api/webhooks/simulate", domain.ShiftReportData{
+		SupervisorName:      "Petrus Juan Teranggani",
+		SupervisorNIK:       "SPV0001",
+		Department:          "Engineering Maintenance Pulogadung",
+		Plant:               "Pulogadung",
+		Shift:               "1",
+		Date:                "18/09/2026",
+		ActiveMachinesCount: 20,
+		BreakdownCount:      0,
+	})
+
+	if err != nil {
+		t.Fatalf("Unexpected error in simulation: %v", err)
+	}
+	if !result.Success {
+		t.Error("result.Success = false; want true")
+	}
+	if !result.Simulated {
+		t.Error("result.Simulated = false; want true")
+	}
+	if result.ReportStatus != domain.ShiftReportStatusComplete {
+		t.Errorf("ReportStatus = %s; want COMPLETE", result.ReportStatus)
+	}
+	if result.Payload.Embeds[0].Color != 0x059669 {
+		t.Errorf("Embed Color = %x; want 0x059669", result.Payload.Embeds[0].Color)
+	}
+}
