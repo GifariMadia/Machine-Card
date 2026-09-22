@@ -208,3 +208,213 @@ func GetCurrentShift(date time.Time) ShiftInfo {
 	if dayCategory == DayCategoryWeekend {
 		if totalMinutes >= 405 && totalMinutes < 855 {
 			return GetShiftSchedule("1", DayCategoryWeekend)
+		} else if totalMinutes >= 855 && totalMinutes < 1305 {
+			return GetShiftSchedule("2", DayCategoryWeekend)
+		}
+		return GetShiftSchedule("3", DayCategoryWeekend)
+	}
+
+	if totalMinutes >= 405 && totalMinutes < 900 {
+		return GetShiftSchedule("1", DayCategoryWeekday)
+	} else if totalMinutes >= 900 && totalMinutes < 1335 {
+		return GetShiftSchedule("2", DayCategoryWeekday)
+	}
+	return GetShiftSchedule("3", DayCategoryWeekday)
+}
+
+func EvaluateShiftCompleteness(data ShiftReportData) (ShiftReportStatus, []string) {
+	var missingItems []string
+
+	if len(data.AssignedTechnicians) > 0 {
+		for _, tech := range data.AssignedTechnicians {
+			isNihil := tech.IsNihil != nil && *tech.IsNihil
+			if !tech.HasReported && !isNihil {
+				missingItems = append(missingItems, fmt.Sprintf("Petugas %s (%s) belum mencatat realisasi atau pernyataan Nihil", tech.Name, tech.NIK))
+			}
+		}
+	}
+
+	if len(data.OpenTickets) > 0 {
+		for _, t := range data.OpenTickets {
+			normalizedStatus := strings.ToUpper(t.Status)
+			if normalizedStatus != "CLOSED" && normalizedStatus != "DONE" {
+				hasFollowUp := t.Progres != "" || t.TindakLanjut != "" || len(t.Actions) > 0
+				if !hasFollowUp && t.Progres == "" {
+					missingItems = append(missingItems, fmt.Sprintf("Tiket %s (%s) berstatus %s namun belum dilengkapi catatan progres & tindak lanjut", t.Ticket, t.Machine, t.Status))
+				}
+			}
+		}
+	}
+
+	if len(missingItems) == 0 {
+		return ShiftReportStatusComplete, []string{}
+	}
+	return ShiftReportStatusPending, missingItems
+}
+
+func GenerateAutoShiftSummary(shift, timeRange string, dayCategory DayCategory, activeMachinesCount, breakdownCount int, openTickets []ShiftTicketItem) (string, string) {
+	isNormal := breakdownCount == 0
+	dayLabel := "Weekdays"
+	if dayCategory == DayCategoryWeekend {
+		dayLabel = "Weekend"
+	}
+
+	var summary string
+	if isNormal {
+		summary = fmt.Sprintf("[AUTO-GENERATED SISTEM] Jadwal %s Shift %s (%s): Seluruh catatan teknisi lengkap. Sebanyak %d mesin tanpa tiket gangguan dalam penanganan. Kondisi operasi aktual memerlukan konfirmasi.", dayLabel, shift, timeRange, activeMachinesCount)
+	} else {
+		summary = fmt.Sprintf("[AUTO-GENERATED SISTEM] Jadwal %s Shift %s (%s): Sebanyak %d mesin tanpa gangguan dalam penanganan dan terdapat %d pekerjaan maintenance berstatus OPEN lintas shift.", dayLabel, shift, timeRange, activeMachinesCount, breakdownCount)
+	}
+
+	var handoverNotes string
+	if isNormal {
+		handoverNotes = "Tidak ada pekerjaan tertunda (OPEN/PENDING). Seluruh pekerjaan shift ini berstatus DONE."
+	} else {
+		var activeUnits []string
+		for _, t := range openTickets {
+			if t.Status == "OPEN" || t.Status == "IN_PROGRESS" {
+				activeUnits = append(activeUnits, t.Machine)
+			}
+		}
+		handoverNotes = fmt.Sprintf("Pekerjaan lanjutan antar-shift pada unit: %s. Tanggung jawab laporan shift asal telah tuntas; tindak lanjut fisik diteruskan ke shift berikutnya.", strings.Join(activeUnits, ", "))
+	}
+
+	return summary, handoverNotes
+}
+
+func formatSingleTicketLine(t ShiftTicketItem, index int) string {
+	statusUpper := strings.ToUpper(t.Status)
+	if statusUpper == "CLOSED" {
+		statusUpper = "DONE"
+	}
+	statusBadge := fmt.Sprintf("Status : *%s*", statusUpper)
+
+	timeInfo := ""
+	if t.TimeRange != "" {
+		timeInfo = fmt.Sprintf(" (%s)", t.TimeRange)
+	}
+
+	wrInfo := "\nWR : ~"
+	if t.WR != "" && t.WR != "~" {
+		wrInfo = fmt.Sprintf("\nWR : %s", t.WR)
+	} else if t.Ticket != "" && !strings.HasPrefix(t.Ticket, "WS-") && !strings.HasPrefix(t.Ticket, "CMP-") && !strings.HasPrefix(t.Ticket, "FIL-") {
+		wrInfo = fmt.Sprintf("\nWR : %s", t.Ticket)
+	}
+
+	actionsList := ""
+	if len(t.Actions) > 0 {
+		var lines []string
+		for _, act := range t.Actions {
+			lines = append(lines, fmt.Sprintf("• %s", act))
+		}
+		actionsList = "\n" + strings.Join(lines, "\n")
+	} else if t.Progres != "" {
+		actionsList = fmt.Sprintf("\n• %s", t.Progres)
+	}
+
+	noteLine := ""
+	if t.Note != "" {
+		noteLine = fmt.Sprintf("\nNOTE : %s", t.Note)
+	}
+
+	followUpLine := ""
+	if t.TindakLanjut != "" && len(t.Actions) == 0 {
+		followUpLine = fmt.Sprintf("\n↳ Tindak Lanjut : %s", t.TindakLanjut)
+	}
+
+	return fmt.Sprintf("**%d. %s : %s**%s%s%s\n%s%s%s",
+		index, t.Machine, t.Issue, timeInfo, wrInfo, actionsList, statusBadge, noteLine, followUpLine)
+}
+
+func truncate(s string, limit int) string {
+	if len(s) > limit {
+		return s[:limit]
+	}
+	return s
+}
+
+func FormatDiscordShiftReport(data ShiftReportData) DiscordPayload {
+	dayCategory := data.DayCategory
+	if dayCategory == "" {
+		dayCategory = GetDayCategory(time.Now())
+	}
+	sched := GetShiftSchedule(data.Shift, dayCategory)
+	reportStatus, missingItems := EvaluateShiftCompleteness(data)
+	isPendingReport := reportStatus == ShiftReportStatusPending
+	isAllNormal := data.BreakdownCount == 0 && !isPendingReport
+
+	statusEmoji := "🔴"
+	if isPendingReport {
+		statusEmoji = "🟡"
+	} else if isAllNormal {
+		statusEmoji = "🟢"
+	}
+
+	color := 0xe11d48
+	if isPendingReport {
+		color = 0xd97706
+	} else if isAllNormal {
+		color = 0x059669
+	}
+
+	autoSummary, autoHandover := GenerateAutoShiftSummary(
+		data.Shift,
+		sched.TimeRange,
+		dayCategory,
+		data.ActiveMachinesCount,
+		data.BreakdownCount,
+		data.OpenTickets,
+	)
+
+	finalSummary := data.Summary
+	if finalSummary == "" {
+		finalSummary = autoSummary
+	}
+
+	finalHandover := data.HandoverNotes
+	if finalHandover == "" {
+		finalHandover = autoHandover
+	}
+
+	tickets := data.OpenTickets
+	hasAreaGrouping := false
+	for _, t := range tickets {
+		if t.Area != "" {
+			hasAreaGrouping = true
+			break
+		}
+	}
+
+	type areaDef struct {
+		key   ShiftAreaCategory
+		label string
+	}
+	areaDefs := []areaDef{
+		{key: AreaRuangRepair, label: "Ruang Repair / Workshop :"},
+		{key: AreaCompounding, label: "AREA COMPOUNDING :"},
+		{key: AreaFilling, label: "AREA FILLING :"},
+		{key: AreaPackaging, label: "AREA PACKAGING :"},
+		{key: AreaPBJT, label: "PBJT :"},
+		{key: AreaPM, label: "PM :"},
+		{key: AreaOther, label: "OTHER :"},
+	}
+
+	var areaFields []DiscordField
+	if hasAreaGrouping {
+		for _, ad := range areaDefs {
+			var items []ShiftTicketItem
+			for _, t := range tickets {
+				areaUpper := strings.ToUpper(strings.TrimSpace(t.Area))
+				if ad.key == AreaPBJT && areaUpper == "PBJT" {
+					items = append(items, t)
+				} else if ad.key == AreaPM && areaUpper == "PM" {
+					items = append(items, t)
+				} else if areaUpper == string(ad.key) {
+					items = append(items, t)
+				}
+			}
+			if len(items) > 0 {
+				var formatted []string
+				for idx, item := range items {
+					formatted = append(formatted, formatSingleTicketLine(item, idx+1))
+				}
