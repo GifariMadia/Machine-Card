@@ -358,3 +358,181 @@ func (h *Handler) CloseOpenWork(w http.ResponseWriter, r *http.Request) {
 // GetOpenWorks: Mengambil riwayat breakdown tiket dengan perbandingan waktu teknisi vs downtime operasional
 func (h *Handler) GetOpenWorks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	q := r.URL.Query()
+
+	status := strings.TrimSpace(q.Get("status"))
+	machine := strings.TrimSpace(q.Get("machine"))
+	section := strings.TrimSpace(q.Get("section"))
+	limit := domain.NormalizeLimit(q.Get("limit"))
+
+	tickets, err := h.repo.ListOpenWorks(ctx, status, machine, section, limit)
+	if err != nil {
+		if errors.Is(err, db.ErrDegraded) {
+			writeStructuredError(w, r, http.StatusServiceUnavailable, "ERR_DB_DEGRADED", "Database belum tersambung")
+			return
+		}
+		writeStructuredError(w, r, http.StatusInternalServerError, "ERR_INTERNAL", "Terjadi kesalahan pada server")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"data":       tickets,
+		"total":      len(tickets),
+		"request_id": GetRequestID(ctx),
+	})
+}
+
+// GetBreakdownAnalytics: Mengembalikan metrik MTTR, MTBF, Availability, Pareto Mesin, dan Tren Kerusakan
+func (h *Handler) GetBreakdownAnalytics(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	analytics, err := h.repo.GetBreakdownAnalytics(ctx)
+	if err != nil {
+		if errors.Is(err, db.ErrDegraded) {
+			writeStructuredError(w, r, http.StatusServiceUnavailable, "ERR_DB_DEGRADED", "Database belum tersambung")
+			return
+		}
+		writeStructuredError(w, r, http.StatusInternalServerError, "ERR_INTERNAL", "Terjadi kesalahan pada server")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"data":       analytics,
+		"request_id": GetRequestID(ctx),
+	})
+}
+
+func (h *Handler) PostShiftReportDiscord(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	rawBody, err := ReadAndRestoreBody(r)
+	if err != nil {
+		writeStructuredError(w, r, http.StatusRequestEntityTooLarge, "ERR_PAYLOAD_TOO_LARGE", "Ukuran payload melebihi batas maksimum (1 MB)")
+		return
+	}
+
+	idemKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	payloadHash := HashPayload(rawBody)
+	if idemKey != "" && h.idempotency != nil && ActorFromContext(ctx).NIK == "" {
+		if rec, found, conflict := h.idempotency.Check("POST:/api/shift-report/discord", idemKey, payloadHash); found {
+			if conflict {
+				writeStructuredError(w, r, http.StatusConflict, "ERR_IDEMPOTENCY_PAYLOAD_MISMATCH", "Idempotency-Key yang sama tidak boleh digunakan untuk payload berbeda")
+				return
+			}
+			w.Header().Set("X-Idempotent-Replayed", "true")
+			writeJSONBytes(w, rec.Status, rec.Body)
+			return
+		}
+	}
+
+	var data domain.ShiftReportData
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		writeStructuredError(w, r, http.StatusBadRequest, "ERR_INVALID_PAYLOAD", "Payload shift report tidak valid")
+		return
+	}
+
+	// Apply defaults
+	if data.SupervisorName == "" {
+		data.SupervisorName = "SPV Maintenance"
+	}
+	if data.SupervisorNIK == "" {
+		data.SupervisorNIK = "SPV0001"
+	}
+	if data.Department == "" {
+		data.Department = "Engineering Maintenance Pulogadung"
+	}
+	if data.Plant == "" {
+		data.Plant = "Pulogadung"
+	}
+	if data.Shift == "" {
+		data.Shift = "1"
+	}
+	if data.DayCategory != domain.DayCategoryWeekend {
+		data.DayCategory = domain.DayCategoryWeekday
+	}
+	if data.Date == "" {
+		data.Date = time.Now().Format("02/01/2006")
+	}
+
+	targetURL := strings.TrimSpace(data.WebhookURL)
+	if targetURL == "" {
+		targetURL = h.cfg.DiscordWebhookURL
+	}
+
+	if targetURL == "" {
+		writeError(w, 400, "Webhook server belum dikonfigurasi. Gunakan tombol simulasi untuk pratinjau.")
+		return
+	}
+	var result *domain.DiscordReportResult
+	if store, ok := h.repo.(*db.PostgresRepo); ok {
+		actor := ActorFromContext(ctx)
+		if !strings.Contains(targetURL, "simulate") {
+			if actor.Role != "SUPERVISOR" && actor.Role != "ADMIN" {
+				writeError(w, 403, "Pengiriman resmi memerlukan Supervisor")
+				return
+			}
+			date, parseErr := time.Parse("02/01/2006", data.Date)
+			if parseErr != nil {
+				writeError(w, 400, "Tanggal laporan tidak valid")
+				return
+			}
+			docs, readErr := store.Documents(ctx, actor)
+			if readErr != nil {
+				writeError(w, 503, "Data laporan belum tersedia")
+				return
+			}
+			report, ready := readyShiftReports(docs, time.Now())[date.Format("2006-01-02")+":"+data.Shift]
+			if !ready {
+				writeError(w, 409, "Laporan belum lengkap atau shift belum berakhir")
+				return
+			}
+			data = report
+		}
+		data.SupervisorNIK = actor.NIK
+		data.SupervisorName = actor.Name
+		if idemKey == "" {
+			writeError(w, 400, "Idempotency-Key wajib diisi")
+			return
+		}
+		result, err = store.Dispatch(ctx, actor, idemKey, payloadHash, func() (*domain.DiscordReportResult, error) {
+			return domain.SendDiscordShiftReport(ctx, targetURL, data)
+		})
+	} else {
+		result, err = domain.SendDiscordShiftReport(ctx, targetURL, data)
+	}
+	if err != nil {
+		if errors.Is(err, db.ErrConflict) {
+			writeStructuredError(w, r, 409, "ERR_DISPATCH_UNCERTAIN", "Status pengiriman belum pasti atau payload berubah. Periksa riwayat/Discord sebelum mengirim ulang.")
+			return
+		}
+		if errors.Is(err, domain.ErrUnsafeWebhookURL) {
+			writeStructuredError(w, r, http.StatusBadRequest, "ERR_SSRF_BLOCKED", err.Error())
+			return
+		}
+		writeStructuredError(w, r, http.StatusInternalServerError, "ERR_DISCORD_WEBHOOK", err.Error())
+		return
+	}
+
+	respBytes, _ := json.Marshal(result)
+	if idemKey != "" && h.idempotency != nil && ActorFromContext(ctx).NIK == "" {
+		h.idempotency.Save("POST:/api/shift-report/discord", idemKey, payloadHash, http.StatusOK, respBytes)
+	}
+
+	if h.obs != nil {
+		h.obs.RecordAudit(AuditEntry{
+			RequestID:  GetRequestID(ctx),
+			ActorNIK:   strings.ToUpper(strings.TrimSpace(data.SupervisorNIK)),
+			ActorRole:  "SUPERVISOR",
+			Action:     "DISPATCH_DISCORD_SHIFT_REPORT",
+			EntityType: "SHIFT_REPORT",
+			EntityID:   data.Date + "-SHIFT-" + data.Shift,
+			StatusCode: http.StatusOK,
+			Metadata: map[string]any{
+				"report_status": string(result.ReportStatus),
+				"simulated":     result.Simulated,
+			},
+		})
+	}
+
+	writeJSONBytes(w, http.StatusOK, respBytes)
+}
