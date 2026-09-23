@@ -193,3 +193,196 @@ func extractClientIP(r *http.Request) string {
 }
 
 // IdempotencyRecord menyimpan respons dari operasi yang telah dieksekusi (Bab 17 & Lab 3).
+type IdempotencyRecord struct {
+	PayloadHash string
+	Status      int
+	Body        []byte
+	CreatedAt   time.Time
+	ExpiresAt   time.Time
+}
+
+type IdempotencyStore struct {
+	mu      sync.Mutex
+	records map[string]IdempotencyRecord
+	ttl     time.Duration
+	obs     *ObservabilityCollector
+}
+
+func NewIdempotencyStore(ttl time.Duration, obs *ObservabilityCollector) *IdempotencyStore {
+	return &IdempotencyStore{
+		records: make(map[string]IdempotencyRecord),
+		ttl:     ttl,
+		obs:     obs,
+	}
+}
+
+func HashPayload(raw []byte) string {
+	sum := sha256.Sum256(bytes.TrimSpace(raw))
+	return hex.EncodeToString(sum[:])
+}
+
+// CheckOrReserve memeriksa apakah Idempotency-Key sudah pernah diproses.
+func (s *IdempotencyStore) Check(scope, key, payloadHash string) (rec IdempotencyRecord, found bool, conflict bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	composite := scope + ":" + key
+	existing, ok := s.records[composite]
+	if !ok {
+		return IdempotencyRecord{}, false, false
+	}
+
+	if time.Now().After(existing.ExpiresAt) {
+		delete(s.records, composite)
+		return IdempotencyRecord{}, false, false
+	}
+
+	if existing.PayloadHash != payloadHash {
+		return existing, true, true
+	}
+
+	if s.obs != nil {
+		atomic.AddInt64(&s.obs.idempotentReplays, 1)
+	}
+	return existing, true, false
+}
+
+func (s *IdempotencyStore) Save(scope, key, payloadHash string, status int, body []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	composite := scope + ":" + key
+	now := time.Now()
+	s.records[composite] = IdempotencyRecord{
+		PayloadHash: payloadHash,
+		Status:      status,
+		Body:        append([]byte(nil), body...),
+		CreatedAt:   now,
+		ExpiresAt:   now.Add(s.ttl),
+	}
+}
+
+// ReadAndRestoreBody membaca body untuk fingerprinting dan mengembalikannya ke r.Body.
+func ReadAndRestoreBody(r *http.Request) ([]byte, error) {
+	if r.Body == nil {
+		return nil, nil
+	}
+	raw, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	r.Body = io.NopCloser(bytes.NewReader(raw))
+	return raw, nil
+}
+
+// AuditEntry merepresentasikan jejak audit perubahan penting GxP ALCOA+ (Bab 33).
+type AuditEntry struct {
+	RequestID  string         `json:"request_id"`
+	ActorNIK   string         `json:"actor_nik"`
+	ActorRole  string         `json:"actor_role"`
+	Action     string         `json:"action"`
+	EntityType string         `json:"entity_type"`
+	EntityID   string         `json:"entity_id"`
+	StatusCode int            `json:"status_code"`
+	Metadata   map[string]any `json:"metadata,omitempty"`
+	Timestamp  string         `json:"timestamp"`
+}
+
+// ObservabilityCollector mengumpulkan SLI/SLO (latency p50/p95, error budget, dan audit trail) (Bab 33 & Bab 34).
+type ObservabilityCollector struct {
+	mu                sync.Mutex
+	startedAt         time.Time
+	totalRequests     int64
+	errorRequests     int64
+	idempotentReplays int64
+	rateLimitedCount  int64
+	latenciesMs       []float64
+	maxLatencySamples int
+	auditTrail        []AuditEntry
+	maxAuditEntries   int
+}
+
+func NewObservabilityCollector() *ObservabilityCollector {
+	return &ObservabilityCollector{
+		startedAt:         time.Now(),
+		latenciesMs:       make([]float64, 0, 256),
+		maxLatencySamples: 500,
+		auditTrail:        make([]AuditEntry, 0, 64),
+		maxAuditEntries:   100,
+	}
+}
+
+func (o *ObservabilityCollector) RecordRequest(status int, durationMs float64) {
+	atomic.AddInt64(&o.totalRequests, 1)
+	if status >= 500 {
+		atomic.AddInt64(&o.errorRequests, 1)
+	}
+
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if len(o.latenciesMs) >= o.maxLatencySamples {
+		o.latenciesMs = o.latenciesMs[1:]
+	}
+	o.latenciesMs = append(o.latenciesMs, durationMs)
+}
+
+func (o *ObservabilityCollector) RecordAudit(entry AuditEntry) {
+	if entry.Timestamp == "" {
+		entry.Timestamp = time.Now().Format(time.RFC3339)
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if len(o.auditTrail) >= o.maxAuditEntries {
+		o.auditTrail = o.auditTrail[1:]
+	}
+	// Prepend terbaru di awal saat dibaca
+	o.auditTrail = append(o.auditTrail, entry)
+}
+
+func (o *ObservabilityCollector) Snapshot() map[string]any {
+	total := atomic.LoadInt64(&o.totalRequests)
+	errCount := atomic.LoadInt64(&o.errorRequests)
+	replays := atomic.LoadInt64(&o.idempotentReplays)
+	rateLimited := atomic.LoadInt64(&o.rateLimitedCount)
+
+	availabilitySLI := 100.0
+	if total > 0 {
+		availabilitySLI = float64(total-errCount) / float64(total) * 100.0
+	}
+
+	o.mu.Lock()
+	latCopy := make([]float64, len(o.latenciesMs))
+	copy(latCopy, o.latenciesMs)
+
+	audits := make([]AuditEntry, len(o.auditTrail))
+	for i := range o.auditTrail {
+		audits[i] = o.auditTrail[len(o.auditTrail)-1-i]
+	}
+	o.mu.Unlock()
+
+	p50, p95 := computePercentiles(latCopy)
+
+	return map[string]any{
+		"uptime_seconds":             int64(time.Since(o.startedAt).Seconds()),
+		"total_requests":             total,
+		"server_error_requests":      errCount,
+		"availability_sli_percent":   availabilitySLI,
+		"slo_target_percent":         99.5,
+		"p50_latency_ms":             p50,
+		"p95_latency_ms":             p95,
+		"idempotent_replays":         replays,
+		"rate_limited_requests":      rateLimited,
+		"audit_trail_recent":         audits,
+		"audit_trail_total_buffered": len(audits),
+	}
+}
+
+func computePercentiles(samples []float64) (p50 float64, p95 float64) {
+	if len(samples) == 0 {
+		return 0, 0
+	}
+	sort.Float64s(samples)
+	idx50 := int(float64(len(samples)-1) * 0.50)
+	idx95 := int(float64(len(samples)-1) * 0.95)
+	return samples[idx50], samples[idx95]
+}
