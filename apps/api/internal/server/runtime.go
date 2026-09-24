@@ -98,3 +98,99 @@ func SecureRouter(core http.Handler, store db.Runtime, origin string) http.Handl
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, 4<<20)
 		if json.NewDecoder(r.Body).Decode(&input) != nil {
+			writeError(w, 400, "Payload tidak valid")
+			return
+		}
+		result, err := store.Commit(r.Context(), ActorFromContext(r.Context()), input.Key, input.Changes)
+		if err != nil {
+			status := 503
+			if errors.Is(err, db.ErrConflict) {
+				status = 409
+			}
+			if errors.Is(err, db.ErrForbidden) {
+				status = 403
+			}
+			writeError(w, status, "Perubahan belum tersimpan: akses ditolak, data berubah, atau penyimpanan tidak tersedia")
+			return
+		}
+		writeJSON(w, 200, result)
+	})
+	mux.HandleFunc("GET /api/events", func(w http.ResponseWriter, r *http.Request) {
+		a := ActorFromContext(r.Context())
+		if a.Role != "ADMIN" && a.Role != "SUPERVISOR" {
+			writeError(w, 403, "Akses ditolak")
+			return
+		}
+		reader, ok := store.(interface {
+			Events(context.Context) (json.RawMessage, error)
+		})
+		if !ok {
+			writeError(w, 503, "Audit belum tersedia")
+			return
+		}
+		value, err := reader.Events(r.Context())
+		if err != nil {
+			writeError(w, 503, "Audit belum tersedia")
+			return
+		}
+		writeJSON(w, 200, value)
+	})
+	mux.Handle("/", core)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		if r.Method == http.MethodOptions {
+			core.ServeHTTP(w, r)
+			return
+		}
+		if r.URL.Path == "/api/health" || r.URL.Path == "/api/auth/login" {
+			mux.ServeHTTP(w, r)
+			return
+		}
+		if store == nil {
+			writeError(w, 503, "Penyimpanan server belum tersedia")
+			return
+		}
+		cookie, err := r.Cookie("mc_session")
+		if err != nil || cookie.Value == "" {
+			writeError(w, 401, "Silakan login")
+			return
+		}
+		a, err := store.Session(r.Context(), cookie.Value)
+		if err != nil {
+			writeError(w, 401, "Sesi tidak berlaku")
+			return
+		}
+		if r.Method != http.MethodGet && !sameOrigin(r, origin) {
+			writeError(w, 403, "Origin ditolak")
+			return
+		}
+		switch r.URL.Path {
+		case "/api/observability", "/":
+			if a.Role != "ADMIN" {
+				writeError(w, 403, "Akses administrator diperlukan")
+				return
+			}
+		case "/api/shift-report/discord":
+			if a.Role != "SUPERVISOR" && a.Role != "ADMIN" && a.Role != "TEKNISI" {
+				writeError(w, 403, "Akses ditolak")
+				return
+			}
+		case "/api/open-work", "/api/open-work/close", "/api/machines", "/api/monitoring", "/api/analytics/breakdown":
+			writeError(w, 410, "Endpoint lama dihentikan. Gunakan data dan transaksi /api/state")
+			return
+		}
+		mux.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), actorKey{}, a)))
+	})
+}
+
+func sameOrigin(r *http.Request, configured string) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	if origin == strings.TrimSuffix(configured, "/") {
+		return true
+	}
+	// Same-host reverse proxies may serve the UI on a tunnel host.
+	return origin == "http://"+r.Host || origin == "https://"+r.Host
+}
