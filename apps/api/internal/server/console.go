@@ -258,3 +258,261 @@ func (h *Handler) BackendConsole(w http.ResponseWriter, r *http.Request) {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: #f8faf9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-header h3 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+    }
+    table {
+      width: 100%%;
+      border-collapse: collapse;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+    th {
+      text-align: left;
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--subtle);
+      background: #fbfcfc;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid #eef2f0;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    .mono {
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    .method {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .method.get { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .method.post { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .role-tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 11px;
+      background: #f1f5f9;
+      color: #334155;
+    }
+    .empty-row {
+      text-align: center;
+      color: var(--subtle);
+      padding: 24px !important;
+    }
+    a.ep-link {
+      color: #047857;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    a.ep-link:hover { text-decoration: underline; }
+    .table-scroll {
+      width: 100%%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    @media (max-width: 768px) {
+      .topbar { padding: 12px 16px; }
+      .topbar-right { width: 100%%; justify-content: space-between; }
+      .container { padding: 16px 12px; }
+      .section-head { flex-direction: column; gap: 4px; align-items: flex-start; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .kpi-val { font-size: 18px; }
+      .panel-header { flex-direction: column; align-items: flex-start; gap: 4px; }
+      table, thead, tbody, tr, td { display: block; width: 100%%; min-width: 0; }
+      thead { display: none; }
+      tbody { padding: 10px; display: flex; flex-direction: column; gap: 10px; background: #f3f5f4; }
+      tr { background: #ffffff; border: 1px solid var(--border); border-radius: 8px; padding: 4px 12px; }
+      td { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px dashed #e2e8f0; text-align: right; }
+      td:last-child { border-bottom: none; }
+      td[data-label]::before { content: attr(data-label); font-family: var(--sans); font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--subtle); text-align: left; }
+    }
+    @media (max-width: 420px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">B7</div>
+      <div class="brand-title">
+        <strong>PT Bintang Toedjoe · Machine Card Backend Engine</strong>
+        <small>Golang net/http · pgx/v5 · GxP ALCOA+ Validated</small>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="status-pill %s">%s</span>
+      <a class="btn-link" href="http://localhost:5173/">Buka Web Portal (:5173) &rarr;</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="section-head">
+      <h1>Observability, SLI/SLO &amp; Runtime Telemetry (Bab 33–36)</h1>
+      <span>Server Time: %s</span>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-box emerald">
+        <div class="kpi-label">Availability SLI</div>
+        <div class="kpi-val">%.2f%%</div>
+        <div class="kpi-sub">Target SLO: &gt;= 99.50%% (5xx: %d)</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Latency (p50 / p95)</div>
+        <div class="kpi-val">%.2f / %.2f ms</div>
+        <div class="kpi-sub">Distribusi waktu respons aktual</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Total Requests</div>
+        <div class="kpi-val">%d</div>
+        <div class="kpi-sub">Uptime: %d detik</div>
+      </div>
+      <div class="kpi-box amber">
+        <div class="kpi-label">Idempotency &amp; Guard</div>
+        <div class="kpi-val">%d / %d</div>
+        <div class="kpi-sub">Replay Idempoten / Rate-Limited (429)</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h3>Kontrak Layanan REST API (Bab 16 &amp; Bab 17)</h3>
+        <span class="mono">Base URL: http://localhost:4000</span>
+      </div>
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Endpoint</th>
+            <th>Proteksi &amp; Invariant</th>
+            <th>Deskripsi Kontrak</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Method"><span class="method get">GET</span></td>
+            <td data-label="Endpoint" class="mono"><a class="ep-link" href="/api/health">/api/health</a></td>
+            <td data-label="Proteksi" class="mono">Readiness Probe</td>
+            <td data-label="Deskripsi">Status koneksi PostgreSQL &amp; sinkronisasi waktu server</td>
+          </tr>
+          <tr>
+            <td data-label="Method"><span class="method get">GET</span></td>
+            <td data-label="Endpoint" class="mono"><a class="ep-link" href="/api/observability">/api/observability</a></td>
+            <td data-label="Proteksi" class="mono">SLI/SLO + Audit</td>
+            <td data-label="Deskripsi">Snapshot JSON metrik latensi p50/p95, error budget, dan jejak audit GxP</td>
+          </tr>
+          <tr>
+            <td data-label="Method"><span class="method get">GET</span></td>
+            <td data-label="Endpoint" class="mono"><a class="ep-link" href="/api/machines">/api/machines</a></td>
+            <td data-label="Proteksi" class="mono">Unrestricted Field Access</td>
+            <td data-label="Deskripsi">Daftar seluruh mesin aktif pabrik tanpa restriksi operator</td>
+          </tr>
+          <tr>
+            <td data-label="Method"><span class="method get">GET</span></td>
+            <td data-label="Endpoint" class="mono"><a class="ep-link" href="/api/open-work">/api/open-work</a></td>
+            <td data-label="Proteksi" class="mono">Timeline Comparison</td>
+            <td data-label="Deskripsi">Daftar tiket breakdown beserta komparasi durasi teknisi vs downtime operasional</td>
+          </tr>
+          <tr>
+            <td data-label="Method"><span class="method post">POST</span></td>
+            <td data-label="Endpoint" class="mono">/api/open-work</td>
+            <td data-label="Proteksi" class="mono">Idempotency-Key + Timeline Check</td>
+            <td data-label="Deskripsi">Pelaporan tiket breakdown baru oleh operator aktif</td>
+          </tr>
+          <tr>
+            <td data-label="Method"><span class="method post">POST</span></td>
+            <td data-label="Endpoint" class="mono">/api/open-work/close</td>
+            <td data-label="Proteksi" class="mono">Optimistic Lock + State Machine</td>
+            <td data-label="Deskripsi">Penutupan tiket oleh operator saat mesin beroperasi kembali (mendukung ganti shift)</td>
+          </tr>
+          <tr>
+            <td data-label="Method"><span class="method get">GET</span></td>
+            <td data-label="Endpoint" class="mono"><a class="ep-link" href="/api/analytics/breakdown">/api/analytics/breakdown</a></td>
+            <td data-label="Proteksi" class="mono">MTTR / MTBF / Pareto</td>
+            <td data-label="Deskripsi">Agregasi MTTR Operasional, MTTR Teknis, MTBF, Availability, &amp; Pareto Mesin</td>
+          </tr>
+          <tr>
+            <td data-label="Method"><span class="method post">POST</span></td>
+            <td data-label="Endpoint" class="mono">/api/shift-report/discord</td>
+            <td data-label="Proteksi" class="mono">SSRF Guard + Idempotency-Key</td>
+            <td data-label="Deskripsi">Pengiriman laporan serah-terima shift otomatis ke webhook resmi Discord</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h3>Jejak Audit Operasional Terbaru (GxP ALCOA+ Audit Trail · Bab 33)</h3>
+        <span class="mono">Correlation: X-Request-ID</span>
+      </div>
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Request ID</th>
+            <th>Actor NIK</th>
+            <th>Role</th>
+            <th>Action</th>
+            <th>Entity ID</th>
+            <th>HTTP</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          %s
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </main>
+</body>
+</html>`,
+		dbBadgeClass,
+		html.EscapeString(dbStatus),
+		time.Now().Format(time.RFC3339),
+		availSLI,
+		errReq,
+		p50Ms,
+		p95Ms,
+		totalReq,
+		uptimeSec,
+		idemReplays,
+		rateLimited,
+		auditRowsHTML,
+	)
+
+	_, _ = w.Write([]byte(page))
+}
