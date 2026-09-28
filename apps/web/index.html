@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="theme-color" content="#14231d" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/assets/favicon-192x192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600;1,700;1,800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>Machine Card · PT Bintang Toedjoe</title>
+    <script>
+      function showGlobalError(title, msg) {
+        var root = document.getElementById('root');
+        if (root && (!root.firstElementChild || root.children.length === 0)) {
+          root.innerHTML =
+            '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;color:#f8fafc;font-family:system-ui,-apple-system,sans-serif;padding:1.5rem;text-align:center;">' +
+            '<div style="max-width:480px;width:100%;background:#1e293b;border:1px solid #334155;border-radius:16px;padding:2rem;box-shadow:0 20px 40px rgba(0,0,0,0.5);">' +
+            '<div style="font-size:2.2rem;margin-bottom:1rem;">⚠️</div>' +
+            '<h2 style="margin:0 0 0.5rem;font-size:1.25rem;font-weight:700;">' + (title || 'Kendala Inisialisasi') + '</h2>' +
+            '<p style="margin:0 0 1.25rem;font-size:0.875rem;color:#94a3b8;line-height:1.5;">' + (msg || 'Browser atau ekstensi simulator Anda menahan cache script lama.') + '</p>' +
+            '<div style="display:flex;gap:8px;justify-content:center;">' +
+            '<button onclick="try{sessionStorage.clear();localStorage.clear();}catch(e){};window.location.href=window.location.pathname+\'?r=\'+Date.now();" style="padding:0.65rem 1.4rem;font-size:0.9rem;font-weight:600;border-radius:8px;background:#059669;color:#ffffff;border:none;cursor:pointer;">Reset Cache &amp; Buka Ulang</button>' +
+            '</div>' +
+            '</div></div>';
+        }
+      }
+
+      window.addEventListener('error', function (e) {
+        console.error('Machine Card Error caught:', e);
+        showGlobalError('Error Modul Antarmuka', e.message || (e.error && e.error.message) || String(e));
+      }, true);
+
+      window.addEventListener('unhandledrejection', function (e) {
+        console.error('Machine Card Unhandled Rejection:', e);
+        showGlobalError('Unhandled Rejection', (e.reason && (e.reason.message || e.reason.stack)) || String(e.reason));
+      });
+
+      // Timeout fallback jika script tertahan lebih dari 3.5 detik
+      setTimeout(function () {
+        var root = document.getElementById('root');
+        if (root && (!root.firstElementChild || root.children.length === 0)) {
+          showGlobalError('Waktu Pemuatan Habis', 'Inisialisasi modul antarmuka melebihi batas waktu normal. Kemungkinan ekstensi simulator menahan sesi lawas.');
+        }
+      }, 3500);
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
