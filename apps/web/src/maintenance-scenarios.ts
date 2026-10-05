@@ -2998,3 +2998,607 @@ export const INITIAL_100_MAINTENANCE_SCENARIOS: UnifiedMaintenanceScenario[] = [
       "spvNotes": "Durasi 0 menit tidak valid. Dikonfirmasi verifikasi log PLC perbaikan memakan waktu 45 menit."
     },
     "originalOpenedAt": "2026-10-23T21:00:00Z",
+    "createdAt": "2026-10-23T21:00:00Z",
+    "waktuSelesai": "2026-10-23T21:15:00Z",
+    "waktuMesinBeroperasi": "2026-10-23T21:30:00Z",
+    "penutupNik": "OPR0001",
+    "penutupName": "A. Dahlan",
+    "catatanClosing": "Mesin running kembali"
+  },
+  {
+    "ticket": "OW-2610-092",
+    "machine": "Ilapak 4",
+    "id_mesin": 15,
+    "section": "Horizontal Sealer",
+    "reporter": "OPR0002",
+    "reporterName": "Siti Nurhaliza",
+    "shift": "2",
+    "keterangan": "Alarm motor overheat trip pada conveyor",
+    "kategori": "Mekanis & Transmisi",
+    "woType": "Batch",
+    "kodeProduk": "EXT75",
+    "noBatch": "BT912",
+    "noWr": "260092",
+    "waktuMulai": "2026-10-23T19:00:00Z",
+    "opened": "19.00",
+    "status": "SELESAI_PERBAIKAN",
+    "technician": "TKN0002",
+    "technicianName": "Agus Setiawan",
+    "technicianNik": "TKN0002",
+    "action": "sudah dibenerin",
+    "durasiPerbaikanMenit": 70,
+    "durasiJam": "1.17",
+    "completenessAudit": {
+      "isIncomplete": true,
+      "defectType": "DESKRIPSI_AMBIGU",
+      "defectDescription": "Catatan tindakan teknisi terlalu singkat dan tidak informatif ('sudah dibetulkan')",
+      "spvVerdict": "REJECTED",
+      "spvNotes": "Ditolak: Tindakan teknis wajib merinci komponen yang diperiksa/diganti untuk kepatuhan GMP."
+    },
+    "originalOpenedAt": "2026-10-23T19:00:00Z",
+    "createdAt": "2026-10-23T19:00:00Z",
+    "waktuSelesai": "2026-10-23T20:10:00Z"
+  },
+  {
+    "ticket": "OW-2610-093",
+    "machine": "Jinsung 4",
+    "id_mesin": 27,
+    "section": "Mechanical Drive",
+    "reporter": "OPR0003",
+    "reporterName": "Rahmat Hidayat",
+    "shift": "3",
+    "keterangan": "Pisau pemotong sachet aus",
+    "kategori": "Kualitas Data & Audit",
+    "woType": "Batch",
+    "kodeProduk": "PRO09",
+    "noBatch": "KB044",
+    "noWr": "260093",
+    "waktuMulai": "2026-10-23T17:00:00Z",
+    "opened": "17.00",
+    "status": "SELESAI_PERBAIKAN",
+    "technician": "TKN0003",
+    "technicianName": "Dedi Prasetyo",
+    "technicianNik": "TKN0003",
+    "action": "Ganti mata pisau",
+    "durasiPerbaikanMenit": 60,
+    "durasiJam": "1.0",
+    "completenessAudit": {
+      "isIncomplete": true,
+      "defectType": "PART_QTY_NOL",
+      "defectDescription": "Form penggantian sparepart diisi nama part namun kuantitas pemakaian 0 Pcs",
+      "spvVerdict": "REVISED",
+      "spvNotes": "Koreksi kuantitas part menjadi 1 Pcs sesuai fisik serah terima gudang."
+    },
+    "originalOpenedAt": "2026-10-23T17:00:00Z",
+    "createdAt": "2026-10-23T17:00:00Z",
+    "waktuSelesai": "2026-10-23T18:00:00Z"
+  },
+  {
+    "ticket": "OW-2610-094",
+    "machine": "ST 12 RCL 1",
+    "id_mesin": 34,
+    "section": "Liquid Filler",
+    "reporter": "OPR0004",
+    "reporterName": "Bambang Tri",
+    "shift": "1",
+    "keterangan": "Silinder penggerak hopper macet di tengah stroke",
+    "kategori": "Mekanis & Transmisi",
+    "woType": "Batch",
+    "kodeProduk": "MED12",
+    "noBatch": "EM331",
+    "noWr": "260094",
+    "waktuMulai": "2026-10-23T15:00:00Z",
+    "opened": "15.00",
+    "status": "CLOSED",
+    "technician": "TKN0004",
+    "technicianName": "Eko Wahyudi",
+    "technicianNik": "TKN0004",
+    "action": "Pembersihan silinder dan pelumasan",
+    "durasiPerbaikanMenit": -30,
+    "durasiJam": "0.0",
+    "completenessAudit": {
+      "isIncomplete": true,
+      "defectType": "WAKTU_INVERSI",
+      "defectDescription": "Anomali waktu kronologis: Jam selesai tercatat mendahului jam mulai breakdown",
+      "spvVerdict": "REVISED",
+      "spvNotes": "Waktu mulai salah input AM/PM. Dikoreksi sesuai log SCADA sentral."
+    },
+    "originalOpenedAt": "2026-10-23T15:00:00Z",
+    "createdAt": "2026-10-23T15:00:00Z",
+    "waktuSelesai": "2026-10-23T15:15:00Z",
+    "waktuMesinBeroperasi": "2026-10-23T15:30:00Z",
+    "penutupNik": "OPR0004",
+    "penutupName": "Bambang Tri",
+    "catatanClosing": "Mesin running kembali"
+  },
+  {
+    "ticket": "OW-2610-095",
+    "machine": "Chimei 1B/SIG 6",
+    "id_mesin": 4,
+    "section": "Packaging",
+    "reporter": "OPR0005",
+    "reporterName": "Dewi Sartika",
+    "shift": "2",
+    "keterangan": "Kerusakan berulang (bad actor) motor drive sealing trip ke-4 bulan ini",
+    "kategori": "Kualitas Data & Audit",
+    "woType": "Batch",
+    "kodeProduk": "VIT88",
+    "noBatch": "VT204",
+    "noWr": "260095",
+    "waktuMulai": "2026-10-23T13:00:00Z",
+    "opened": "13.00",
+    "status": "IN_PROGRESS",
+    "technician": "TKN0001",
+    "technicianName": "Budi Santoso",
+    "technicianNik": "TKN0001",
+    "action": "Reset overload relay thermal",
+    "durasiPerbaikanMenit": 90,
+    "durasiJam": "1.5",
+    "completenessAudit": {
+      "isIncomplete": true,
+      "defectType": "REVISI_AKAR_MASALAH",
+      "defectDescription": "Tiket ditolak oleh Supervisor karena analisa 5-Why root cause belum dilampirkan",
+      "spvVerdict": "REJECTED",
+      "spvNotes": "Insiden berulang ke-4 kali! Ditolak sebelum teknisi melampirkan formulir investigasi akar masalah."
+    },
+    "originalOpenedAt": "2026-10-23T13:00:00Z",
+    "createdAt": "2026-10-23T13:00:00Z"
+  },
+  {
+    "ticket": "OW-2610-096",
+    "machine": "Ilapak 1",
+    "id_mesin": 12,
+    "section": "Filling & Sealing",
+    "reporter": "OPR0006",
+    "reporterName": "Agus Triyono",
+    "shift": "3",
+    "keterangan": "Gasket pneumatic line 1 bocor tekanan",
+    "kategori": "Mekanis & Transmisi",
+    "woType": "Batch",
+    "kodeProduk": "ANT01",
+    "noBatch": "AN880",
+    "noWr": "260096",
+    "waktuMulai": "2026-10-23T11:00:00Z",
+    "opened": "11.00",
+    "status": "CLOSED",
+    "technician": "TKN0002",
+    "technicianName": "Agus Setiawan",
+    "technicianNik": "TKN0002",
+    "action": "Penggantian gasket dan uji tekanan pneumatik",
+    "durasiPerbaikanMenit": 120,
+    "durasiJam": "2.0",
+    "completenessAudit": {
+      "isIncomplete": true,
+      "defectType": "KOREKSI_PENGUKURAN_RESMI",
+      "defectDescription": "Data pengukuran durasi aktif telah dikoreksi resmi melalui prosedur Audit Trail (Sebelum: 150 min, Sesudah: 120 min)",
+      "spvVerdict": "APPROVED",
+      "spvNotes": "Diaudit & disetujui: Koreksi durasi aktif setelah verifikasi rekaman time-stamp PLC (CORR-202610-001)."
+    },
+    "originalOpenedAt": "2026-10-23T11:00:00Z",
+    "createdAt": "2026-10-23T11:00:00Z",
+    "waktuSelesai": "2026-10-23T13:00:00Z",
+    "waktuMesinBeroperasi": "2026-10-23T13:15:00Z",
+    "penutupNik": "OPR0006",
+    "penutupName": "Agus Triyono",
+    "catatanClosing": "Mesin running kembali"
+  },
+  {
+    "ticket": "OW-2610-097",
+    "machine": "Ilapak 7",
+    "id_mesin": 18,
+    "section": "Rotary Cutter",
+    "reporter": "OPR0007",
+    "reporterName": "Fajar Sidik",
+    "shift": "1",
+    "keterangan": "Heater sealing bar bocor arus grounding trip ELCB",
+    "kategori": "Kualitas Data & Audit",
+    "woType": "Batch",
+    "kodeProduk": "—",
+    "noBatch": "—",
+    "noWr": "260097",
+    "waktuMulai": "2026-10-23T09:00:00Z",
+    "opened": "09.00",
+    "status": "SELESAI_PERBAIKAN",
+    "technician": "TKN0003",
+    "technicianName": "Dedi Prasetyo",
+    "technicianNik": "TKN0003",
+    "action": "Penggantian elemen pemanas dan isolasi keramik",
+    "durasiPerbaikanMenit": 80,
+    "durasiJam": "1.33",
+    "completenessAudit": {
+      "isIncomplete": true,
+      "defectType": "DATA_PRODUK_KOSONG",
+      "defectDescription": "Pekerjaan WO Batch tidak mencantumkan Nomor Batch dan Kode Produk obat",
+      "spvVerdict": "REVISED",
+      "spvNotes": "Nomor batch obat wajib diisi sebelum verifikasi akhir untuk penelusuran batch record."
+    },
+    "originalOpenedAt": "2026-10-23T09:00:00Z",
+    "createdAt": "2026-10-23T09:00:00Z",
+    "waktuSelesai": "2026-10-23T10:20:00Z"
+  },
+  {
+    "ticket": "OW-2610-098",
+    "machine": "Jinsung 5",
+    "id_mesin": 28,
+    "section": "Film Tensioner",
+    "reporter": "OPR0008",
+    "reporterName": "Indah Permata",
+    "shift": "2",
+    "keterangan": "Motor servo puller film alarm overload",
+    "kategori": "Mekanis & Transmisi",
+    "woType": "Batch",
+    "kodeProduk": "FLU02",
+    "noBatch": "FL440",
+    "noWr": "260098",
+    "waktuMulai": "2026-10-23T07:00:00Z",
+    "opened": "07.00",
+    "status": "HANDOVER",
+    "technician": "TKN0004",
+    "technicianName": "Eko Wahyudi",
+    "technicianNik": "TKN0004",
+    "action": "Pengecekan belt dan motor",
+    "durasiPerbaikanMenit": 180,
+    "durasiJam": "3.0",
+    "completenessAudit": {
+      "isIncomplete": true,
+      "defectType": "HANDOVER_TANPA_STATUS",
+      "defectDescription": "Catatan handover tidak mencantumkan kondisi terakhir komponen yang separuh terpasang",
+      "spvVerdict": "REJECTED",
+      "spvNotes": "Ditolak: Teknisi asal wajib memperbarui status pemasangan gear sebelum shift berikutnya melanjutkan."
+    },
+    "originalOpenedAt": "2026-10-23T07:00:00Z",
+    "createdAt": "2026-10-23T07:00:00Z"
+  },
+  {
+    "ticket": "OW-2610-099",
+    "machine": "Chimei 12A/Jinsung 1",
+    "id_mesin": 3,
+    "section": "Sealing",
+    "reporter": "OPR0009",
+    "reporterName": "Hadi Santoso",
+    "shift": "3",
+    "keterangan": "Mesin berhenti mendadak saat proses pengemasan",
+    "kategori": "Kualitas Data & Audit",
+    "woType": "Batch",
+    "kodeProduk": "LNKQA",
+    "noBatch": "HM758",
+    "noWr": "260099",
+    "waktuMulai": "2026-10-23T05:00:00Z",
+    "opened": "05.00",
+    "status": "CLOSED",
+    "technician": "TKN0001",
+    "technicianName": "Budi Santoso",
+    "technicianNik": "TKN0001",
+    "action": "Penggantian modul kontrol temperatur dan relay",
+    "durasiPerbaikanMenit": 105,
+    "durasiJam": "1.75",
+    "completenessAudit": {
+      "isIncomplete": true,
+      "defectType": "REKLASIFIKASI_KATEGORI",
+      "defectDescription": "Reklasifikasi kategori dari Mekanis Umum menjadi Sistem Pemanas / Steam Trap (CORR-202610-002)",
+      "spvVerdict": "APPROVED",
+      "spvNotes": "Koreksi klasifikasi untuk akurasi pelacakan bad actor sistem pemanas lini pengemasan."
+    },
+    "originalOpenedAt": "2026-10-23T05:00:00Z",
+    "createdAt": "2026-10-23T05:00:00Z",
+    "waktuSelesai": "2026-10-23T06:45:00Z",
+    "waktuMesinBeroperasi": "2026-10-23T07:00:00Z",
+    "penutupNik": "OPR0009",
+    "penutupName": "Hadi Santoso",
+    "catatanClosing": "Mesin running kembali"
+  },
+  {
+    "ticket": "OW-2610-100",
+    "machine": "Ilapak 2",
+    "id_mesin": 13,
+    "section": "Cutting & Sealing",
+    "reporter": "OPR0010",
+    "reporterName": "Nurul Aini",
+    "shift": "1",
+    "keterangan": "Inspeksi rutin preventif dan perbaikan ringan konveyor",
+    "kategori": "Mekanis & Transmisi",
+    "woType": "Batch",
+    "kodeProduk": "EXT75",
+    "noBatch": "BT912",
+    "noWr": "260100",
+    "waktuMulai": "2026-10-23T03:00:00Z",
+    "opened": "03.00",
+    "status": "OPEN",
+    "technician": "TKN0002",
+    "technicianName": "Agus Setiawan",
+    "technicianNik": "TKN0002",
+    "action": "Menunggu konfirmasi catatan shift teknisi",
+    "durasiPerbaikanMenit": 0,
+    "durasiJam": "0.0",
+    "completenessAudit": {
+      "isIncomplete": true,
+      "defectType": "LAPORAN_SHIFT_PENDING",
+      "defectDescription": "Laporan shift teknisi berstatus PENDING karena anggota shift belum mengisi realisasi atau pernyataan nihil",
+      "spvVerdict": "REJECTED",
+      "spvNotes": "Laporan shift ditahan PENDING sesuai prosedur kepatuhan operasional sampai seluruh checklist anggota lengkap."
+    },
+    "originalOpenedAt": "2026-10-23T03:00:00Z",
+    "createdAt": "2026-10-23T03:00:00Z"
+  }
+];
+
+export const INITIAL_PENDING_PART_JUSTIFICATIONS = [
+  {
+    "id": "JUSTIF-001",
+    "ticket": "OW-233183",
+    "machine": "Ilapak 1",
+    "technicianName": "Budi Santoso",
+    "technicianNik": "TKN0001",
+    "partName": "Rubber Sealing Pad",
+    "specification": "Silicone High-Temp 30 × 10 mm",
+    "quantity": "2",
+    "position": "Vertical Sealer Line 1",
+    "reportedAt": "2026-10-25T18:00:00Z",
+    "status": "PENDING"
+  },
+  {
+    "id": "JUSTIF-002",
+    "ticket": "OW-233174",
+    "machine": "Chimei 10A",
+    "technicianName": "Joko Purwanto",
+    "technicianNik": "TKN0002",
+    "partName": "Nozzle Tip Dispenser",
+    "specification": "Stainless Steel 316L 1.2 mm",
+    "quantity": "1",
+    "position": "Filling Head Station 2",
+    "reportedAt": "2026-10-24T21:00:00Z",
+    "status": "PENDING"
+  },
+  {
+    "id": "JUSTIF-003",
+    "ticket": "OW-2610-053",
+    "machine": "Ilapak 3",
+    "technicianName": "Dedi Prasetyo",
+    "technicianNik": "TKN0003",
+    "partName": "Heater Cartridge Custom 500W High-Temp",
+    "specification": "Incoloy 800 240V 500W L=150mm",
+    "quantity": "2",
+    "position": "Sealing Jaws Center",
+    "reportedAt": "2026-10-25T16:00:00Z",
+    "status": "PENDING"
+  },
+  {
+    "id": "JUSTIF-004",
+    "ticket": "OW-2610-056",
+    "machine": "Chimei 10A/Jinsung 3",
+    "technicianName": "Budi Santoso",
+    "technicianNik": "TKN0001",
+    "partName": "Pneumatic Gripper Festo HGPT-25-A",
+    "specification": "Parallel Gripper Double Acting Stroke 14mm",
+    "quantity": "1",
+    "position": "Sachet Transfer Arm",
+    "reportedAt": "2026-10-25T13:00:00Z",
+    "status": "PENDING"
+  },
+  {
+    "id": "JUSTIF-005",
+    "ticket": "OW-2610-058",
+    "machine": "ST 3 RCL 3",
+    "technicianName": "Agus Setiawan",
+    "technicianNik": "TKN0002",
+    "partName": "Teflon Sealing Belt Seamless 0.18mm",
+    "specification": "PTFE Coated Fiberglass Seamless W=20mm L=750mm",
+    "quantity": "4",
+    "position": "Continuous Sealer Belt",
+    "reportedAt": "2026-10-25T11:00:00Z",
+    "status": "PENDING"
+  },
+  {
+    "id": "JUSTIF-006",
+    "ticket": "OW-2610-060",
+    "machine": "SIG 5",
+    "technicianName": "Eko Wahyudi",
+    "technicianNik": "TKN0004",
+    "partName": "Rotary Encoder Omron E6B2-CWZ6C",
+    "specification": "1000 P/R NPN Open Collector DC 5-24V",
+    "quantity": "1",
+    "position": "Main Servo Cam Shaft",
+    "reportedAt": "2026-10-25T09:00:00Z",
+    "status": "PENDING"
+  },
+  {
+    "id": "JUSTIF-007",
+    "ticket": "OW-2610-063",
+    "machine": "Ilapak 7",
+    "technicianName": "Dedi Prasetyo",
+    "technicianNik": "TKN0003",
+    "partName": "Ceramic Cutting Blade 45mm Tungsten",
+    "specification": "Solid Tungsten Carbide TiN Coated Dia 45mm",
+    "quantity": "2",
+    "position": "Slitter Rotary Cutter",
+    "reportedAt": "2026-10-25T06:00:00Z",
+    "status": "PENDING"
+  },
+  {
+    "id": "JUSTIF-008",
+    "ticket": "OW-2610-066",
+    "machine": "Jinsung 2",
+    "technicianName": "Agus Setiawan",
+    "technicianNik": "TKN0002",
+    "partName": "Solid State Relay Fotek SSR-40DA",
+    "specification": "Input 3-32VDC Output 24-380VAC 40A",
+    "quantity": "1",
+    "position": "Heater Control Panel Line 2",
+    "reportedAt": "2026-10-25T03:00:00Z",
+    "status": "PENDING"
+  }
+];
+
+export const INITIAL_SYSTEM_AUDIT_LOGS = [
+  {
+    "id": "LOG-20261025-08",
+    "timestamp": "2026-10-25T20:48:00Z",
+    "actorName": "Siti Rahma (ADM0001)",
+    "actorRole": "ADMIN",
+    "eventType": "PART_JUSTIFICATION",
+    "action": "Justifikasi & Standarisasi Part Baru",
+    "target": "Rubber Sealing Pad (PART-009)",
+    "details": "Standarisasi nama part dari tiket breakdown OW-233183 (Ilapak 1), penetapan kategori Sealing, dan rumus lifetime 1500 Jam Operasi.",
+    "ipAddress": "192.168.10.45",
+    "status": "SUCCESS"
+  },
+  {
+    "id": "LOG-20261025-07",
+    "timestamp": "2026-10-25T19:36:00Z",
+    "actorName": "Siti Rahma (ADM0001)",
+    "actorRole": "ADMIN",
+    "eventType": "USER_MANAGEMENT",
+    "action": "Perubahan Peran & Hak Akses Pengguna",
+    "target": "Budi Santoso (TKN0001)",
+    "details": "Pemberian hak otorisasi penanganan breakdown lini Ilapak & Chimei.",
+    "ipAddress": "192.168.10.45",
+    "status": "SUCCESS"
+  },
+  {
+    "id": "LOG-20261025-06",
+    "timestamp": "2026-10-25T17:50:00Z",
+    "actorName": "Hendra Gunawan (SPV0001)",
+    "actorRole": "SUPERVISOR",
+    "eventType": "MACHINE_CONFIG",
+    "action": "Koreksi Jam Operasi Aktual Mesin (HM)",
+    "target": "Ilapak 1 (ILA-01)",
+    "details": "Pembaruan manual jam operasi dari 1.250 HM menjadi 1.280 HM pasca running continuous batch weekend.",
+    "ipAddress": "192.168.10.52",
+    "status": "SUCCESS"
+  },
+  {
+    "id": "LOG-20261025-05",
+    "timestamp": "2026-10-25T14:15:00Z",
+    "actorName": "Sistem Keamanan",
+    "actorRole": "SYSTEM",
+    "eventType": "SECURITY",
+    "action": "Deteksi Percobaan Login Gagal Berulang",
+    "target": "Akun NIK OPR0099",
+    "details": "3 kali gagal memasukkan kata sandi dari terminal Lini 4B. Akses sementara dibatasi 15 menit.",
+    "ipAddress": "192.168.12.18",
+    "status": "WARNING"
+  },
+  {
+    "id": "LOG-20261025-04",
+    "timestamp": "2026-10-25T11:30:00Z",
+    "actorName": "Siti Rahma (ADM0001)",
+    "actorRole": "ADMIN",
+    "eventType": "SYSTEM_RULE",
+    "action": "Pembaruan Ambang Batas Kritis Part",
+    "target": "Aturan Master Part Plant",
+    "details": "Penyesuaian batas peringatan warning lifetime dari 80% menjadi 85% untuk efisiensi OEE.",
+    "ipAddress": "192.168.10.45",
+    "status": "SUCCESS"
+  },
+  {
+    "id": "LOG-20261025-03",
+    "timestamp": "2026-10-25T06:45:00Z",
+    "actorName": "Siti Rahma (ADM0001)",
+    "actorRole": "ADMIN",
+    "eventType": "MACHINE_CONFIG",
+    "action": "Pembaruan Status Mesin",
+    "target": "Temach (OTH-03)",
+    "details": "Status mesin diubah menjadi AKTIF setelah penyelesaian kalibrasi load cell timbangan.",
+    "ipAddress": "192.168.10.45",
+    "status": "SUCCESS"
+  },
+  {
+    "id": "LOG-20261025-02",
+    "timestamp": "2026-10-24T19:00:00Z",
+    "actorName": "Hendra Gunawan (SPV0001)",
+    "actorRole": "SUPERVISOR",
+    "eventType": "PART_JUSTIFICATION",
+    "action": "Rekomendasi Part Baru dari Laporan Teknisi",
+    "target": "Nozzle Tip Dispenser (OW-233174)",
+    "details": "Pengajuan approval sparepart nozzle tip SS316L untuk standarisasi lini pengisian Chimei 10A.",
+    "ipAddress": "192.168.10.52",
+    "status": "SUCCESS"
+  },
+  {
+    "id": "LOG-20261025-01",
+    "timestamp": "2026-10-24T13:00:00Z",
+    "actorName": "Siti Rahma (ADM0001)",
+    "actorRole": "ADMIN",
+    "eventType": "USER_MANAGEMENT",
+    "action": "Registrasi Pengguna Baru",
+    "target": "Agus Triyono (OPR0006)",
+    "details": "Penambahan akun operator baru untuk penugasan Shift 2 Lini ST (Sachet).",
+    "ipAddress": "192.168.10.45",
+    "status": "SUCCESS"
+  }
+];
+
+/**
+ * Reset total dan injeksi 100 skenario pemeliharaan ke dalam browser storage.
+ * Memastikan seluruh modul (Operator, Teknisi, Handover, Supervisor, Admin) terisi data komprehensif.
+ */
+export function inject100MaintenanceScenarios(options?: { reload?: boolean }): {
+  totalTickets: number;
+  openCount: number;
+  inProgressCount: number;
+  handoverCount: number;
+  selesaiPerbaikanCount: number;
+  closedCount: number;
+  auditDefectCount: number;
+  pendingJustificationsCount: number;
+} {
+  try {
+    // 1. Simpan 100 Skenario ke machine-card-open-work
+    storage.setItem('machine-card-open-work', JSON.stringify(INITIAL_100_MAINTENANCE_SCENARIOS));
+
+    // 2. Simpan antrean justifikasi part ke mc-pending-part-justifications
+    storage.setItem('mc-pending-part-justifications', JSON.stringify(INITIAL_PENDING_PART_JUSTIFICATIONS));
+
+    // 3. Simpan log audit sistem & keamanan ke mc-system-audit-logs
+    storage.setItem('mc-system-audit-logs', JSON.stringify(INITIAL_SYSTEM_AUDIT_LOGS));
+
+    // 4. Hitung metrik skenario
+    const counts = {
+      totalTickets: INITIAL_100_MAINTENANCE_SCENARIOS.length,
+      openCount: INITIAL_100_MAINTENANCE_SCENARIOS.filter((s) => s.status === 'OPEN').length,
+      inProgressCount: INITIAL_100_MAINTENANCE_SCENARIOS.filter((s) => s.status === 'IN_PROGRESS').length,
+      handoverCount: INITIAL_100_MAINTENANCE_SCENARIOS.filter((s) => s.status === 'HANDOVER').length,
+      selesaiPerbaikanCount: INITIAL_100_MAINTENANCE_SCENARIOS.filter((s) => s.status === 'SELESAI_PERBAIKAN').length,
+      closedCount: INITIAL_100_MAINTENANCE_SCENARIOS.filter((s) => s.status === 'CLOSED').length,
+      auditDefectCount: INITIAL_100_MAINTENANCE_SCENARIOS.filter((s) => Boolean(s.completenessAudit)).length,
+      pendingJustificationsCount: INITIAL_PENDING_PART_JUSTIFICATIONS.length,
+    };
+
+    // Dispatch custom event untuk komponen yang mendengarkan pembaruan data
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mc-maintenance-data-injected', { detail: counts }));
+      if (options?.reload) {
+        window.location.reload();
+      }
+    }
+
+    return counts;
+  } catch (err) {
+    console.error('Gagal menginjeksi 100 skenario:', err);
+    throw err;
+  }
+}
+
+/**
+ * Membersihkan seluruh data operasional maintenance dari localStorage menjadi keadaan awal.
+ */
+export function clearAllMaintenanceData(): void {
+  try {
+    storage.removeItem('machine-card-open-work');
+    storage.removeItem('mc-pending-part-justifications');
+    storage.removeItem('mc-system-audit-logs');
+    storage.removeItem('machine-card-correction-logs');
+    storage.removeItem('machine-card-shift-revisions');
+    storage.removeItem('machine-card-shift-members');
+    storage.removeItem('machine-card-repair-notes');
+    storage.removeItem('machine-card-pbjt-notes');
+    storage.removeItem('machine-card-pm-notes');
+    storage.removeItem('machine-card-other-notes');
+    storage.removeItem('machine-card-shift-overrides');
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mc-maintenance-data-cleared'));
+    }
+  } catch (err) {
+    console.error('Gagal membersihkan data maintenance:', err);
+  }
+}
