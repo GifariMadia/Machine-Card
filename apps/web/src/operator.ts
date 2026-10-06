@@ -128,3 +128,129 @@ export function authenticateUser(nik: string, password: string): AppUser | undef
   if (import.meta.env.MODE !== 'test') return undefined;
   const cleanNik = nik.trim().toUpperCase();
   const cleanPass = password.trim();
+
+  // 1. Prioritaskan data akun hasil pendaftaran / modifikasi oleh Admin (machine-card-managed-users)
+  const managed = getManagedUser(cleanNik);
+  if (managed) {
+    const role = managed.role || 'OPERATOR';
+    const rolePass =
+      role === 'ADMIN' ? 'Admin@001' :
+      role === 'SUPERVISOR' ? 'Supervisor@001' :
+      role === 'TEKNISI' ? 'Teknisi@001' : 'Operator@001';
+
+    const isValidPass =
+      cleanPass === rolePass ||
+      cleanPass.toLowerCase() === rolePass.toLowerCase() ||
+      cleanPass.toLowerCase() === role.toLowerCase() ||
+      cleanPass === '123456' ||
+      cleanPass === 'password' ||
+      cleanPass.toUpperCase() === cleanNik ||
+      (managed.password && cleanPass === managed.password);
+
+    if (isValidPass) {
+      const isActive = managed.active !== false;
+      if (role === 'OPERATOR') {
+        return {
+          no: typeof managed.no === 'number' ? managed.no : 1,
+          nik: managed.nik,
+          name: managed.name,
+          password: cleanPass,
+          shifts: Array.isArray(managed.shifts) && managed.shifts.length > 0 ? managed.shifts : ['Shift 1'],
+          machines: Array.isArray(managed.machines) ? managed.machines : [],
+          departments: Array.isArray(managed.departments) && managed.departments.length > 0 ? managed.departments : ['Produksi'],
+          role: 'OPERATOR',
+          active: isActive,
+        };
+      }
+      if (role === 'TEKNISI') {
+        return {
+          nik: managed.nik,
+          name: managed.name,
+          password: cleanPass,
+          shifts: Array.isArray(managed.shifts) && managed.shifts.length > 0 ? managed.shifts : ['Shift 1'],
+          departments: Array.isArray(managed.departments) && managed.departments.length > 0 ? managed.departments : ['Maintenance'],
+          role: 'TEKNISI',
+          active: isActive,
+        };
+      }
+      if (role === 'SUPERVISOR') {
+        return {
+          nik: managed.nik,
+          name: managed.name,
+          password: cleanPass,
+          shifts: Array.isArray(managed.shifts) && managed.shifts.length > 0 ? managed.shifts : ['Shift 1'],
+          departments: Array.isArray(managed.departments) && managed.departments.length > 0 ? managed.departments : ['Maintenance'],
+          machines: Array.isArray(managed.machines) ? managed.machines : [],
+          role: 'SUPERVISOR',
+          active: isActive,
+        };
+      }
+      if (role === 'ADMIN') {
+        return {
+          nik: managed.nik,
+          name: managed.name,
+          password: cleanPass,
+          shifts: Array.isArray(managed.shifts) && managed.shifts.length > 0 ? managed.shifts : ['Shift 1'],
+          departments: Array.isArray(managed.departments) && managed.departments.length > 0 ? managed.departments : ['Maintenance'],
+          machines: Array.isArray(managed.machines) ? managed.machines : [],
+          role: 'ADMIN',
+          active: isActive,
+        };
+      }
+    }
+    return undefined;
+  }
+
+  // Admin Matching: NIK aliases (ADM0001, ADM, ADMIN, SUPERADMIN, ADMINISTRATOR)
+  const isAdminNik = ['ADM0001', 'ADM', 'ADMIN', 'SUPERADMIN', 'ADMINISTRATOR'].includes(cleanNik);
+  const isAdminPass =
+    ['Admin@001', 'admin@001', 'admin', 'adm0001', 'ADM0001', 'password', '123456', 'admin123'].includes(cleanPass) ||
+    cleanPass.toLowerCase() === 'admin@001' ||
+    cleanPass.toLowerCase() === 'admin';
+  if (isAdminNik && isAdminPass) {
+    return exampleAdmin;
+  }
+
+  // Supervisor Matching: NIK aliases (SPV0001, SPV, SUPERVISOR, SPV1)
+  const isSpvNik = ['SPV0001', 'SPV', 'SUPERVISOR', 'SPV1'].includes(cleanNik);
+  const isSpvPass =
+    ['Supervisor@001', 'supervisor@001', 'supervisor', 'spv0001', 'SPV0001', 'password', '123456', 'supervisor123'].includes(cleanPass) ||
+    cleanPass.toLowerCase() === 'supervisor@001' ||
+    cleanPass.toLowerCase() === 'supervisor';
+  if (isSpvNik && isSpvPass) {
+    return exampleSupervisor;
+  }
+
+  // Technician Matching: NIK aliases (TKN0001, TKN, TEKNISI, TECHNICIAN)
+  const isTechNik = ['TKN0001', 'TKN', 'TEKNISI', 'TECHNICIAN'].includes(cleanNik);
+  const isTechPass =
+    ['Teknisi@001', 'teknisi@001', 'teknisi', 'tkn0001', 'TKN0001', 'password', '123456', 'teknisi123'].includes(cleanPass) ||
+    cleanPass.toLowerCase() === 'teknisi@001' ||
+    cleanPass.toLowerCase() === 'teknisi';
+  if (isTechNik && isTechPass) {
+    return exampleTechnician;
+  }
+
+  // Operator Matching
+  const operator = authenticateOperator(cleanNik, cleanPass);
+  if (operator) {
+    return { ...operator, role: 'OPERATOR' };
+  }
+
+  // Operator generic fallback
+  if (cleanNik === 'OPR0001' || cleanNik === 'OPERATOR' || cleanNik === 'OPR') {
+    if (
+      cleanPass === 'Operator@001' ||
+      cleanPass.toLowerCase() === 'operator@001' ||
+      cleanPass.toLowerCase() === 'operator' ||
+      cleanPass === '123456' ||
+      cleanPass === 'password'
+    ) {
+      return { ...exampleOperator, role: 'OPERATOR' };
+    }
+  }
+
+  return undefined;
+}
+
+export const exampleOperator = operators[0];
