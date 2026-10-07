@@ -63,3 +63,63 @@ async function flush() {
     if (version !== generation) return;
     Object.assign(documents, saved);
     for (const [key, doc] of Object.entries(saved)) if (!queued.has(key)) cache[key] = encode(doc.value);
+    if (!queued.size) { status(false); window.dispatchEvent(new Event('mc-documents-saved')); }
+  } catch (error) {
+    failed = true; queued.clear();
+    status(false, error instanceof Error ? error.message : 'Penyimpanan gagal.');
+  } finally {
+    sending = false;
+    if (queued.size && !failed) void flush();
+  }
+}
+
+export async function refreshBusinessData() {
+  if (sending || queued.size || failed || !ready) return false;
+  const response = await fetch('/api/state', { credentials: 'same-origin', cache: 'no-store' });
+  if (response.status === 401) { window.dispatchEvent(new Event('mc-session-expired')); return false; }
+  if (!response.ok) return false;
+  const latest: Record<string, Document> = await response.json();
+  if (sending || queued.size) return false;
+  if (JSON.stringify(latest) === JSON.stringify(documents)) return false;
+  documents = latest; cache = Object.fromEntries(Object.entries(latest).map(([key, doc]) => [key, encode(doc.value)]));
+  window.dispatchEvent(new Event('storage'));
+  return true;
+}
+
+// Preserve legacy browser records before any server hydration; nothing is deleted or automatically imported.
+export function backupLegacyBusinessData() {
+  if (localStorage.getItem('mc-legacy-preserved-v1')) return;
+  const legacy: Record<string, string> = {};
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index); if (key && businessKey(key)) legacy[key] = localStorage.getItem(key)!;
+  }
+  if (Object.keys(legacy).length) localStorage.setItem(`mc-legacy-backup-${Date.now()}`, JSON.stringify(legacy));
+  localStorage.setItem('mc-legacy-preserved-v1', 'true');
+}
+
+export function legacyImportSummary() {
+  if (testing || cache['machine-card-import-ledger']) return [];
+  const keys: string[] = [];
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (key && businessKey(key) && !['mc-system-audit-logs', 'machine-card-correction-logs'].includes(key)) keys.push(key);
+  }
+  return keys.filter((key) => { const raw = localStorage.getItem(key); return raw && !['[]', '{}', ''].includes(raw); });
+}
+
+export function importLegacyRecords() {
+  const keys = legacyImportSummary();
+  for (const key of keys) {
+    let legacy = valueForKey(key, localStorage.getItem(key)!);
+    if (key === 'machine-card-managed-users' && Array.isArray(legacy)) legacy = legacy.map(({ password, password_hash, ...profile }) => profile);
+    const current = valueForKey(key, cache[key] || '[]');
+    if (Array.isArray(legacy) && Array.isArray(current)) {
+      const id = (row: Record<string, unknown>) => String(key === 'machine-card-managed-users' ? row.nik : row.ticket || row.id || row.kode_mesin || row.kodeMesin || row.nik || '');
+      const merged = new Map(current.map((row) => [id(row), row]));
+      // Only untouched startup documents can be updated from the legacy snapshot.
+      for (const row of legacy) if (!merged.has(id(row)) || (documents[key]?.version || 0) <= 1) merged.set(id(row), row);
+      storage.setItem(key, JSON.stringify([...merged.values()]));
+    } else if (!(key in cache)) storage.setItem(key, encode(legacy));
+  }
+  storage.setItem('machine-card-import-ledger', JSON.stringify({ importedAt: new Date().toISOString(), keys }));
+}
