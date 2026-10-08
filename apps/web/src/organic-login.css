@@ -1,0 +1,380 @@
+/* ==========================================================================
+   MACHINE CARD — EXECUTIVE INDUSTRIAL SPLIT LOGIN
+   Persis Referensi (Background Pabrik Bintang Toedjoe + Overlay Biru Korporat)
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+/* Page Root: Split Screen (Left balanced with Right) */
+.replica-page {
+  min-height: 100vh;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(420px, 0.95fr);
+  background: #ffffff;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #0f172a;
+}
+
+/* ==========================================================================
+   SISI KIRI: BACKGROUND SLIDER 2 FOTO PABRIK + OVERLAY HIJAU KORPORAT
+   ========================================================================== */
+.replica-left {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(30px, 3.3vh, 44px) clamp(36px, 3.5vw, 50px);
+  background: #081c12;
+  color: #ffffff;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Background Crossfade Slider: Stabil, Elegan, Anti-Glitch */
+.replica-bg-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.replica-bg-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 2s ease-in-out !important;
+  will-change: opacity;
+}
+
+.replica-bg-slide.slide-1 {
+  background-image: url('/assets/factory-bintang-toedjoe.webp');
+}
+
+.replica-bg-slide.slide-2 {
+  background-image: url('/assets/factory-bintang-toedjoe-2.webp');
+}
+
+.replica-bg-slide.active {
+  opacity: 1 !important;
+}
+
+.replica-bg-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, rgba(8, 28, 18, 0.94) 0%, rgba(16, 52, 32, 0.90) 50%, rgba(26, 82, 50, 0.86) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.replica-left-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 100%;
+  gap: 24px;
+}
+
+/* Header Besar & Berwibawa Persis Referensi */
+.replica-left-header {
+  display: flex;
+  flex-direction: column;
+}
+
+.company-main-title {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(33px, 3.5vw, 47px);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ffffff;
+  line-height: 1.15;
+}
+
+.company-sub-tagline {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #c8ebd8;
+  letter-spacing: 0.01em;
+}
+
+.header-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
+  margin-top: 24px;
+}
+
+/* Content Groups */
+.replica-content-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.content-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.group-category-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.group-category-pill {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(128, 188, 0, 0.22);
+  color: #a3e635;
+  border: 1px solid rgba(163, 230, 53, 0.35);
+  text-transform: uppercase;
+}
+
+.group-category-title {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(128, 188, 0);
+}
+
+/* ==========================================================================
+   MODERN INDUSTRIAL GRID: KALBE PANCA SRADHA (BALANCED 3 + 2 COMPACT CARDS)
+   ========================================================================== */
+.panca-sradha-strip {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+}
+
+/* 3 kartu di baris pertama (masing-masing span 2 dari total 6 kolom) */
+.sradha-pillar-card:nth-child(1),
+.sradha-pillar-card:nth-child(2),
+.sradha-pillar-card:nth-child(3) {
+  grid-column: span 2;
+}
+
+/* 2 kartu di baris kedua (masing-masing span 3 dari total 6 kolom, simetris sempurna) */
+.sradha-pillar-card:nth-child(4),
+.sradha-pillar-card:nth-child(5) {
+  grid-column: span 3;
+}
+
+@media (max-width: 1024px) {
+  .panca-sradha-strip {
+    grid-template-columns: 1fr;
+  }
+  .sradha-pillar-card:nth-child(n) {
+    grid-column: span 1;
+  }
+}
+
+.sradha-pillar-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(16, 52, 32, 0.65) 0%, rgba(8, 28, 18, 0.75) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 2px solid rgba(128, 188, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 12px;
+  padding: 16px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.sradha-pillar-card:hover {
+  background: linear-gradient(180deg, rgba(20, 68, 42, 0.85) 0%, rgba(10, 36, 23, 0.9) 100%);
+  border-color: rgba(163, 230, 53, 0.5);
+  border-top: 2px solid #a3e635;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32), 0 0 0 1px rgba(163, 230, 53, 0.2);
+}
+
+.sradha-pillar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sradha-pillar-num {
+  font-family: 'Plus Jakarta Sans', monospace, sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: #102a1c;
+  background: #a3e635;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 6px rgba(163, 230, 53, 0.35);
+}
+
+.sradha-pillar-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #80bc00;
+}
+
+.sradha-pillar-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.4;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.sradha-pillar-desc {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #a7c5b5;
+}
+
+/* ==========================================================================
+   VISI & MISI: EXECUTIVE DUAL BANNER (ELEGANT BALANCE)
+   ========================================================================== */
+.vision-mission-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .vision-mission-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vm-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(14, 46, 28, 0.7) 0%, rgba(8, 28, 18, 0.8) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 12px;
+  padding: 18px 20px;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.vm-card:hover {
+  background: linear-gradient(135deg, rgba(18, 58, 36, 0.85) 0%, rgba(10, 36, 23, 0.9) 100%);
+  border-color: rgba(128, 188, 0, 0.45);
+  transform: translateY(-2px);
+}
+
+.vm-badge-glow {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  background: linear-gradient(135deg, #1e40af 0%, #1e1b4b 100%);
+  color: #ffffff;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 14px rgba(30, 64, 175, 0.45);
+}
+
+.vm-badge-letter {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.vm-text {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.vm-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+}
+
+.vm-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #b9d8c8;
+}
+
+/* Left Footer */
+.replica-left-footer {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 13px;
+  line-height: 1.65;
+  color: #a7c5b5;
+}
+
+.footer-quick-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #c0ded0;
+}
+
+.quick-link {
+  color: rgb(128, 188, 0);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.quick-link:hover {
+  text-decoration: underline;
+}
+
+.footer-quick-links .sep,
+.footer-contact .sep {
+  opacity: 0.4;
+}
+
+.footer-address {
+  margin: 0 0 4px;
+  color: #a3c2b1;
+}
+
+.footer-contact {
+  margin: 0;
+  display: flex;
