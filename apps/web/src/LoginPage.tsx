@@ -193,3 +193,194 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <h1 className="company-main-title">BINTANG TOEDJOE</h1>
             <p className="company-sub-tagline">
               PT Bintang Toedjoe adalah perusahaan kesehatan konsumen yang merupakan anak perusahaan dari Grup Kalbe.
+            </p>
+            <div className="header-divider" />
+          </header>
+
+          <div className="replica-content-blocks">
+            {/* Blok 1: Kalbe Panca Sradha (5-Pillar Industrial Bento) */}
+            <div className="content-group">
+              <div className="group-category-header">
+                <span className="group-category-pill">NILAI INTI</span>
+                <span className="group-category-title">KALBE PANCA SRADHA</span>
+              </div>
+              <div className="panca-sradha-strip">
+                {pancaSradhaItems.map((item) => (
+                  <div key={item.badge} className="sradha-pillar-card">
+                    <div className="sradha-pillar-top">
+                      <span className="sradha-pillar-num">{item.badge}</span>
+                      <span className="sradha-pillar-tag">{item.keyword}</span>
+                    </div>
+                    <strong className="sradha-pillar-title">{item.title}</strong>
+                    <p className="sradha-pillar-desc">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Blok 2: Visi & Misi Bintang Toedjoe (Executive Dual Banner) */}
+            <div className="content-group">
+              <div className="group-category-header">
+                <span className="group-category-pill">KOMITMEN</span>
+                <span className="group-category-title">VISI &amp; MISI BINTANG TOEDJOE</span>
+              </div>
+              <div className="vision-mission-row">
+                {visiMisiItems.map((item) => (
+                  <div key={item.badge} className="vm-card">
+                    <div className="vm-badge-glow">
+                      <span className="vm-badge-letter">{item.badge}</span>
+                    </div>
+                    <div className="vm-text">
+                      <strong className="vm-title">{item.title}</strong>
+                      <p className="vm-desc">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <footer className="replica-left-footer">
+            <div className="footer-quick-links">
+              <span>Portal Machine Card</span>
+              <span className="sep">•</span>
+              <span>Plant Pulogadung</span>
+              <span className="sep">•</span>
+              <span>Sistem Pemeliharaan Mesin</span>
+              <span className="sep">•</span>
+              <span>GMT+7 Jakarta</span>
+            </div>
+            <p className="footer-address">
+              K.9, Jl. Rw. Gelam V No.9 Kw. Industri Pulogadung, RW.9, Jatinegara, Kec. Cakung, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 13920
+            </p>
+            <p className="footer-contact">
+              <Phone size={13} className="footer-ico" />
+              <span>(021) 4605533</span>
+            </p>
+          </footer>
+        </div>
+      </section>
+
+      {/* ====================================================================
+          SISI KANAN: KARTU LOGIN PRESISI SEPERTI REFERENSI
+          ==================================================================== */}
+      <section className="replica-right" aria-label="Portal Login Machine Card">
+        <div className="replica-card-wrapper">
+          <div className="replica-card">
+            {/* Logo Emblem Presisi */}
+            <div className="replica-logo-container">
+              <img
+                src="/assets/bintang-toedjoe-logo.webp"
+                alt="PT Bintang Toedjoe - A Kalbe Company"
+                className="login-card-direct-logo"
+              />
+              <h2 className="system-title">MACHINE CARD</h2>
+              <p className="system-subtitle">Maintenance Digital Information</p>
+            </div>
+
+            {/* Form Input */}
+            <form className="replica-form" onSubmit={submit} noValidate>
+              <div className="replica-field">
+                <label htmlFor="employee-id">EMAIL / EMPLOYEE ID</label>
+                <div className="field-input-wrap">
+                  <UserRound size={19} className="field-ico" />
+                  <input
+                    id="employee-id"
+                    type="text"
+                    value={employeeId}
+                    onChange={(e) => setEmployeeId(e.target.value)}
+                    autoComplete="username"
+                    placeholder="Contoh: OPR0001, TKN0001, SPV0001, ADM0001"
+                    aria-required="true"
+                  />
+                  {employeeId && (
+                    <button
+                      type="button"
+                      className="field-action-btn"
+                      onClick={() => setEmployeeId('')}
+                      aria-label="Hapus NIK"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="replica-field">
+                <label htmlFor="password">PASSWORD</label>
+                <div className="field-input-wrap">
+                  <LockKeyhole size={19} className="field-ico" />
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    aria-required="true"
+                  />
+                  <button
+                    type="button"
+                    className="field-action-btn"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Sembunyikan password' : 'Lihat password'}
+                  >
+                    {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="replica-options-row">
+                <label className="replica-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={rememberId}
+                    onChange={(e) => setRememberId(e.target.checked)}
+                  />
+                  <span>Ingat saya di perangkat ini</span>
+                </label>
+              </div>
+
+              <div className="replica-helper-links">
+                <a
+                  href={whatsappAdminUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="whatsapp-help-link"
+                  aria-label="Hubungi Admin Machine Card via WhatsApp"
+                >
+                  <MessageCircle size={14} className="wa-ico" />
+                  <span>Kendala login? Hubungi Admin</span>
+                </a>
+              </div>
+
+              {infoMessage && (
+                <div className="banner-alert info" role="status">
+                  <CheckCircle2 size={16} />
+                  <span>{infoMessage}</span>
+                </div>
+              )}
+
+              {error && (
+                <div className="banner-alert error" role="alert">
+                  <AlertCircle size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <div className="submit-row">
+                <button
+                  type="submit"
+                  className="replica-login-btn"
+                  disabled={submitting}
+                >
+                  {submitting ? 'MEMERIKSA...' : 'LOGIN'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
