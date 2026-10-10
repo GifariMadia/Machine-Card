@@ -1,0 +1,450 @@
+/* ==========================================================================
+   BINTANG TOEDJOE MACHINE CARD — UNIFIED INDUSTRIAL DASHBOARD DESIGN SYSTEM
+   Matching Login Page Palette (Organic Forest Emerald, B7 Shield, Crisp Cards)
+   ========================================================================== */
+
+:root {
+  --color-icon-neutral: #64748b;
+  --font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Manrope', 'IBM Plex Sans', sans-serif;
+
+  /* Login Page Forest & Emerald Brand Palette */
+  --color-brand-forest-dark: #0a1e15;
+  --color-brand-forest: #102f22;
+  --color-brand-forest-light: #163e2d;
+  --color-brand-navy: #0a1e15;
+  --color-brand-navy-dark: #07160f;
+  --color-brand-navy-light: #163e2d;
+
+  /* Emerald Accents (Matching B7 Shield & Active States) */
+  --color-accent-emerald: #059669;
+  --color-accent-emerald-hover: #047857;
+  --color-accent-emerald-bright: #10b981;
+  --color-accent-emerald-subtle: #ecfdf5;
+  --color-accent-mint: #34d399;
+  --color-accent-teal: #059669;
+  --color-accent-teal-hover: #047857;
+  --color-accent-teal-subtle: #ecfdf5;
+
+  /* Crimson Badge Accent from Login Page */
+  --color-accent-crimson: #e11d48;
+  --color-accent-crimson-hover: #be123c;
+
+  /* Neutral & Surface Tokens */
+  --color-bg-app: #f4f7f5;
+  --color-surface-card: #ffffff;
+  --color-surface-subtle: #f7faf8;
+  --color-border: #cbd5e1;
+  --color-border-subtle: #e2e8f0;
+  --color-text-main: #0f172a;
+  --color-text-muted: #64748b;
+  --color-text-dim: #94a3b8;
+
+  /* Status Semantics */
+  --color-success: #166534;
+  --color-success-bg: #dcfce7;
+  --color-success-border: #bbf7d0;
+
+  --color-danger: #991b1b;
+  --color-danger-bg: #fee2e2;
+  --color-danger-border: #fecaca;
+
+  --color-warning: #92400e;
+  --color-warning-bg: #fef3c7;
+  --color-warning-border: #fde68a;
+
+  --color-info: #0369a1;
+  --color-info-bg: #e0f2fe;
+  --color-info-border: #bae6fd;
+
+  --color-purple: #6b21a8;
+  --color-purple-bg: #faf5ff;
+  --color-purple-border: #e9d5ff;
+
+  /* Layout Dimensions */
+  --sidebar-width: 276px;
+  --sidebar-collapsed-width: 72px;
+  --topbar-height: 68px;
+  --card-radius: 16px;
+  --card-border: 1px solid #e2e8f0;
+  --card-shadow: 0 10px 28px rgba(10, 30, 21, 0.04), 0 2px 6px rgba(10, 30, 21, 0.02);
+}
+
+/* Section symbols are decorative. Status badges and chart colors remain semantic. */
+:is(.admin-portal-root, .spv-portal-root, .tech-portal-root, .operator-portal-root)
+  :is(h1, h2, h3, h4) > .lucide {
+  color: var(--color-icon-neutral);
+}
+
+.spv-discord-icon-badge,
+.scenario-icon-badge {
+  background: #f1f5f9;
+  color: var(--color-icon-neutral);
+  box-shadow: none;
+}
+
+/* Base App Root Container */
+.dashboard-app-container {
+  display: flex !important;
+  flex-direction: row !important;
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--color-bg-app);
+  color: var(--color-text-main);
+  font-family: var(--font-family);
+  overflow-x: hidden;
+}
+
+/* ==========================================================================
+   SIDEBAR NAVIGATION (FOREST GRADIENT MATCHING LOGIN PAGE LEFT PANEL)
+   ========================================================================== */
+.dashboard-sidebar {
+  width: var(--sidebar-width);
+  background: linear-gradient(165deg, #0a1e15 0%, #102f22 55%, #163e2d 100%);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: fixed !important;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  height: 100vh;
+  z-index: 50;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 4px 0 24px rgba(10, 30, 21, 0.15);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 1024px) {
+  .dashboard-sidebar {
+    transform: translateX(-100%);
+    box-shadow: 8px 0 32px rgba(10, 30, 21, 0.45);
+  }
+
+  .dashboard-sidebar.is-open {
+    transform: translateX(0);
+  }
+}
+
+.sidebar-scrim-overlay {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .sidebar-scrim-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 30, 21, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 45;
+  }
+}
+
+/* Sidebar Brand Header (Matching B7 Shield Emblem from Login Page) */
+.sidebar-brand-header {
+  min-height: var(--topbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  background: rgba(7, 22, 15, 0.45);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.brand-badge-box {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: -0.02em;
+  border-radius: 10px;
+  border: 2px solid rgba(52, 211, 153, 0.45);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+  display: grid;
+  place-items: center;
+}
+
+.brand-text-block {
+  min-width: 0;
+}
+
+.brand-text-block strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.brand-text-block small {
+  display: block;
+  font-size: 0.7rem;
+  color: #a4c7b6;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-sidebar-close {
+  display: none;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #e2e8f0;
+  cursor: pointer;
+  padding: 5px;
+}
+
+@media (max-width: 1024px) {
+  .btn-sidebar-close {
+    display: grid;
+    place-items: center;
+  }
+}
+
+/* Sidebar Role Badge Chip */
+.sidebar-role-indicator {
+  padding: 0.8rem 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.role-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+}
+
+.role-pill-tag.role-operator {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
+.role-pill-tag.role-teknisi {
+  background: rgba(56, 189, 248, 0.18);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.role-pill-tag.role-supervisor {
+  background: rgba(251, 191, 36, 0.18);
+  color: #fde68a;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+.role-pill-tag.role-admin {
+  background: rgba(192, 132, 252, 0.18);
+  color: #e9d5ff;
+  border: 1px solid rgba(192, 132, 252, 0.35);
+}
+
+.sidebar-plant-label {
+  font-size: 0.72rem;
+  color: #a4c7b6;
+  font-weight: 600;
+}
+
+/* Sidebar Nav Links */
+.sidebar-navigation-menu {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.1rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sidebar-nav-heading {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #34d399;
+  letter-spacing: 0.12em;
+  padding: 0.4rem 0.65rem 0.35rem;
+}
+
+.sidebar-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #b7d1c3;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.16s ease;
+}
+
+.sidebar-nav-btn-left {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.sidebar-nav-btn-left svg {
+  flex-shrink: 0;
+  color: #6ee7b7;
+  transition: color 0.16s ease;
+}
+
+.sidebar-nav-btn-left span {
+  line-height: 1.3;
+}
+
+.sidebar-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.sidebar-nav-btn.is-active {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border-color: rgba(52, 211, 153, 0.35);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(4, 120, 87, 0.35);
+}
+
+.sidebar-nav-btn.is-active .sidebar-nav-btn-left svg {
+  color: #ffffff;
+}
+
+.sidebar-nav-btn.is-active .sidebar-nav-counter {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.sidebar-nav-counter {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.12);
+  color: #d1fae5;
+  padding: 0.18rem 0.52rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* Red badge matching Login Page .impact-badge (#e11d48) */
+.sidebar-nav-counter.alert {
+  background: #e11d48 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.45);
+}
+
+/* Sidebar Footer / User Profile Card */
+.sidebar-footer-profile {
+  margin-top: auto;
+  flex-shrink: 0;
+  padding: 0.95rem 1.1rem;
+  background: rgba(7, 22, 15, 0.55);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sidebar-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.sidebar-avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.sidebar-user-text {
+  min-width: 0;
+}
+
+.sidebar-user-text strong {
+  display: block;
+  font-size: 0.82rem;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-text small {
+  display: block;
+  font-size: 0.7rem;
+  color: #a4c7b6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.btn-sidebar-logout-icon {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #d1fae5;
+  border-radius: 8px;
+  padding: 0.45rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-sidebar-logout-icon:hover {
+  background: #e11d48;
+  border-color: #f43f5e;
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   MAIN CONTENT AREA & TOPBAR
+   ========================================================================== */
