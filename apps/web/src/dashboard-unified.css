@@ -948,3 +948,503 @@
   border-bottom: 1px solid #dce2df !important;
 }
 
+/* Sembunyikan chip duplikat sekunder agar topbar bersih dan fokus pada aksi */
+.topbar-right-zone .topbar-chip:not(.live-status):not(.live):not(.active-shift) {
+  display: none !important;
+}
+
+.topbar-chip.live-status,
+.topbar-chip.live,
+.topbar-chip.active-shift {
+  border-radius: 6px !important;
+  font-size: 0.75rem !important;
+  padding: 0.32rem 0.65rem !important;
+}
+
+/* Compact Hero Header agar tabel/mesin langsung terlihat (Above the Fold) */
+.portal-hero-section,
+.tech-hero-section,
+.spv-hero-section,
+.admin-hero-section {
+  gap: 1rem !important;
+  margin-bottom: 1.25rem !important;
+}
+
+.hero-text-wrap h1,
+.tech-hero-section h1,
+.spv-hero-section h1,
+.admin-hero-section h1 {
+  font-size: clamp(1.25rem, 1.8vw, 1.5rem) !important;
+  font-weight: 700 !important;
+  margin: 0 0 4px !important;
+  color: #0f172a !important;
+}
+
+.hero-subtitle,
+.tech-hero-subtitle,
+.spv-hero-subtitle,
+.admin-hero-subtitle {
+  font-size: 0.84rem !important;
+  color: #475569 !important;
+  line-height: 1.45 !important;
+}
+
+/* Unifikasi Kartu KPI (Tanpa Border Pelangi 4px & Tanpa Hover Bounce Palsu) */
+.metric-box,
+.tech-metric-box,
+.spv-metric-box,
+.admin-metric-box,
+.analytics-kpi-card {
+  background: #ffffff !important;
+  border: 1px solid #d8e0dc !important;
+  border-left: 1px solid #d8e0dc !important;
+  border-top: 2px solid #0f291e !important;
+  border-radius: 8px !important;
+  padding: 1rem 1.15rem !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+  transform: none !important;
+  transition: border-color 0.15s ease !important;
+}
+
+.metric-box:hover,
+.tech-metric-box:hover,
+.spv-metric-box:hover,
+.admin-metric-box:hover,
+.analytics-kpi-card:hover {
+  transform: none !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+}
+
+/* Matikan pseudo-bar pelangi ::before pada analytics-kpi-card */
+.analytics-kpi-card::before {
+  display: none !important;
+}
+
+/* Aksen Semantik Fungsional pada Garis Atas (2px) */
+.metric-box.alert,
+.tech-metric-box.alert,
+.spv-metric-box.breakdown,
+.admin-metric-box.alert {
+  border-top-color: #be123c !important;
+}
+
+.metric-box.done,
+.tech-metric-box.done,
+.spv-metric-box.running,
+.analytics-kpi-card.mtbf,
+.analytics-kpi-card.avail {
+  border-top-color: #059669 !important;
+}
+
+.metric-box.prog,
+.tech-metric-box.prog,
+.analytics-kpi-card.handover {
+  border-top-color: #b45309 !important;
+}
+
+.metric-val,
+.tech-metric-val,
+.spv-metric-val,
+.admin-metric-val,
+.kpi-value {
+  font-family: var(--font-mono) !important;
+  font-size: 1.6rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.02em !important;
+  color: #0f172a !important;
+}
+
+/* Unifikasi Kartu Konten & Tabel Operasional */
+.portal-content-card,
+.tech-content-card,
+.spv-content-card,
+.admin-content-card,
+.analytics-card {
+  border-radius: 10px !important;
+  border: 1px solid #d8e0dc !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+}
+
+.machine-item-card {
+  border-radius: 8px !important;
+  border: 1px solid #d8e0dc !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+}
+
+.machine-item-card:hover {
+  transform: none !important;
+  border-color: #94a3b8 !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* ==========================================================================
+   ADJUSTABLE / COLLAPSIBLE SIDEBAR (EXTEND & ICON-ONLY RAIL MODE)
+   ========================================================================== */
+
+.dashboard-sidebar {
+  transition:
+    width 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.dashboard-main-area {
+  transition:
+    margin-left 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    width 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Tombol Toggle Collapse Desktop di Header Sidebar */
+.btn-sidebar-collapse-desktop {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  color: #a4c7b6;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-sidebar-collapse-desktop:hover {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: rgba(52, 211, 153, 0.45);
+  color: #ffffff;
+}
+
+@media (max-width: 1024px) {
+  .btn-sidebar-collapse-desktop {
+    display: none !important;
+  }
+}
+
+/* Mode Sidebar Diciutkan (Icon-Only Rail) pada Desktop */
+@media (min-width: 1025px) {
+  .dashboard-app-container.sidebar-collapsed .dashboard-sidebar,
+  .dashboard-sidebar.is-collapsed {
+    width: var(--sidebar-collapsed-width) !important;
+    overflow: visible !important;
+  }
+
+  .dashboard-app-container.sidebar-collapsed .dashboard-main-area {
+    margin-left: var(--sidebar-collapsed-width) !important;
+    width: calc(100% - var(--sidebar-collapsed-width)) !important;
+  }
+
+  /* Brand Header saat diciutkan: sembunyikan teks & logo MC agar tombol expand terpusat rapi, atau tampilkan tombol di floating rail */
+  .dashboard-sidebar.is-collapsed .sidebar-brand-header {
+    padding: 0.75rem 0.5rem !important;
+    justify-content: center !important;
+    position: relative;
+  }
+
+  .dashboard-sidebar.is-collapsed .brand-text-block {
+    display: none !important;
+  }
+
+  .dashboard-sidebar.is-collapsed .sidebar-brand-logo {
+    justify-content: center;
+  }
+
+  /* Tombol Collapse mengambang presisi di garis batas kanan sidebar saat mode collapsed */
+  .dashboard-sidebar.is-collapsed .btn-sidebar-collapse-desktop {
+    position: absolute;
+    right: -13px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    border-radius: 999px;
+    background: #0f291e;
+    border: 1px solid #34d399;
+    color: #ecfdf5;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    z-index: 60;
+  }
+
+  .dashboard-sidebar.is-collapsed .btn-sidebar-collapse-desktop:hover {
+    background: #10b981;
+    color: #ffffff;
+  }
+
+  /* Indikator Role saat diciutkan: hanya tampilkan titik status aktif */
+  .dashboard-sidebar.is-collapsed .sidebar-role-indicator {
+    padding: 0.65rem 0.5rem !important;
+    justify-content: center !important;
+  }
+
+  .dashboard-sidebar.is-collapsed .sidebar-plant-label,
+  .dashboard-sidebar.is-collapsed .role-pill-text {
+    display: none !important;
+  }
+
+  .dashboard-sidebar.is-collapsed .role-pill-tag {
+    padding: 0.35rem !important;
+    border-radius: 50% !important;
+    justify-content: center;
+  }
+
+  /* Menu Navigasi saat diciutkan: hanya tampilkan ikon tombol di tengah */
+  .dashboard-sidebar.is-collapsed .sidebar-navigation-menu {
+    padding: 0.85rem 0.55rem !important;
+    align-items: center;
+    overflow: visible !important;
+  }
+
+  .dashboard-sidebar.is-collapsed .sidebar-nav-heading {
+    display: none !important;
+  }
+
+  .dashboard-sidebar.is-collapsed .sidebar-nav-btn {
+    justify-content: center !important;
+    padding: 0.7rem 0 !important;
+    width: 46px !important;
+    height: 46px !important;
+    position: relative;
+  }
+
+  .dashboard-sidebar.is-collapsed .sidebar-nav-btn-left {
+    justify-content: center;
+    gap: 0;
+  }
+
+  /* Sembunyikan teks tombol navigasi ketika sidebar menutup */
+  .dashboard-sidebar.is-collapsed .sidebar-nav-btn-left span {
+    display: none !important;
+  }
+
+  /* Sembunyikan counter biasa, tapi pertahankan badge alert merah sebagai dot kecil di pojok ikon */
+  .dashboard-sidebar.is-collapsed .sidebar-nav-counter:not(.alert) {
+    display: none !important;
+  }
+
+  .dashboard-sidebar.is-collapsed .sidebar-nav-counter.alert {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px !important;
+    font-size: 0.62rem !important;
+    line-height: 16px;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Tooltip instan di sebelah kanan ikon saat di-hover pada mode collapsed */
+  .dashboard-sidebar.is-collapsed .sidebar-nav-btn[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: #0f172a;
+    color: #f8fafc;
+    font-family: var(--font-family);
+    font-size: 0.76rem;
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 0.38rem 0.68rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.28);
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Footer Profil & Tombol Logout saat diciutkan: susun vertikal ikon avatar & ikon logout */
+  .dashboard-sidebar.is-collapsed .sidebar-footer-profile {
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0.75rem 0.4rem !important;
+    gap: 0.6rem !important;
+  }
+
+  .dashboard-sidebar.is-collapsed .sidebar-user-text {
+    display: none !important;
+  }
+
+  .dashboard-sidebar.is-collapsed .sidebar-user-info {
+    justify-content: center;
+  }
+}
+
+/* ==========================================================================
+   RATIONAL PROPORTION & MULTI-DEVICE RESPONSIVE SYSTEM (TABLET & MOBILE)
+   Mengacu Bab 10, Bab 11 (Touch Target >= 42px), Bab 12 (Responsive Layout),
+   dan Bab 14 (Table Scroll Shadow & Form Ergonomics)
+   ========================================================================== */
+
+/* 1. RATIONAL TYPOGRAPHY, SPACING, & STICKY TABLE HEADER */
+.portal-table th,
+.tech-table th,
+.spv-table th,
+.admin-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f4f7f5 !important;
+  box-shadow: inset 0 -1px 0 #dce2df;
+}
+
+/* Indikator bayangan halus pada container tabel yang bisa digeser horizontal */
+.table-responsive,
+.tech-table-responsive,
+.spv-table-responsive,
+.admin-table-responsive {
+  background:
+    linear-gradient(to right, #ffffff 25%, rgba(255, 255, 255, 0)),
+    linear-gradient(to right, rgba(255, 255, 255, 0), #ffffff 75%) 0 100%,
+    radial-gradient(farthest-side at 0% 50%, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0)) 0 100%;
+  background-repeat: no-repeat;
+  background-color: #ffffff;
+  background-size: 32px 100%, 32px 100%, 12px 100%, 12px 100%;
+  background-position: 0 0, 100% 0, 0 0, 100% 0;
+  background-attachment: local, local, scroll, scroll;
+}
+
+/* 2. TABLET PORTRAIT & LANDSCAPE (max-width: 1024px) */
+@media (max-width: 1024px) {
+  .dashboard-topbar {
+    min-height: 54px !important;
+    padding: 0.45rem 1rem !important;
+    gap: 0.65rem !important;
+  }
+
+  .btn-mobile-sidebar-toggle {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* Di tablet/mobile, tombol Logout sudah ada di Sidebar, sembunyikan duplikat di Topbar agar tidak sempit */
+  .btn-logout,
+  .btn-tech-logout,
+  .btn-spv-logout,
+  .btn-admin-logout {
+    padding: 0 10px !important;
+    height: 36px !important;
+    font-size: 0.76rem !important;
+  }
+
+  .dashboard-content-scroll,
+  .operator-main,
+  .tech-main,
+  .spv-main,
+  .admin-main {
+    padding: 1.15rem 1rem 2.25rem !important;
+  }
+
+  /* Grid KPI di Tablet menjadi 2x2 simetris yang lega */
+  .portal-metrics-grid,
+  .tech-metrics-grid,
+  .spv-metrics-grid,
+  .admin-metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+
+  .analytics-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Katalog Mesin Teknisi di Tablet: daftar mesin menjadi horizontal scroll pill / compact list */
+  .tech-catalog-layout {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+    padding: 1rem !important;
+  }
+
+  .tech-catalog-sidebar {
+    max-height: 240px !important;
+  }
+
+  .tech-catalog-list {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 0.4rem;
+    padding: 0.5rem;
+  }
+
+  .tech-machine-item-btn {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 0.6rem 0.75rem !important;
+  }
+
+  /* Di Tablet, sesuaikan padding dan overflow tabel agar nyaman dibaca */
+  .portal-table,
+  .tech-table,
+  .spv-table,
+  .admin-table {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .portal-table th,
+  .tech-table th,
+  .spv-table th,
+  .admin-table th {
+    padding: 8px 10px !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
+  }
+
+  .portal-table td,
+  .tech-table td,
+  .spv-table td,
+  .admin-table td {
+    padding: 9px 10px !important;
+    font-size: 12px !important;
+    word-break: normal;
+  }
+
+  .filter-pills-row,
+  .tech-filter-pills,
+  .spv-filter-pills,
+  .admin-filter-pills {
+    flex-wrap: wrap !important;
+  }
+}
+
+/* 3. MOBILE & TABLET PORTRAIT (max-width: 900px) */
+@media (max-width: 900px) {
+  /* ========================================================================
+     SEAMLESS MODERN APP BAR (MOBILE & TABLET BEST PRACTICE)
+     Menggantikan topbar desktop kaku menjadi App Bar native ramping (48px)
+     ======================================================================== */
+  .dashboard-topbar,
+  .tech-topbar,
+  .spv-topbar,
+  .admin-topbar {
+    min-height: 48px !important;
+    height: 48px !important;
+    padding: 0.35rem 1rem !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    box-shadow: 0 1px 4px rgba(10, 30, 21, 0.04) !important;
+  }
+
+  /* Judul modul aktif di App Bar: tegas, bersih, tanpa breadcrumb redundan */
+  .topbar-breadcrumb-trail span {
+    display: none !important;
+  }
+
+  .topbar-breadcrumb-trail strong {
+    font-size: 0.92rem !important;
+    font-weight: 800 !important;
+    color: #064e3b !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  /* Area Kanan: Context Chip Ringkas & Tombol Keluar Minimalis */
+  .topbar-right-zone {
