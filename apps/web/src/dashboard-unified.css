@@ -1448,3 +1448,503 @@
 
   /* Area Kanan: Context Chip Ringkas & Tombol Keluar Minimalis */
   .topbar-right-zone {
+    gap: 0.45rem !important;
+  }
+
+  .topbar-chip {
+    padding: 3px 8px !important;
+    font-size: 0.72rem !important;
+    border-radius: 6px !important;
+    background: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  .topbar-chip.live-status,
+  .topbar-chip:nth-child(2) {
+    display: none !important;
+  }
+
+  .btn-topbar-action {
+    padding: 0.4rem 0.55rem !important;
+    min-height: 32px;
+    height: 32px;
+  }
+
+  .btn-topbar-action span,
+  .btn-logout span,
+  .btn-tech-logout span,
+  .btn-spv-logout span,
+  .btn-admin-logout span {
+    display: none !important;
+  }
+
+  .btn-logout,
+  .btn-tech-logout,
+  .btn-spv-logout,
+  .btn-admin-logout {
+    padding: 0 !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    border-radius: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* ========================================================================
+     HERO SECTION RAMPING (HEMAT VERTICAL VIEWPORT MOBILE HINGGA 150px)
+     Konten kerja utama (mesin/tiket) langsung terlihat di layar pertama
+     ======================================================================== */
+  .portal-hero-section,
+  .tech-hero-section,
+  .spv-hero-section,
+  .admin-hero-section {
+    padding: 0.65rem 1rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Sembunyikan breadcrumb desktop dan paragraf pengantar panjang */
+  .breadcrumb {
+    display: none !important;
+  }
+
+  .hero-subtitle,
+  .tech-hero-subtitle,
+  .spv-hero-subtitle,
+  .admin-hero-subtitle {
+    display: none !important;
+  }
+
+  .hero-text-wrap h1,
+  .tech-hero-section h1,
+  .spv-hero-section h1,
+  .admin-hero-section h1 {
+    font-size: 1.08rem !important;
+    line-height: 1.25 !important;
+    margin: 0 0 0.45rem 0 !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+  }
+
+  /* KPI Grid: Compact Horizontal Strip (Nilai & Label sejajar hemat tinggi) */
+  .portal-metrics-grid,
+  .tech-metrics-grid,
+  .spv-metrics-grid,
+  .admin-metrics-grid,
+  .analytics-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.45rem !important;
+    margin-top: 0.25rem !important;
+  }
+
+  .metric-box,
+  .tech-metric-box,
+  .spv-metric-box,
+  .admin-metric-box,
+  .analytics-kpi-card {
+    padding: 0.55rem 0.75rem !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .metric-val,
+  .tech-metric-val,
+  .spv-metric-val,
+  .admin-metric-val,
+  .kpi-value {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+  }
+
+  .metric-lbl,
+  .tech-metric-lbl,
+  .spv-metric-lbl,
+  .admin-metric-lbl,
+  .kpi-title {
+    font-size: 0.65rem !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
+    margin-top: 0 !important;
+    text-align: right !important;
+    max-width: 60% !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Card 마지막 di 5-item analytics KPI mengambil 2 kolom penuh agar grid tetap rata (tidak pincang) */
+  .analytics-kpi-grid > .analytics-kpi-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  /* Toolbar Pencarian & Filter Full-Width dan Scrollable */
+  .table-header-toolbar,
+  .tickets-toolbar,
+  .tech-toolbar-wrap,
+  .spv-toolbar-wrap,
+  .admin-toolbar-wrap {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 12px 14px !important;
+    gap: 10px !important;
+  }
+
+  .search-input-wrap,
+  .tech-search-box,
+  .spv-search-box,
+  .admin-search-box,
+  .filter-select-wrap {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 42px !important;
+  }
+
+  .filter-select-wrap select {
+    width: 100%;
+  }
+
+  /* Filter Pills: Bungkus Rapi (Wrap) agar tidak ada tombol filter yang terpotong di tepi kanan */
+  .filter-pills-row,
+  .tech-filter-pills,
+  .spv-filter-pills,
+  .admin-filter-pills {
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
+    gap: 6px !important;
+  }
+
+  .filter-title,
+  .tech-filter-label,
+  .spv-filter-label,
+  .admin-filter-label {
+    width: 100%;
+    margin-bottom: 2px;
+    font-size: 0.7rem !important;
+  }
+
+  .pill-btn,
+  .tech-pill-btn,
+  .spv-pill-btn,
+  .admin-pill-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    text-align: center;
+    min-height: 36px;
+    padding: 6px 10px !important;
+    font-size: 0.76rem !important;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .admin-toolbar-actions {
+    width: 100%;
+  }
+
+  .admin-toolbar-actions .btn-admin-primary {
+    width: 100%;
+    justify-content: center;
+    height: 42px;
+  }
+
+  /* ========================================================================
+     TRANSFORMASI TABEL MENJADI NATIVE STACKED CARDS DI MOBILE & TABLET COMPACT
+     Menghilangkan 100% potongan kolom kanan/kiri (Zero Horizontal Clipping)
+     ======================================================================== */
+  .table-responsive,
+  .tech-table-responsive,
+  .spv-table-responsive,
+  .admin-table-responsive {
+    overflow-x: visible !important;
+    background: transparent !important;
+  }
+
+  .portal-table,
+  .tech-table,
+  .spv-table,
+  .admin-table {
+    min-width: 0 !important;
+    width: 100% !important;
+    display: block !important;
+  }
+
+  .portal-table thead,
+  .tech-table thead,
+  .spv-table thead,
+  .admin-table thead {
+    display: none !important;
+  }
+
+  .portal-table tbody,
+  .tech-table tbody,
+  .spv-table tbody,
+  .admin-table tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    background: #f4f7f5 !important;
+  }
+
+  .portal-table tbody tr,
+  .tech-table tbody tr,
+  .spv-table tbody tr,
+  .admin-table tbody tr {
+    display: flex !important;
+    flex-direction: column !important;
+    background: #ffffff !important;
+    border: 1px solid #d8e0dc !important;
+    border-radius: 10px !important;
+    padding: 4px 14px !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+  }
+
+  .portal-table tbody tr.row-breakdown,
+  .spv-table tbody tr.breakdown-row {
+    background: #fffafa !important;
+    border-color: #fecdd3 !important;
+    border-left: 3px solid #e11d48 !important;
+  }
+
+  .portal-table td,
+  .tech-table td,
+  .spv-table td,
+  .admin-table td {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    padding: 10px 0 !important;
+    font-size: 13px !important;
+    border-bottom: 1px dashed #e2e8f0 !important;
+    text-align: right !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .portal-table td:last-child,
+  .tech-table td:last-child,
+  .spv-table td:last-child,
+  .admin-table td:last-child {
+    border-bottom: none !important;
+  }
+
+  /* Kecualikan kartu modern Operator yang sudah memiliki hierarki visual mandiri */
+  .portal-table tr.opr-machine-card-row td::before,
+  .portal-table tr.opr-ticket-card-row td::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  /* Label Kolom Otomatis di Sisi Kiri Baris Kartu */
+  .portal-table tr:not(.opr-machine-card-row):not(.opr-ticket-card-row) td[data-label]::before,
+  .tech-table td[data-label]::before,
+  .spv-table td[data-label]::before,
+  .admin-table td[data-label]::before {
+    content: attr(data-label);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    text-align: left;
+    flex-shrink: 0;
+    max-width: 44%;
+  }
+
+  /* Sel dengan konten panjang (Deskripsi, Timeline Downtime, Progress Bar) disusun vertikal penuh */
+  .portal-table td.td-block-cell,
+  .tech-table td.td-block-cell,
+  .spv-table td.td-block-cell,
+  .admin-table td.td-block-cell {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    text-align: left !important;
+    gap: 6px !important;
+  }
+
+  .portal-table td.td-block-cell::before,
+  .tech-table td.td-block-cell::before,
+  .spv-table td.td-block-cell::before,
+  .admin-table td.td-block-cell::before {
+    max-width: 100%;
+    margin-bottom: 2px;
+  }
+
+  .downtime-timeline-strip,
+  .tech-lifetime-bar-wrap {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .downtime-timeline-strip {
+    border-radius: 6px !important;
+    padding: 8px 10px !important;
+    background: #f1f5f9 !important;
+    border-left: 3px solid #059669 !important;
+  }
+
+  /* Sel Status & Closing Operator: badge dan tombol tersusun rapi */
+  .portal-table td[data-label*="Status"] {
+    align-items: stretch !important;
+  }
+
+  .portal-table td[data-label*="Status"] .status-pill,
+  .portal-table td[data-label*="Status"] .btn-operator-closing-action {
+    align-self: flex-start;
+  }
+
+  /* Expand/Collapse Card pada Tampilan Mobile (Kartu Ramping) */
+  .btn-mobile-toggle-detail {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    padding: 7px 10px;
+    margin-top: 4px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    color: #475569;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-mobile-toggle-detail:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+  }
+
+  /* Sembunyikan bagian rincian panjang saat kartu collapsed */
+  .ticket-row-card.is-card-collapsed .mobile-collapsible-cell,
+  .ticket-row-card.is-card-collapsed .mobile-collapsible-item {
+    display: none !important;
+  }
+
+  .ticket-row-card.is-card-expanded {
+    border-color: #059669 !important;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.08) !important;
+  }
+
+  /* Sel Tombol Aksi di Bagian Bawah Kartu: Tombol melebar 100% agar mudah ditekan */
+  .portal-table td.td-action-cell,
+  .tech-table td.td-action-cell,
+  .spv-table td.td-action-cell,
+  .admin-table td.td-action-cell {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    text-align: center !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    gap: 6px !important;
+  }
+
+  .portal-table td.td-action-cell::before,
+  .tech-table td.td-action-cell::before,
+  .spv-table td.td-action-cell::before,
+  .admin-table td.td-action-cell::before {
+    display: none !important;
+  }
+
+  .td-action-cell .btn-breakdown-action,
+  .td-action-cell .btn-tech-action,
+  .td-action-cell .btn-spv-table-action,
+  .td-action-cell .btn-table-action,
+  .btn-operator-closing-action {
+    width: 100% !important;
+    justify-content: center !important;
+    height: 40px !important;
+    margin-right: 0 !important;
+  }
+
+  /* Empty state row tetap satu blok utuh */
+  .portal-table td.empty-table-cell,
+  .tech-table td.tech-empty-state {
+    display: block !important;
+    text-align: center !important;
+    padding: 32px 16px !important;
+  }
+
+  /* Perbaikan Box Panduan Operasional & Card Analitik agar teks tidak pernah terpotong */
+  .analytics-card,
+  .tech-part-section-card {
+    padding: 14px !important;
+    overflow: hidden !important;
+  }
+
+  .best-practice-box {
+    padding: 12px 14px !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .best-practice-box ul {
+    padding-left: 16px !important;
+  }
+
+  /* Pagination Footer */
+  .table-pagination-footer {
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    text-align: center;
+    padding: 12px 14px !important;
+  }
+
+  /* Slide-Over Drawers & Modals pada Mobile: Full-Width Bottom/Side Sheet */
+  .openwork-drawer,
+  .tech-drawer-panel,
+  .spv-drawer-panel,
+  .admin-drawer-panel {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .drawer-top,
+  .tech-drawer-top,
+  .spv-drawer-top,
+  .admin-drawer-top {
+    padding: 16px 18px 14px !important;
+  }
+
+  .drawer-machine-title,
+  .tech-drawer-top-brand h2,
+  .spv-drawer-top h2,
+  .admin-drawer-top h2 {
+    font-size: 1.15rem !important;
+  }
+
+  .drawer-form-body,
+  .tech-drawer-scroll-body,
+  .spv-drawer-body,
+  .admin-drawer-body {
+    padding: 16px !important;
+    gap: 14px !important;
+  }
+
+  /* Form Grid 2 Kolom menjadi 1 Kolom di layar ponsel agar input tidak terpotong */
+  .form-grid-2,
+  .tech-incident-grid,
+  .spv-kv-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .tech-incident-grid .full-span {
+    grid-column: span 1 !important;
+  }
+
+  /* Drawer & Modal Footer Buttons: rapi, kompak, tidak memakan tinggi vertikal berlebihan */
+  .drawer-footer,
+  .tech-drawer-footer,
+  .spv-drawer-footer,
