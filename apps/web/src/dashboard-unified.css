@@ -448,3 +448,503 @@
 /* ==========================================================================
    MAIN CONTENT AREA & TOPBAR
    ========================================================================== */
+.dashboard-main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+  margin-left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
+  background: var(--color-bg-app);
+}
+
+@media (max-width: 1024px) {
+  .dashboard-main-area {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* App Topbar Header */
+.dashboard-topbar {
+  min-height: var(--topbar-height);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem clamp(1rem, 2.5vw, 2rem);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.topbar-left-zone {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.btn-mobile-sidebar-toggle {
+  display: none;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-main);
+  border-radius: 8px;
+  padding: 0.45rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-mobile-sidebar-toggle:hover {
+  background: #f0fdf4;
+  border-color: var(--color-accent-emerald);
+}
+
+@media (max-width: 1024px) {
+  .btn-mobile-sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.topbar-breadcrumb-trail {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.topbar-breadcrumb-trail span {
+  color: var(--color-text-dim);
+}
+
+.topbar-breadcrumb-trail strong {
+  font-family: var(--font-display);
+  color: var(--color-brand-forest-dark);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Topbar Right Actions & Context Chips */
+.topbar-right-zone {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1280px) {
+  .topbar-chip:nth-of-type(2),
+  .topbar-chip:nth-of-type(3) {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .topbar-chip {
+    display: none !important;
+  }
+}
+
+.btn-topbar-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-main);
+  padding: 0.42rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-topbar-action:hover {
+  background: #f0fdf4;
+  border-color: var(--color-accent-emerald);
+  color: var(--color-brand-forest-dark);
+}
+
+.btn-topbar-action.primary {
+  background: var(--color-accent-emerald);
+  border-color: var(--color-accent-emerald);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.22);
+}
+
+.btn-topbar-action.primary:hover {
+  background: var(--color-accent-emerald-hover);
+  border-color: var(--color-accent-emerald-hover);
+  color: #ffffff;
+}
+
+.topbar-chip {
+  background: #f8faf9;
+  border: 1px solid var(--color-border-subtle);
+  padding: 0.35rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.topbar-chip .chip-label {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.topbar-chip strong {
+  color: var(--color-text-main);
+  font-weight: 600;
+}
+
+.topbar-chip.live-status,
+.topbar-chip.live,
+.topbar-chip.active-shift {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+  font-weight: 600;
+}
+
+.pulse-green-dot {
+  width: 7px;
+  height: 7px;
+  background-color: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.28);
+  flex-shrink: 0;
+}
+
+/* Content Container Body */
+.dashboard-content-scroll {
+  flex: 1;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 2.5vw, 2rem) clamp(1rem, 2.5vw, 2rem) 3rem;
+  box-sizing: border-box;
+}
+
+/* App Footer */
+.dashboard-app-footer,
+.operator-footer,
+.tech-footer,
+.spv-footer,
+.admin-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem clamp(1rem, 2.5vw, 2rem);
+  background: #ffffff;
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ==========================================================================
+   SESSION TIMEOUT DIALOG (URS Gambar 4 & Tabel 1 Item 1.3)
+   ========================================================================== */
+.session-expired-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 30, 21, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.session-expired-dialog {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 20px 35px -5px rgba(10, 30, 21, 0.35);
+  width: 90%;
+  max-width: 440px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.session-dialog-header {
+  padding: 0.9rem 1.25rem;
+  background: linear-gradient(160deg, #0a1e15 0%, #163e2d 100%);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.session-dialog-body {
+  padding: 1.5rem 1.25rem;
+  font-size: 0.95rem;
+  color: #1e293b;
+  line-height: 1.5;
+}
+
+.session-dialog-footer {
+  padding: 0.75rem 1.25rem 1rem;
+  display: flex;
+  justify-content: flex-end;
+  background: #f8faf9;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.btn-session-ok {
+  background: var(--color-accent-emerald);
+  color: #ffffff;
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+  transition: background 0.15s ease;
+}
+
+.btn-session-ok:hover {
+  background: var(--color-accent-emerald-hover);
+}
+
+/* ==========================================================================
+   PRINT & REPORT MODAL (URS Gambar 8, 25 & Tabel 1 Item 5.1)
+   ========================================================================== */
+.print-report-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 30, 21, 0.72);
+  backdrop-filter: blur(4px);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.print-report-container {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 820px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(10, 30, 21, 0.35);
+  border: 1px solid var(--color-border);
+}
+
+.print-report-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.5rem;
+  background: linear-gradient(160deg, #0a1e15 0%, #102f22 60%, #163e2d 100%);
+  color: #ffffff;
+}
+
+.print-report-topbar h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.print-report-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-print-primary {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.84rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.btn-print-primary:hover {
+  background: #059669;
+}
+
+.btn-print-close {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 0.45rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.btn-print-close:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.print-report-content {
+  padding: 2rem;
+  overflow-y: auto;
+  font-size: 0.9rem;
+  color: #1e293b;
+  line-height: 1.6;
+}
+
+.print-doc-header {
+  border-bottom: 2px solid #0a1e15;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.print-doc-meta-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+}
+
+.print-doc-meta-table td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-report-content, .print-report-content * {
+    visibility: visible;
+  }
+  .print-report-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+  }
+}
+
+/* ==========================================================================
+   SWISS INDUSTRIAL DESIGN HARMONIZATION (Bab 10, Bab 11, Bab 55 Playbook M)
+   Menghilangkan kesan dekoratif buatan AI:
+   - Menghapus border-left 4px pelangi & hover-bounce pada kartu angka statis
+   - Menyatukan radius presisi (8px–10px), hairline border, dan tipografi tabular
+   - Menyederhanakan kepadatan Topbar & Sidebar agar fokus pada instrumen kerja
+   ========================================================================== */
+
+.dashboard-sidebar {
+  background: #0a1c14 !important;
+  border-right: 1px solid #163024 !important;
+  box-shadow: none !important;
+}
+
+.sidebar-brand-header {
+  min-height: 56px !important;
+  padding: 0.75rem 1.15rem !important;
+  background: #081710 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+.brand-badge-box {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  background: #ffffff !important;
+  border: 1.5px solid rgba(116, 184, 45, 0.45) !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 4px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  transition: transform 0.2s ease;
+}
+
+.brand-badge-box:hover {
+  transform: scale(1.05);
+}
+
+.brand-logo-mark {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.sidebar-avatar-circle {
+  background: #123123 !important;
+  border: 1px solid rgba(52, 211, 153, 0.35) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+
+.sidebar-nav-btn {
+  border-radius: 6px !important;
+  padding: 0.65rem 0.85rem !important;
+  font-size: 0.83rem !important;
+}
+
+.sidebar-nav-btn.is-active {
+  background: rgba(16, 185, 129, 0.14) !important;
+  border: 1px solid rgba(52, 211, 153, 0.28) !important;
+  border-left: 3px solid #10b981 !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+}
+
+.sidebar-nav-counter {
+  font-family: var(--font-mono) !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  border-radius: 4px !important;
+  padding: 0.12rem 0.45rem !important;
+  background: rgba(255, 255, 255, 0.09) !important;
+}
+
+/* Compact Topbar & Hapus Duplikasi Identitas (Sudah ada di Sidebar) */
+.dashboard-topbar {
+  min-height: 56px !important;
+  padding: 0.5rem clamp(1rem, 2.2vw, 1.75rem) !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  border-bottom: 1px solid #dce2df !important;
+}
+
