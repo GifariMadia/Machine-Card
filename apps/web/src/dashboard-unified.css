@@ -1948,3 +1948,503 @@
   .drawer-footer,
   .tech-drawer-footer,
   .spv-drawer-footer,
+  .admin-drawer-footer,
+  .closing-modal-footer {
+    padding: 12px 14px !important;
+    gap: 10px !important;
+  }
+
+  .drawer-footer button,
+  .tech-drawer-footer button,
+  .admin-drawer-footer button,
+  .closing-modal-footer button {
+    flex: 1;
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .drawer-footer .btn-cancel,
+  .tech-drawer-footer .btn-cancel,
+  .closing-modal-footer .btn-cancel {
+    flex: 0 0 auto;
+    min-width: 80px;
+  }
+
+  .drawer-footer .btn-submit-openwork {
+    flex: 1;
+    white-space: nowrap;
+  }
+
+  /* Closing Modal & Print Modal pada Mobile */
+  .closing-modal-backdrop,
+  .print-report-overlay {
+    padding: 10px !important;
+  }
+
+  .closing-modal-header,
+  .print-report-topbar {
+    padding: 14px 16px !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .closing-modal-body,
+  .print-report-content {
+    padding: 16px !important;
+  }
+
+  .print-doc-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .print-doc-header > div:last-child {
+    text-align: left !important;
+  }
+
+  /* Alert Banner Sukses Tiket di Mobile */
+  .ticket-success-alert {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px 16px !important;
+  }
+
+  .alert-actions {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .btn-view-ticket {
+    flex: 1;
+    text-align: center;
+  }
+
+  /* Discord & Shift Switcher di Portal Supervisor */
+  .spv-discord-input {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .spv-discord-header {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .spv-discord-header > div:last-child {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .btn-discord-sim,
+  .btn-discord-send {
+    justify-content: center;
+    padding: 0.6rem 0.5rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  .spv-shift-switcher-bar {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .spv-shift-btn {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Footer Aplikasi */
+  .dashboard-app-footer,
+  .operator-footer,
+  .tech-footer,
+  .spv-footer,
+  .admin-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.85rem 1rem !important;
+    font-size: 0.74rem !important;
+  }
+}
+
+/* 4. SMALL PHONES (max-width: 400px) */
+@media (max-width: 400px) {
+  .tech-metrics-grid,
+  .spv-metrics-grid,
+  .admin-metrics-grid,
+  .analytics-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.4rem !important;
+  }
+
+  .spv-discord-header > div:last-child {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ==========================================================================
+   MOBILE & TABLET BOTTOM NAVIGATION BAR (THUMB-ZONE ERGONOMICS)
+   Dioptimalkan untuk jempol satu tangan Teknisi & Operator lapangan
+   ========================================================================== */
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    box-shadow: 0 -4px 16px rgba(10, 30, 21, 0.08);
+    z-index: 50;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .mobile-bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: clamp(0.6rem, 2.2vw, 0.72rem);
+    font-weight: 700;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    transition: color 0.15s ease, transform 0.1s ease;
+    padding: 6px 2px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-width: 0;
+  }
+
+  .mobile-bottom-nav-item span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .mobile-bottom-nav-item:active {
+    transform: scale(0.96);
+  }
+
+  .mobile-bottom-nav-item.is-active {
+    color: #059669;
+    font-weight: 800;
+  }
+
+  .bottom-nav-icon-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+  }
+
+  .bottom-nav-badge {
+    position: absolute;
+    top: -5px;
+    right: -10px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 1.5px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  }
+
+  .bottom-nav-badge.alert {
+    background: #e11d48;
+  }
+
+  .bottom-nav-badge.info {
+    background: #0284c7;
+  }
+
+  /* Ruang scrolling di mobile agar konten bawah tidak tertutup Bottom Nav Bar */
+  .dashboard-content-scroll,
+  .operator-main,
+  .tech-main-scroll,
+  .spv-main-scroll,
+  .admin-main-scroll {
+    padding-bottom: 85px !important;
+  }
+
+  /* Sticky Drawer Footer di Mobile: Tombol aksi selalu siap di bawah jempol */
+  .drawer-footer {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: #ffffff !important;
+    z-index: 20 !important;
+    border-top: 1px solid #e2e8f0 !important;
+    padding: 0.85rem 1rem !important;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05) !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.6rem !important;
+  }
+
+  /* Grid 2x2 rapi pada mobile technician drawer footer agar tidak memakan ruang tinggi vertikal layar */
+  .tech-drawer-footer {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: #ffffff !important;
+    z-index: 20 !important;
+    border-top: 1px solid #e2e8f0 !important;
+    padding: 0.65rem 0.85rem !important;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05) !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.45rem !important;
+  }
+
+  .drawer-footer button {
+    min-height: 46px !important;
+    font-size: 0.88rem !important;
+    border-radius: 10px !important;
+  }
+
+  .tech-drawer-footer button {
+    min-height: 38px !important;
+    padding: 0.45rem 0.5rem !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
+  .tech-drawer-footer button span {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .tech-drawer-footer .btn-tech-start-big {
+    grid-column: span 2 !important;
+    min-height: 44px !important;
+    font-size: 0.88rem !important;
+  }
+
+  .tech-drawer-footer .btn-tech-handover-pending {
+    grid-column: span 2 !important;
+    min-height: 40px !important;
+    font-size: 0.82rem !important;
+    width: 100% !important;
+  }
+
+  .tech-drawer-footer .btn-tech-finish-work {
+    min-height: 38px !important;
+    font-size: 0.78rem !important;
+    padding: 0.45rem 0.5rem !important;
+  }
+
+  /* Banner status selesai / closed di mobile drawer footer membentang penuh 2 kolom */
+  .tech-drawer-footer .tech-footer-completed-banner,
+  .tech-drawer-footer .tech-footer-closed-banner,
+  .tech-drawer-footer > div {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+  }
+
+  .tech-footer-completed-text {
+    font-size: 0.76rem !important;
+    line-height: 1.35 !important;
+    flex: 1 !important;
+    color: #047857 !important;
+    font-weight: 600 !important;
+  }
+
+  .tech-drawer-footer .btn-tech-rework {
+    flex-shrink: 0 !important;
+    min-width: 105px !important;
+    height: 36px !important;
+    padding: 0.4rem 0.75rem !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Target sentuh tombol aksi utama (Mulai Kerjakan / Selesaikan / Laporkan) */
+  .btn-tech-start-big,
+  .btn-tech-finish-work,
+  .btn-submit-openwork,
+  .btn-breakdown-action {
+    min-height: 48px !important;
+    font-size: 0.92rem !important;
+    font-weight: 800 !important;
+  }
+}
+
+/* ==========================================================================
+   FRIENDLY MANUAL INPUT STYLES (LOGBOOK JAM OPERASI · SPV & ADMIN)
+   ========================================================================== */
+
+.friendly-preset-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.btn-friendly-preset {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-friendly-preset:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.btn-friendly-preset.active {
+  background: #047857;
+  border-color: #047857;
+  color: #ffffff;
+}
+
+.friendly-stepper-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-friendly-stepper {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  min-width: 38px;
+  text-align: center;
+}
+
+.btn-friendly-stepper:hover {
+  background: #f8fafc;
+  border-color: #047857;
+  color: #047857;
+}
+
+.friendly-live-preview {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  margin: 1rem 0;
+}
+
+.friendly-live-preview.warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.friendly-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+@media (max-width: 600px) {
+  .friendly-preview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.friendly-preview-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.friendly-preview-lbl {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.friendly-preview-val {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
+/* ==========================================================================
+   SCENARIO MANAGER & 100 REAL-WORLD CASE TESTER STYLES
+   ========================================================================== */
+
+.btn-scenario-launcher {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 1.25rem;
+  z-index: 999;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0a1e15;
+  background: #ffffff;
+  border: 1px solid #10b981;
+  border-radius: 9999px;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-scenario-launcher:hover {
+  background: #ecfdf5;
+  border-color: #059669;
+  box-shadow: 0 6px 18px rgba(5, 150, 105, 0.22);
+  transform: translateY(-1px);
+}
+
