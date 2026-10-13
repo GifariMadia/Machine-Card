@@ -223,3 +223,230 @@ export default function OpenWorkDrawer({
         throw new Error('API request failed');
       }
 
+      const payload = await response.json();
+      const ticketNumber = payload?.data?.nomor_work || generatedTicket;
+      saveLocalTicket(ticketNumber, finalKategori);
+      onSubmitted(ticketNumber);
+    } catch {
+      setError('Laporan belum tersimpan di server. Periksa koneksi lalu coba lagi.');
+    } finally {
+      clearTimeout(timeoutId);
+      setSubmitting(false);
+    }
+  }
+
+  function saveLocalTicket(ticketNumber: string, finalKategori: string) {
+    try {
+      const saved = JSON.parse(storage.getItem('machine-card-open-work') ?? '[]');
+      saved.unshift({
+        ticket: ticketNumber,
+        machine: machine.nama_mesin,
+        id_mesin: machine.id_mesin,
+        section: machine.kategori,
+        reporter: safeOperator.nik,
+        reporterName: safeOperator.name,
+        shift: form.shift,
+        keterangan: form.keterangan.trim(),
+        kategori: finalKategori,
+        woType: form.woType,
+        kodeProduk: form.woType === 'Batch' ? form.kodeProduk : '',
+        noBatch: form.woType === 'Batch' ? form.noBatch : '',
+        noWr: form.noWr,
+        waktuMulai: form.waktuMulai,
+        waktuSelesai: undefined,
+        durasiJam: undefined,
+        tagType: form.tagType,
+        createdAt: new Date().toISOString(),
+        status: 'OPEN',
+      });
+      storage.setItem('machine-card-open-work', JSON.stringify(saved));
+    } catch (e) {
+      console.warn('Gagal menyimpan ke localStorage:', e);
+    }
+  }
+
+  return (
+    <div className="drawer-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawer-heading">
+      <button className="drawer-overlay" aria-label="Tutup form pelaporan" onClick={onClose} />
+
+      <aside className="openwork-drawer">
+        <header className="drawer-top">
+          <div className="top-brand">
+            <div className="drawer-header-meta">
+              <span className="drawer-type-label">Laporan Open Work</span>
+              <span className="drawer-divider-dot">·</span>
+              <span className="drawer-unit-code">{machine.kode_mesin}</span>
+            </div>
+            <h2 id="drawer-heading" className="drawer-machine-title">
+              {machine.nama_mesin}
+            </h2>
+            <div className="drawer-meta-badges">
+              <span className="meta-badge-item">Line: <strong>{machine.line || 'Line Produksi'}</strong></span>
+              <span className="meta-badge-item">Area: <strong>{machine.area || 'Produksi'}</strong></span>
+              <span className="meta-badge-item">Pelapor: <strong>{safeOperator.name}</strong></span>
+            </div>
+          </div>
+          <button className="btn-close-drawer" onClick={onClose} aria-label="Tutup formulir">
+            <X size={18} />
+          </button>
+        </header>
+
+        <form onSubmit={submit} className={`drawer-form-body ${isKeyboardOpen ? 'keyboard-active' : ''}`}>
+          {/* Struktur mengikuti rekap breakdown: Keterangan -> Start -> (Batch) -> opsional */}
+          <fieldset className="form-section-card" style={{ padding: '0.85rem 1rem' }}>
+            <legend className="section-legend">
+              <Tag size={15} />
+              Detail Gangguan
+            </legend>
+
+            <div className="form-item">
+              <label htmlFor="keterangan-gangguan">Deskripsi Gangguan / Kerusakan Mesin *</label>
+              <textarea
+                id="keterangan-gangguan"
+                value={form.keterangan}
+                onChange={(e) => setForm({ ...form, keterangan: e.target.value })}
+                placeholder="Jelaskan gangguan atau kerusakan mesin..."
+                rows={2}
+                maxLength={500}
+                required
+              />
+
+              <div className="char-count">
+                <span>Minimal 5 karakter</span>
+                <span>{form.keterangan.length} / 500</span>
+              </div>
+            </div>
+
+            <div className="form-item">
+              <label htmlFor="waktu-mulai">Jam Mesin Berhenti (START) *</label>
+              <input
+                id="waktu-mulai"
+                type="datetime-local"
+                value={form.waktuMulai}
+                onChange={(e) => setForm({ ...form, waktuMulai: e.target.value })}
+                required
+              />
+            </div>
+          </fieldset>
+
+          <fieldset className="form-section-card" style={{ padding: '0.85rem 1rem' }}>
+            <legend className="section-legend">
+              <Layers size={15} />
+              Konteks Produksi
+            </legend>
+
+            <div className="wo-toggle-wrap" style={{ maxWidth: '220px', marginBottom: '0.6rem' }}>
+              <button
+                type="button"
+                className={`wo-toggle-btn ${form.woType === 'Batch' ? 'active' : ''}`}
+                onClick={() => handleWoTypeChange('Batch')}
+              >
+                Batch
+              </button>
+              <button
+                type="button"
+                className={`wo-toggle-btn ${form.woType === 'Non Batch' ? 'active' : ''}`}
+                onClick={() => handleWoTypeChange('Non Batch')}
+              >
+                Non Batch
+              </button>
+            </div>
+
+            {form.woType === 'Batch' && (
+              <div className="form-grid-2">
+                <div className="form-item">
+                  <label htmlFor="kode-produk">Kode Produk</label>
+                  <input
+                    id="kode-produk"
+                    type="text"
+                    list="kode-produk-list"
+                    value={form.kodeProduk}
+                    onChange={(e) => setForm({ ...form, kodeProduk: e.target.value.toUpperCase() })}
+                    placeholder="Contoh: LNKOA"
+                    maxLength={40}
+                  />
+                  <datalist id="kode-produk-list">
+                    {quickProductPresets.map((kp) => (
+                      <option key={kp} value={kp} />
+                    ))}
+                  </datalist>
+                </div>
+                <div className="form-item">
+                  <label htmlFor="no-batch">Nomor Batch</label>
+                  <input
+                    id="no-batch"
+                    type="text"
+                    value={form.noBatch}
+                    onChange={(e) => setForm({ ...form, noBatch: e.target.value.toUpperCase() })}
+                    placeholder="Contoh: JJ136"
+                    maxLength={40}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div style={{ paddingTop: '0.6rem', marginTop: '0.6rem', borderTop: '1px solid #e2e8f0' }}>
+              <div className="form-grid-2">
+                <div className="form-item">
+                  <label htmlFor="shift-select">Shift ({safeOperator.name}) *</label>
+                  <select id="shift-select" value={form.shift} onChange={(e) => setForm({ ...form, shift: e.target.value })} required>
+                    <option value="1">Shift 1 (06:45 - 15:15 WIB)</option>
+                    <option value="2">Shift 2 (15:00 - 22:30 WIB)</option>
+                    <option value="3">Shift 3 (22:15 - 06:45 WIB)</option>
+                  </select>
+                </div>
+                <div className="form-item">
+                  <label htmlFor="kategori-breakdown">Kategori Breakdown *</label>
+                  <select id="kategori-breakdown" value={form.kategori} onChange={(e) => handleQuickCategory(e.target.value)} required>
+                    {presetCategories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-item mt-2">
+                <label htmlFor="no-wr">NO.WR (Work Request) *</label>
+                <input
+                  id="no-wr"
+                  type="text"
+                  value={form.noWr}
+                  onChange={(e) => setForm({ ...form, noWr: e.target.value })}
+                  placeholder="Contoh: 293040"
+                  maxLength={50}
+                  required
+                />
+              </div>
+            </div>
+          </fieldset>
+
+          {error && (
+            <div className="drawer-error-alert" role="alert" aria-live="assertive">
+              <AlertTriangle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <footer className={`drawer-footer ${isKeyboardOpen ? 'is-hidden-keyboard' : ''}`}>
+            <button type="button" className="btn-cancel" onClick={onClose} disabled={submitting}>
+              Batal
+            </button>
+            <button type="submit" className="btn-submit-openwork" disabled={submitting}>
+              {submitting ? (
+                <>
+                  <span className="spinner-dot" />
+                  <span>Mengirim Laporan…</span>
+                </>
+              ) : (
+                <>
+                  <Send size={16} />
+                  <span>Kirim Laporan Open Work</span>
+                </>
+              )}
+            </button>
+          </footer>
+        </form>
+      </aside>
+    </div>
+  );
+}
+
