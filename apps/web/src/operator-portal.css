@@ -1648,3 +1648,518 @@
 
 .filter-interval-select {
   min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  color: #0f172a;
+}
+
+@media (max-width: 900px) {
+  .filter-pills-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .filter-pills-row .pill-btn,
+  .filter-pills-row .filter-title {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .filter-interval-row {
+    width: 100%;
+  }
+
+  .filter-interval-select {
+    flex: 1;
+  }
+
+  /* KPI ringkas: 3 kartu sebaris */
+  .portal-metrics-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .portal-metrics-grid .metric-box {
+    min-height: 0 !important;
+    padding: 0.55rem 0.6rem !important;
+  }
+
+  .portal-metrics-grid .metric-val {
+    font-size: 1.35rem !important;
+  }
+
+  .portal-metrics-grid .metric-lbl {
+    font-size: 0.62rem !important;
+  }
+}
+
+/* ==========================================================================
+   SMART TYPING AUTOCOMPLETE (OPEN WORK & OPERATOR COMPLAINTS)
+   ========================================================================== */
+.form-item-smart {
+  position: relative;
+}
+
+/* Quick symptom chips */
+.quick-symptom-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.btn-symptom-chip {
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-symptom-chip:hover {
+  background: #ecfdf5;
+  border-color: #059669;
+  color: #047857;
+}
+
+.btn-symptom-chip.active {
+  background: #059669;
+  border-color: #047857;
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   INDUSTRIAL COMPACT CARD SYSTEM (OPERATOR PORTAL)
+   Mengedepankan kemudahan pemindaian mata (visual scanability) dan pemerataan
+   beban kognitif operator plant pada layar Tablet & Smartphone.
+   ========================================================================== */
+
+/* Mode Desktop Default (> 1024px) */
+.opr-m-mobile-sub,
+.opr-m-mobile-status {
+  display: none;
+}
+
+.ticket-id-pill {
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  color: #0f172a;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11.5px;
+}
+
+.wr-pill {
+  font-weight: 700;
+  color: #0369a1;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+}
+
+.batch-tag-mini {
+  display: inline-block;
+  padding: 1px 6px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.opr-closed-pill {
+  font-size: 0.8rem;
+  color: #059669;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* TABLET (641px - 1024px) - 2-Column Responsive Card Grid */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .portal-table tbody {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 14px !important;
+    padding: 2px !important;
+    background: transparent !important;
+  }
+}
+
+/* SMARTPHONE (<= 640px) - 1-Column Compact Stack */
+@media (max-width: 640px) {
+  .portal-table tbody {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+}
+
+/* UNIVERSAL MOBILE & TABLET CARD RULES (max-width: 1024px) */
+@media (max-width: 1024px) {
+  /* Hilangkan ::before pseudo-element judul kapital yang membuang ruang */
+  .portal-table .opr-machine-card-row td::before,
+  .portal-table .opr-ticket-card-row td::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  /* ------------------------------------------------------------------------
+     KARTU TIKET OPERATOR (Compact & High Cognitive Clarity)
+     ------------------------------------------------------------------------ */
+  .opr-ticket-card-row {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    grid-template-areas:
+      "machine status"
+      "issue issue"
+      "meta meta"
+      "action action" !important;
+    padding: 12px 14px !important;
+    gap: 6px 10px !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    border: 1px solid #d8e0dc !important;
+    box-shadow: 0 1px 4px rgba(10, 30, 21, 0.04) !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+    transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+  }
+
+  .opr-ticket-card-row:hover {
+    box-shadow: 0 4px 12px rgba(10, 30, 21, 0.08) !important;
+  }
+
+  .opr-ticket-card-row.is-closed {
+    background: #fbfdfc !important;
+    border-color: #d1fae5 !important;
+  }
+
+  /* Area Machine (Kiri Atas) */
+  .opr-ticket-card-row .td-opr-ticket-machine {
+    grid-area: machine !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 0 !important;
+    border-bottom: none !important;
+    text-align: left !important;
+    min-width: 0 !important;
+  }
+
+  .opr-ticket-machine-title {
+    font-size: 0.95rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    line-height: 1.3 !important;
+    margin: 0 !important;
+  }
+
+  .opr-ticket-subline {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin-top: 3px !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* Area Status (Kanan Atas) */
+  .opr-ticket-card-row .td-opr-ticket-status {
+    grid-area: status !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: flex-start !important;
+    padding: 0 !important;
+    border-bottom: none !important;
+    text-align: right !important;
+    flex-shrink: 0 !important;
+  }
+
+  .opr-ticket-status-wrap {
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+
+  .opr-ticket-status-wrap .badge-status {
+    margin: 0 !important;
+    padding: 4px 10px !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    border-radius: 999px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Area Issue (Tengah: Deskripsi Gangguan Jelas) */
+  .opr-ticket-card-row .td-opr-ticket-issue {
+    grid-area: issue !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 3px 0 0 0 !important;
+    border-bottom: none !important;
+    text-align: left !important;
+    width: 100% !important;
+  }
+
+  .opr-ticket-issue-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+
+  .opr-ticket-issue-text {
+    margin: 0 !important;
+    font-size: 0.88rem !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    line-height: 1.35 !important;
+  }
+
+  /* Area Metadata Strip (1 Baris Ringkas & Rapi) */
+  .opr-ticket-card-row .td-opr-ticket-info {
+    grid-area: meta !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 2px 0 4px 0 !important;
+    border-bottom: none !important;
+    text-align: left !important;
+    width: 100% !important;
+  }
+
+  .opr-ticket-meta-strip {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px 8px !important;
+    flex-wrap: wrap !important;
+    font-size: 0.72rem !important;
+    color: #64748b !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Respon Teknisi & Closing Callout */
+  .opr-tech-action-callout {
+    grid-column: 1 / -1 !important;
+    background: #f0fdf4 !important;
+    border: 1px solid #bbf7d0 !important;
+    border-radius: 6px !important;
+    padding: 5px 8px !important;
+    margin-top: 3px !important;
+    font-size: 0.75rem !important;
+    color: #166534 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .opr-closing-meta {
+    grid-column: 1 / -1 !important;
+    color: #64748b !important;
+    font-size: 0.72rem !important;
+    display: block !important;
+    margin-top: 2px !important;
+  }
+
+  .opr-closing-notes {
+    grid-column: 1 / -1 !important;
+    font-size: 0.73rem !important;
+    color: #047857 !important;
+    font-style: italic !important;
+    margin-top: 2px !important;
+  }
+
+  /* Area Action Footer */
+  .opr-ticket-card-row .td-opr-ticket-action {
+    grid-area: action !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    padding: 8px 0 0 0 !important;
+    border-bottom: none !important;
+    border-top: 1px solid #f1f5f9 !important;
+    margin-top: 2px !important;
+    width: 100% !important;
+  }
+
+  .opr-ticket-card-row .td-opr-ticket-action .btn-operator-closing-action {
+    width: 100% !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    justify-content: center !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+  }
+
+  .opr-ticket-card-row .td-opr-ticket-action .opr-closed-pill {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 6px !important;
+    background: #f0fdf4 !important;
+    color: #15803d !important;
+    border: 1px solid #bbf7d0 !important;
+    border-radius: 8px !important;
+  }
+
+  /* ------------------------------------------------------------------------
+     KARTU DAFTAR MESIN (Compact, Solid & High Scanability)
+     ------------------------------------------------------------------------ */
+  .opr-machine-card-row {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 12px 14px !important;
+    gap: 8px !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    border: 1px solid #d8e0dc !important;
+    box-shadow: 0 1px 4px rgba(10, 30, 21, 0.04) !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+    transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+  }
+
+  .opr-machine-card-row:hover {
+    box-shadow: 0 4px 12px rgba(10, 30, 21, 0.08) !important;
+  }
+
+  .opr-machine-card-row.row-breakdown {
+    background: #fffafa !important;
+    border-color: #fecdd3 !important;
+    border-left: 4px solid #e11d48 !important;
+  }
+
+  /* Sembunyikan sel redundan pada tampilan kartu mobile */
+  .opr-machine-card-row .td-opr-m-code,
+  .opr-machine-card-row .td-opr-m-section,
+  .opr-machine-card-row .td-opr-m-status {
+    display: none !important;
+  }
+
+  /* Sel Utama Nama Mesin & Info */
+  .opr-machine-card-row .td-opr-m-name {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 0 !important;
+    border-bottom: none !important;
+    text-align: left !important;
+    width: 100% !important;
+  }
+
+  .opr-m-name-wrap {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    width: 100% !important;
+  }
+
+  /* Baris 1: Nama Mesin di Kiri, Status di Kanan */
+  .opr-m-header-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .opr-m-header-row .machine-name {
+    font-size: 0.95rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    line-height: 1.3 !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    flex: 1 1 auto !important;
+  }
+
+  .opr-m-mobile-status {
+    display: inline-flex !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+  }
+
+  .opr-m-mobile-status .status-indicator {
+    padding: 3px 9px !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    border-radius: 999px !important;
+    white-space: nowrap !important;
+    gap: 5px !important;
+  }
+
+  /* Baris 2: Sub-badges (Kode Mesin & Section) */
+  .opr-m-mobile-sub {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin-top: 2px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .opr-m-mobile-sub .code-pill.mini {
+    font-size: 11px !important;
+    padding: 1px 6px !important;
+    font-weight: 700 !important;
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 4px !important;
+    color: #334155 !important;
+  }
+
+  .opr-m-mobile-sub .section-tag.mini {
+    font-size: 11px !important;
+    padding: 1px 6px !important;
+    font-weight: 600 !important;
+    background: #ecfdf5 !important;
+    border: 1px solid #a7f3d0 !important;
+    border-radius: 4px !important;
+    color: #065f46 !important;
+  }
+
+  /* Baris 3: Tombol Aksi */
+  .opr-machine-card-row .td-opr-m-action {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    padding: 8px 0 0 0 !important;
+    border-bottom: none !important;
+    border-top: 1px solid #f1f5f9 !important;
+    margin-top: 2px !important;
+    width: 100% !important;
+  }
+
+  .opr-machine-card-row .td-opr-m-action .btn-breakdown-action {
+    width: 100% !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    justify-content: center !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+  }
+}
+
