@@ -898,3 +898,303 @@ export default function OperatorDashboard({ operator, onLogout }: OperatorDashbo
                   </select>
                 </div>
               </div>
+
+              {/* Table Mesin */}
+              <div className="table-responsive">
+                <table className="portal-table">
+                  <thead>
+                    <tr>
+                      <th>KODE MESIN</th>
+                      <th>NAMA MESIN</th>
+                      <th>SECTION / LINI</th>
+                      <th>STATUS MESIN</th>
+                      <th className="text-center">AKSI PEMELIHARAAN</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleMachines.map((m) => {
+                      const isBreakdown = breakdownMachineNames.has(m.nama_mesin);
+                      return (
+                        <tr key={m.kode_mesin} className={`opr-machine-card-row ${isBreakdown ? 'row-breakdown' : ''}`}>
+                          <td data-label="Kode Mesin" className="td-opr-m-code">
+                            <span className="code-pill">{m.kode_mesin}</span>
+                          </td>
+                          <td data-label="Nama Mesin" className="td-opr-m-name">
+                            <div className="opr-m-name-wrap">
+                              <div className="opr-m-header-row">
+                                <strong className="machine-name">{m.nama_mesin}</strong>
+                                <div className="opr-m-mobile-status">
+                                  {isBreakdown ? (
+                                    <span className="status-indicator breakdown">
+                                      <span className="status-dot red" />
+                                      Breakdown
+                                    </span>
+                                  ) : (
+                                    <span className="status-indicator normal">
+                                      <span className="status-dot green" />
+                                      Berjalan Normal
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="opr-m-mobile-sub">
+                                <span className="code-pill mini">{m.kode_mesin}</span>
+                                <span className="section-tag mini">{m.kategori}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td data-label="Section / Lini" className="td-opr-m-section">
+                            <span className="section-tag">{m.kategori}</span>
+                          </td>
+                          <td data-label="Status Mesin" className="td-opr-m-status">
+                            {isBreakdown ? (
+                              <span className="status-indicator breakdown">
+                                <span className="status-dot red" />
+                                Breakdown (Open Work)
+                              </span>
+                            ) : (
+                              <span className="status-indicator normal">
+                                <span className="status-dot green" />
+                                Berjalan Normal
+                              </span>
+                            )}
+                          </td>
+                          <td data-label="Aksi Pemeliharaan" className="text-center td-action-cell td-opr-m-action">
+                            <button
+                              type="button"
+                              className="btn-breakdown-action"
+                              onClick={() => setSelectedMachine(m)}
+                            >
+                              <AlertTriangle size={15} />
+                              <span>Laporkan Breakdown</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {visibleMachines.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="empty-table-cell">
+                          <PackageSearch size={32} />
+                          <strong>Tidak ada mesin ditemukan</strong>
+                          <p>Coba gunakan kata kunci pencarian atau kategori lain.</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Footer */}
+              <footer className="table-pagination-footer">
+                <div className="pagination-left-wrap">
+                  <span className="pagination-info">
+                    Menampilkan {visibleMachines.length ? (page - 1) * perPage + 1 : 0}–
+                    {Math.min(page * perPage, filteredMachines.length)} dari {filteredMachines.length} mesin
+                  </span>
+                  <div className="pagination-size-selector">
+                    <label htmlFor="machine-per-page">Tampilkan:</label>
+                    <select
+                      id="machine-per-page"
+                      value={perPage}
+                      onChange={(e) => handlePerPageChange(Number(e.target.value))}
+                      aria-label="Jumlah mesin per halaman"
+                    >
+                      <option value={5}>5 / hal</option>
+                      <option value={10}>10 / hal</option>
+                      <option value={20}>20 / hal</option>
+                      <option value={50}>50 / hal</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="pagination-ctrls">
+                  <button
+                    type="button"
+                    disabled={page === 1}
+                    onClick={() => startTransition(() => setPage((p) => Math.max(1, p - 1)))}
+                    aria-label="Halaman sebelumnya"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span className="page-current">
+                    {page} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={page >= totalPages}
+                    onClick={() => startTransition(() => setPage((p) => Math.min(totalPages, p + 1)))}
+                    aria-label="Halaman berikutnya"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </footer>
+            </section>
+          </div>
+        )}
+
+        {/* TAB 2: TIKET AKTIF & CLOSING OPERATOR */}
+        {activeTab === 'TICKETS' && (
+          <section className="portal-content-card">
+            {/* Toolbar Status Filter & Search */}
+            <div className="tickets-toolbar" style={{ flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="filter-pills-row">
+                <span className="filter-title">Filter:</span>
+                <button
+                  type="button"
+                  className={`pill-btn ${ticketFilter === 'ACTIVE' ? 'active' : ''}`}
+                  onClick={() => setTicketFilter('ACTIVE')}
+                >
+                  Semua Aktif ({activeTickets.length})
+                </button>
+                <button
+                  type="button"
+                  className={`pill-btn ${ticketFilter === 'OPEN' ? 'active' : ''}`}
+                  onClick={() => setTicketFilter('OPEN')}
+                >
+                  Menunggu Teknisi ({openTickets.length})
+                </button>
+                <button
+                  type="button"
+                  className={`pill-btn ${ticketFilter === 'IN_PROGRESS' ? 'active' : ''}`}
+                  onClick={() => setTicketFilter('IN_PROGRESS')}
+                >
+                  Sedang Dikerjakan ({inProgressTickets.length})
+                </button>
+                <button
+                  type="button"
+                  className={`pill-btn ${ticketFilter === 'SELESAI_PERBAIKAN' ? 'active' : ''}`}
+                  onClick={() => setTicketFilter('SELESAI_PERBAIKAN')}
+                  style={readyForClosingTickets.length > 0 ? { borderColor: '#86efac', color: '#047857', fontWeight: 700 } : undefined}
+                >
+                  Siap Closing ({readyForClosingTickets.length})
+                </button>
+                <button
+                  type="button"
+                  className={`pill-btn ${ticketFilter === 'CLOSED' ? 'active' : ''}`}
+                  onClick={() => setTicketFilter('CLOSED')}
+                >
+                  Riwayat Selesai ({closedTickets.length})
+                </button>
+              </div>
+
+              <div className="search-input-wrap" style={{ maxWidth: '340px' }}>
+                <Search size={16} className="search-ico" />
+                <input
+                  type="text"
+                  value={ticketSearch}
+                  onChange={(e) => setTicketSearch(e.target.value)}
+                  placeholder="Cari tiket, mesin, atau keluhan..."
+                  aria-label="Cari tiket aktif"
+                />
+                {ticketSearch && (
+                  <button className="btn-clear-search" onClick={() => setTicketSearch('')}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Tabel Tiket Aktif Ringkas & Fokus */}
+            <div className="table-responsive">
+              <table className="portal-table">
+                <thead>
+                  <tr>
+                    <th>MESIN &amp; SECTION</th>
+                    <th>NO. TIKET &amp; WAKTU LAPOR</th>
+                    <th>KELUHAN / GANGGUAN</th>
+                    <th>STATUS &amp; RESPON TEKNISI</th>
+                    <th className="text-center">AKSI OPERATOR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleTickets.map((t) => {
+                    const rawTime = t.waktuMulai || t.createdAt;
+                    const startDate = rawTime ? new Date(rawTime) : new Date();
+                    const isValidStart = !isNaN(startDate.getTime());
+                    const dateFormatted = isValidStart
+                      ? new Intl.DateTimeFormat('id-ID', {
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZone: 'Asia/Jakarta',
+                        }).format(startDate)
+                      : (rawTime || '-');
+
+                    const resumeFormatted = t.waktuMesinBeroperasi && !isNaN(new Date(t.waktuMesinBeroperasi).getTime())
+                      ? new Intl.DateTimeFormat('id-ID', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZone: 'Asia/Jakarta',
+                        }).format(new Date(t.waktuMesinBeroperasi))
+                      : null;
+
+                    return (
+                      <tr key={t.ticket} className={`opr-ticket-card-row ${t.status === 'CLOSED' ? 'is-closed' : ''}`}>
+                        <td data-label="Mesin & Section" className="td-block-cell td-opr-ticket-machine">
+                          <strong className="opr-ticket-machine-title">{t.machine}</strong>
+                          <div className="opr-ticket-subline">
+                            <span className="section-tag">Section {t.section}</span>
+                            {t.woType && (
+                              <span className="batch-tag-mini">
+                                {t.woType === 'Batch' ? `Batch: ${t.noBatch || '—'}` : 'Non Batch'}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td data-label="No. Tiket & Waktu Lapor" className="td-block-cell td-opr-ticket-info">
+                          <div className="opr-ticket-meta-strip">
+                            <span className="ticket-id-pill">{t.ticket}</span>
+                            {t.noWr && (
+                              <span className="wr-pill">WR: {t.noWr}</span>
+                            )}
+                            <span className="time-pill">{dateFormatted}</span>
+                            <span className="reporter-pill">Pelapor: {t.reporterName || t.reporter} (Shift {t.shift || '1'})</span>
+                          </div>
+                        </td>
+
+                        <td data-label="Keluhan / Gangguan" className="issue-desc-cell td-block-cell td-opr-ticket-issue">
+                          <div className="opr-ticket-issue-group">
+                            <p className="opr-ticket-issue-text">{t.keterangan}</p>
+                            {t.kategori && (
+                              <span className="kategori-pill">{t.kategori}</span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td data-label="Status & Respon Teknisi" className="td-block-cell td-opr-ticket-status">
+                          <div className="opr-ticket-status-wrap">
+                            {t.status === 'OPEN' && (
+                              <span className="badge-status open">
+                                <Clock3 size={13} />
+                                Menunggu Teknisi
+                              </span>
+                            )}
+                            {t.status === 'IN_PROGRESS' && (
+                              <span className="badge-status in-progress">
+                                <Wrench size={13} />
+                                Sedang Dikerjakan
+                              </span>
+                            )}
+                            {['PENDING', 'MENUNGGU_PART', 'MENUNGGU_DUKUNGAN'].includes(t.status) && <span className="badge-status in-progress">{t.status === 'MENUNGGU_PART' ? 'Menunggu Part' : t.status === 'MENUNGGU_DUKUNGAN' ? 'Menunggu Dukungan' : 'Pekerjaan Ditunda'}</span>}
+                            {t.status === 'HANDOVER' && (
+                              <span className="badge-status in-progress" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>
+                                <RefreshCw size={13} />
+                                Operan Shift / Handover
+                              </span>
+                            )}
+                            {t.status === 'SELESAI_PERBAIKAN' && (
+                              <span className="badge-status in-progress" style={{ background: '#dcfce7', color: '#166534', border: '1px solid #86efac', fontWeight: 700 }}>
+                                <CheckCircle2 size={13} />
+                                Siap Uji Coba &amp; Closing
+                              </span>
+                            )}
+                            {t.status === 'CLOSED' && (
+                              <span className="badge-status closed">
+                                <CheckCircle2 size={13} />
+                                Selesai Perbaikan
+                              </span>
+                            )}
