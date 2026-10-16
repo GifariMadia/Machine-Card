@@ -1198,3 +1198,345 @@ export default function OperatorDashboard({ operator, onLogout }: OperatorDashbo
                                 Selesai Perbaikan
                               </span>
                             )}
+                          </div>
+
+                          {t.action && (
+                            <div className="opr-tech-action-callout">
+                              <strong style={{ color: '#047857', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Wrench size={12} /> Progres Teknisi ({t.technicianName || 'Maintenance'}):
+                              </strong>
+                              <div style={{ fontSize: '0.78rem', color: '#065f46', marginTop: '2px' }}>
+                                {t.action}
+                              </div>
+                            </div>
+                          )}
+
+                          {t.status === 'CLOSED' && t.penutupName && (
+                            <small className="opr-closing-meta">
+                              Ditutup oleh <strong>{t.penutupName}</strong>{t.shiftPenutup ? ' (Shift ' + t.shiftPenutup + ')' : ''}
+                              {resumeFormatted ? ` pada ${resumeFormatted} WIB` : ''}
+                            </small>
+                          )}
+                          {t.catatanClosing && (
+                            <div className="opr-closing-notes">
+                              Closing: {t.catatanClosing}
+                            </div>
+                          )}
+                        </td>
+
+                        <td data-label="Aksi Operator" className="text-center td-action-cell td-opr-ticket-action">
+                          {t.status !== 'CLOSED' ? (
+                            <button
+                              type="button"
+                              className={`btn-operator-closing-action ${t.status === 'SELESAI_PERBAIKAN' ? 'ready-to-close' : ''}`}
+                              onClick={() => openClosingModal(t)}
+                              title="Konfirmasi mesin telah selesai running test dan beroperasi kembali"
+                              style={t.status === 'SELESAI_PERBAIKAN' ? { background: '#059669', color: '#ffffff', fontWeight: 800, border: '2px solid #34d399' } : undefined}
+                            >
+                              <CheckCircle2 size={14} />
+                              <span>{t.status === 'SELESAI_PERBAIKAN' ? 'Uji Coba & Closing Tiket' : 'Closing Tiket (Mesin Beroperasi)'}</span>
+                            </button>
+                          ) : (
+                            <span className="opr-closed-pill">
+                              <CheckCircle2 size={14} /> Kembali operasi dikonfirmasi
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {filteredTickets.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="empty-table-cell">
+                        <FileText size={32} />
+                        <strong>
+                          {ticketFilter === 'ACTIVE'
+                            ? 'Tidak ada tiket aktif'
+                            : 'Tidak ada tiket yang sesuai'}
+                        </strong>
+                        <p>
+                          {ticketFilter === 'ACTIVE'
+                            ? 'Semua mesin beroperasi normal dan tidak ada laporan breakdown yang menunggu penanganan.'
+                            : 'Sesuaikan filter status atau kata kunci pencarian Anda.'}
+                        </p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Tiket */}
+            <footer className="table-pagination-footer">
+              <div className="pagination-left-wrap">
+                <span className="pagination-info">
+                  Menampilkan {visibleTickets.length ? (ticketPage - 1) * ticketPerPage + 1 : 0}–
+                  {Math.min(ticketPage * ticketPerPage, filteredTickets.length)} dari {filteredTickets.length} tiket
+                </span>
+                <div className="pagination-size-selector">
+                  <label htmlFor="ticket-per-page">Tampilkan:</label>
+                  <select
+                    id="ticket-per-page"
+                    value={ticketPerPage}
+                    onChange={(e) => handleTicketPerPageChange(Number(e.target.value))}
+                    aria-label="Jumlah tiket per halaman"
+                  >
+                    <option value={5}>5 / hal</option>
+                    <option value={10}>10 / hal</option>
+                    <option value={20}>20 / hal</option>
+                    <option value={50}>50 / hal</option>
+                  </select>
+                </div>
+              </div>
+              <div className="pagination-ctrls">
+                <button
+                  type="button"
+                  disabled={ticketPage === 1}
+                  onClick={() => startTransition(() => setTicketPage((p) => Math.max(1, p - 1)))}
+                  aria-label="Halaman tiket sebelumnya"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="page-current">
+                  {ticketPage} / {totalTicketPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={ticketPage >= totalTicketPages}
+                  onClick={() => startTransition(() => setTicketPage((p) => Math.min(totalTicketPages, p + 1)))}
+                  aria-label="Halaman tiket berikutnya"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </footer>
+          </section>
+        )}
+        </main>
+
+        {/* Slide-over Drawer Closing Tiket oleh Operator (Seragam dengan OpenWorkDrawer) */}
+        {closingModalTicket && (
+          <div className="drawer-backdrop" role="dialog" aria-modal="true" aria-labelledby="closing-drawer-heading">
+            <button
+              className="drawer-overlay"
+              aria-label="Tutup form closing"
+              onClick={() => setClosingModalTicket(null)}
+            />
+
+            <aside className="openwork-drawer">
+              <header className="drawer-top">
+                <div className="top-brand">
+                  <div className="drawer-header-meta">
+                    <span className="drawer-type-label" style={{ color: '#34d399' }}>Closing Tiket</span>
+                    <span className="drawer-divider-dot">·</span>
+                    <span className="drawer-unit-code">{closingModalTicket.ticket}</span>
+                  </div>
+                  <h2 id="closing-drawer-heading" className="drawer-machine-title">
+                    {closingModalTicket.machine}
+                  </h2>
+                  <div className="drawer-meta-badges">
+                    <span className="meta-badge-item">Section: <strong>{closingModalTicket.section}</strong></span>
+                    <span className="meta-badge-item">Pelapor: <strong>{closingModalTicket.reporterName || closingModalTicket.reporter} (Shift {closingModalTicket.shift})</strong></span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close-drawer"
+                  onClick={() => setClosingModalTicket(null)}
+                  aria-label="Tutup formulir"
+                >
+                  <X size={18} />
+                </button>
+              </header>
+
+              <form onSubmit={handleConfirmClosing} className="drawer-form-body">
+                {closingError && (
+                  <div className="shift-handover-alert" style={{ background: '#fef2f2', borderColor: '#fca5a5', color: '#b91c1c', marginBottom: '0.75rem' }}>
+                    <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <div>
+                      <strong>Validasi Waktu Integritas Data</strong>
+                      <p style={{ margin: '2px 0 0' }}>{closingError}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Ringkasan Tiket & Histori Awal */}
+                <fieldset className="form-section-card" style={{ padding: '0.85rem 1rem' }}>
+                  <legend className="section-legend" style={{ color: '#047857' }}>
+                    <CheckCircle2 size={15} />
+                    Informasi Pengerjaan &amp; Breakdown Asal
+                  </legend>
+
+                  <div className="ticket-summary-box" style={{ margin: '0.35rem 0 0', background: '#ffffff' }}>
+                    <div className="ticket-summary-row">
+                      <span>No. Tiket:</span>
+                      <strong>{closingModalTicket.ticket}</strong>
+                    </div>
+                    <div className="ticket-summary-row">
+                      <span>Keluhan / Masalah:</span>
+                      <span style={{ fontWeight: 600, color: '#b91c1c' }}>{(closingModalTicket as any).issue || closingModalTicket.keterangan}</span>
+                    </div>
+                    {closingModalTicket.action && (
+                      <div className="ticket-summary-row">
+                        <span>Tindakan Teknisi:</span>
+                        <span style={{ fontWeight: 600, color: '#047857' }}>{closingModalTicket.action}</span>
+                      </div>
+                    )}
+                    <div className="ticket-summary-row">
+                      <span>Jam Mesin Breakdown:</span>
+                      <span>{new Date(closingModalTicket.waktuMulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
+                    </div>
+                  </div>
+
+                  {/* Alert Jika Beda Shift */}
+                  {closingForm.shift !== closingModalTicket.shift && (
+                    <div className="shift-handover-alert" style={{ marginTop: '0.75rem' }}>
+                      <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <div>
+                        <strong>Skenario Pergantian Shift Terdeteksi</strong>
+                        <p style={{ margin: '2px 0 0' }}>
+                          Tiket dilaporkan pada Shift {closingModalTicket.shift} dan akan ditutup oleh Operator pada Shift {closingForm.shift}. Data pergantian shift akan direkonsiliasi otomatis untuk perhitungan MTTR lini.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </fieldset>
+
+                {/* Bagian Uji Coba & Identitas Operator Closing */}
+                <fieldset className="form-section-card" style={{ padding: '0.85rem 1rem' }}>
+                  <legend className="section-legend" style={{ color: '#047857' }}>
+                    <Tag size={15} />
+                    Verifikasi Running Test &amp; Waktu Operasi
+                  </legend>
+
+                  <div className="form-grid-2">
+                    <div className="form-item">
+                      <label htmlFor="input-operator-penutup">Operator Uji Coba &amp; Closing</label>
+                      <select
+                        id="input-operator-penutup"
+                        value={closingForm.operatorNik}
+                        onChange={(e) => setClosingForm((prev) => ({ ...prev, operatorNik: e.target.value }))}
+                        required
+                      >
+                        {allOperators.map((o) => (
+                          <option key={o.nik} value={o.nik}>{o.name} ({o.nik})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-item">
+                      <label htmlFor="select-shift-closing">Shift Saat Closing</label>
+                      <select
+                        id="select-shift-closing"
+                        value={closingForm.shift}
+                        onChange={(e) => setClosingForm((prev) => ({ ...prev, shift: e.target.value }))}
+                        required
+                      >
+                        <option value="1">Shift 1 (Pagi)</option>
+                        <option value="2">Shift 2 (Sore)</option>
+                        <option value="3">Shift 3 (Malam)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-item" style={{ marginTop: '0.75rem' }}>
+                    <label htmlFor="input-waktu-resume">Waktu Mesin Beroperasi Kembali (START RUNNING)</label>
+                    <input
+                      id="input-waktu-resume"
+                      type="datetime-local"
+                      value={closingForm.waktuMesinBeroperasi}
+                      onChange={(e) => setClosingForm((prev) => ({ ...prev, waktuMesinBeroperasi: e.target.value }))}
+                      required
+                    />
+                    <span className="field-date-hint">Waktu acuan selesainya downtime mesin untuk integrasi data MTTR</span>
+                  </div>
+
+                  <div className="form-item" style={{ marginTop: '0.75rem' }}>
+                    <label htmlFor="input-catatan-closing">Catatan Uji Coba / Running Test Produk</label>
+                    <textarea
+                      id="input-catatan-closing"
+                      rows={3}
+                      value={closingForm.catatanClosing}
+                      onChange={(e) => setClosingForm((prev) => ({ ...prev, catatanClosing: e.target.value }))}
+                      placeholder="Contoh: Running test 15 menit dengan produk HM758 lancar, speed 80 rpm, sealing rapi."
+                      required
+                    />
+                  </div>
+                </fieldset>
+
+                <footer className="drawer-footer">
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={() => setClosingModalTicket(null)}
+                  >
+                    Batal
+                  </button>
+                  <button type="submit" className="btn-submit-openwork" style={{ background: '#059669' }}>
+                    <CheckCircle2 size={16} />
+                    <span>Konfirmasi &amp; Tutup Tiket</span>
+                  </button>
+                </footer>
+              </form>
+            </aside>
+          </div>
+        )}
+
+        {/* Drawer Pelaporan Open Work */}
+        {selectedMachine && (
+          <OpenWorkDrawer
+            machine={selectedMachine}
+            operator={safeOperator}
+            onClose={() => setSelectedMachine(null)}
+            onSubmitted={handleOpenWorkSubmitted}
+          />
+        )}
+
+        {/* Footer Portal */}
+        <footer className="operator-footer">
+          <span>Machine Card · Portal Pelaporan Breakdown Operator</span>
+          <span className="footer-status">
+            <span className={`status-dot ${isLive ? 'green' : 'amber'}`} />
+            {isLive ? 'Koneksi Server Aktif' : 'Mode Offline / Simulasi'}
+          </span>
+        </footer>
+
+        {/* Mobile & Tablet Bottom Navigation Bar (Jempol-Friendly) */}
+        <nav className="mobile-bottom-nav" aria-label="Navigasi Bawah Operator">
+          <button
+            type="button"
+            className={`mobile-bottom-nav-item ${activeTab === 'MACHINES' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('MACHINES')}
+            title="Katalog Mesin Plant"
+          >
+            <div className="bottom-nav-icon-wrap">
+              <PackageSearch size={20} />
+            </div>
+            <span>Daftar Mesin</span>
+          </button>
+          <button
+            type="button"
+            className={`mobile-bottom-nav-item ${activeTab === 'TICKETS' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('TICKETS')}
+            title="Tiket Aktif"
+          >
+            <div className="bottom-nav-icon-wrap">
+              <FileText size={20} />
+              {activeTickets.length > 0 && (
+                <span className="bottom-nav-badge alert">
+                  {activeTickets.length}
+                </span>
+              )}
+            </div>
+            <span>Tiket Aktif</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  );
+}
+
+
+
+
