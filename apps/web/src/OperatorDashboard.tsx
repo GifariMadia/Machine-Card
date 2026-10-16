@@ -598,3 +598,303 @@ export default function OperatorDashboard({ operator, onLogout }: OperatorDashbo
       )}
 
       {/* Industrial Sidebar Navigation */}
+      <aside className={`dashboard-sidebar ${sidebarOpen ? 'is-open' : ''} ${sidebarCollapsed ? 'is-collapsed' : ''}`}>
+        <div className="sidebar-brand-header">
+          <div className="sidebar-brand-logo" title="BINTANG TOEDJOE · Machine Card Portal Operator">
+            <span className="brand-badge-box" aria-label="Logo Bintang Toedjoe">
+              <img
+                src="/assets/bintang-toedjoe-mark.webp"
+                alt="Logo Bintang Toedjoe"
+                className="brand-logo-mark"
+                loading="lazy"
+                decoding="async"
+              />
+            </span>
+            <div className="brand-text-block">
+              <strong>BINTANG TOEDJOE</strong>
+              <small>Machine Card · Portal Operator</small>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-sidebar-collapse-desktop"
+            onClick={toggleSidebarCollapse}
+            title={sidebarCollapsed ? 'Perluas Sidebar (Tampilkan Teks)' : 'Ciutkan Sidebar (Hanya Ikon)'}
+            aria-label={sidebarCollapsed ? 'Perluas Sidebar' : 'Ciutkan Sidebar'}
+          >
+            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+          <button
+            type="button"
+            className="btn-sidebar-close"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Tutup sidebar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="sidebar-role-indicator" title="OPERATOR · Ranah Produksi">
+          <span className="role-pill-tag role-operator">
+            <span className="pulse-green-dot" />
+            <span className="role-pill-text">OPERATOR</span>
+          </span>
+          <span className="sidebar-plant-label">Ranah Produksi</span>
+        </div>
+
+        <nav className="sidebar-navigation-menu" role="tablist" aria-label="Menu Modul Operator">
+          <div className="sidebar-nav-heading">NAVIGASI MODUL</div>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'MACHINES'}
+            title={`Daftar Mesin Plant (${allPlantMachines.length})`}
+            data-tooltip={`Daftar Mesin (${allPlantMachines.length})`}
+            className={`sidebar-nav-btn ${activeTab === 'MACHINES' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('MACHINES');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <PackageSearch size={18} />
+              <span>Daftar Mesin Plant</span>
+            </div>
+            <span className="sidebar-nav-counter">{allPlantMachines.length}</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'TICKETS'}
+            title={`Tiket Aktif (${activeTickets.length})`}
+            data-tooltip={`Tiket Aktif (${activeTickets.length})`}
+            className={`sidebar-nav-btn ${activeTab === 'TICKETS' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('TICKETS');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <FileText size={18} />
+              <span>Tiket Aktif</span>
+            </div>
+            {activeTickets.length > 0 && (
+              <span className="sidebar-nav-counter alert">
+                {activeTickets.length}
+              </span>
+            )}
+          </button>
+        </nav>
+
+        {/* Sidebar Footer User Card */}
+        <div className="sidebar-footer-profile">
+          <div className="sidebar-user-info" title={`${safeOperator.name} (${safeOperator.nik}) · Dept: ${safeOperator.departments.join(', ')}`}>
+            <div className="sidebar-avatar-circle">
+              {safeOperator.name.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="sidebar-user-text">
+              <strong>{safeOperator.name} · {safeOperator.nik}</strong>
+              <small>Dept: {safeOperator.departments.join(', ')}</small>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-sidebar-logout-icon"
+            onClick={onLogout}
+            title="Keluar dari sesi"
+            aria-label="Logout"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="dashboard-main-area">
+        {/* Top Navbar */}
+        <header className="dashboard-topbar">
+          <div className="topbar-left-zone">
+            <div className="topbar-breadcrumb-trail">
+              <span>Beranda</span>
+              <span>/</span>
+              <strong>
+                {activeTab === 'MACHINES'
+                  ? 'Daftar Mesin Plant'
+                  : 'Tiket Aktif'}
+              </strong>
+            </div>
+          </div>
+
+          <div className="topbar-right-zone">
+            <div className="topbar-chip">
+              <span className="chip-label">Operator:</span>
+              <strong>{safeOperator.name}</strong>
+            </div>
+            <div className="topbar-chip">
+              <span className="chip-label">Area:</span>
+              <strong>{safeOperator.departments.join(', ')}</strong>
+            </div>
+            <div className="topbar-chip">
+              <span className="chip-label">Shift:</span>
+              <strong>{safeOperator.shifts.map((s) => s.replace('Shift ', '')).join('/')}</strong>
+            </div>
+            <div className="topbar-chip live-status">
+              <span className="pulse-green-dot" />
+              <span>Plant Pulogadung</span>
+            </div>
+            <button className="btn-logout" onClick={onLogout} title="Keluar dari sesi">
+              <LogOut size={16} />
+              <span>Keluar</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Main Workspace Content */}
+        <main className="dashboard-content-scroll operator-main">
+          {/* Banner Notifikasi Berhasil */}
+          {successTicket && (
+            <div className="ticket-success-alert" role="status">
+              <div className="alert-content">
+                <CheckCircle2 size={20} className="icon-success" />
+                <div>
+                  <strong>
+                    {successTicket.includes('Mesin Beroperasi')
+                      ? 'Berhasil Ditutup - Mesin Beroperasi Kembali!'
+                      : 'Laporan Breakdown Berhasil Terkirim!'}
+                  </strong>
+                  <p>
+                    Tiket <strong>{successTicket}</strong> telah diperbarui dan siap dipantau.
+                  </p>
+                </div>
+              </div>
+              <div className="alert-actions">
+                <button
+                  className="btn-view-ticket"
+                  onClick={() => {
+                    setActiveTab('TICKETS');
+                    setSuccessTicket('');
+                  }}
+                >
+                  Lihat di Tiket Aktif
+                </button>
+                <button
+                  className="btn-dismiss"
+                  onClick={() => setSuccessTicket('')}
+                  aria-label="Tutup notifikasi"
+                >
+                  <X size={17} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Hero Header & Metrics */}
+          <section className="portal-hero-section">
+            <div className="hero-text-wrap">
+              <p className="breadcrumb">
+                Operator <span>/</span>{' '}
+                {activeTab === 'MACHINES'
+                  ? 'Daftar Mesin Plant'
+                  : 'Tiket Aktif'}
+              </p>
+              <h1>
+                {activeTab === 'MACHINES'
+                  ? 'Daftar Mesin & Lapor Breakdown'
+                  : 'Daftar Tiket Aktif & Closing Operasional'}
+              </h1>
+              <p className="hero-subtitle">
+                {activeTab === 'MACHINES'
+                  ? 'Pilih mesin yang mengalami kendala teknis atau breakdown untuk mengirim laporan pemeliharaan secara instan.'
+                  : 'Pantau respon pengerjaan perbaikan teknisi dan lakukan closing tiket setelah Anda menguji coba running test mesin.'}
+              </p>
+            </div>
+          </section>
+
+          {/* TAB 1: DAFTAR MESIN */}
+          {activeTab === 'MACHINES' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Actionable Reminder Banner jika ada tiket siap closing */}
+              {urgentClosingTicket && (
+                <div
+                  style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderLeft: '4px solid #10b981',
+                    borderRadius: '8px',
+                    padding: '0.85rem 1.15rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '0.75rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Wrench size={18} color="var(--color-icon-neutral, #64748b)" style={{ flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#065f46' }}>
+                        Mesin {urgentClosingTicket.machine} Siap Running Test / Ditutup
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#047857', marginTop: '2px' }}>
+                        Teknisi ({urgentClosingTicket.technicianName || 'Tim Maintenance'}) mencatat:{' '}
+                        <strong>{urgentClosingTicket.action || urgentClosingTicket.keterangan}</strong>. Silakan uji coba produk.
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-operator-closing-action"
+                    style={{
+                      padding: '0.55rem 1.1rem',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      background: '#059669',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                    onClick={() => openClosingModal(urgentClosingTicket)}
+                  >
+                    <CheckCircle2 size={15} />
+                    <span>Closing Tiket (Mesin Beroperasi)</span>
+                  </button>
+                </div>
+              )}
+
+              {/* SECTION: SELURUH KATALOG MESIN PABRIK (Akses Terbuka) */}
+              <section className="portal-content-card">
+                {/* Toolbar: Search & Filter */}
+                <div className="table-header-toolbar">
+                <div className="search-input-wrap">
+                  <Search size={18} className="search-ico" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Cari nama atau kode mesin..."
+                    aria-label="Cari mesin"
+                  />
+                  {search && (
+                    <button className="btn-clear-search" onClick={() => setSearch('')}>
+                      <X size={15} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="filter-select-wrap">
+                  <SlidersHorizontal size={16} />
+                  <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                    {categoryOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
