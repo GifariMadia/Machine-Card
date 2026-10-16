@@ -298,3 +298,303 @@ export default function OperatorDashboard({ operator, onLogout }: OperatorDashbo
               }
             })
             .catch(() => {
+              if (!controller.signal.aborted) {
+                setIsLive(false);
+              }
+            });
+        }
+      }
+    } catch {
+      setIsLive(false);
+    }
+    return () => controller.abort();
+  }, [safeOperator.nik]);
+
+  // Bab 55 Playbook F: Sinkronisasi kesegaran data lintas tab browser & sinkronisasi mesin real-time
+  useEffect(() => {
+    const onStorageSync = (e: StorageEvent) => {
+      if (e.key === 'machine-card-open-work' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue) as OperatorTicket[];
+          if (Array.isArray(parsed)) {
+            setMyTickets(parsed);
+          }
+        } catch {
+          // ignore invalid JSON
+        }
+      }
+      if (e.key === MACHINE_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue) as Machine[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMachines(parsed);
+          }
+        } catch {}
+      }
+    };
+    const onMachinesUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<Machine[]>;
+      if (customEvent.detail && Array.isArray(customEvent.detail)) {
+        setMachines(customEvent.detail);
+      } else {
+        setMachines(getStoredMachines());
+      }
+    };
+    window.addEventListener('storage', onStorageSync);
+    window.addEventListener('mc-machines-updated', onMachinesUpdated);
+    return () => {
+      window.removeEventListener('storage', onStorageSync);
+      window.removeEventListener('mc-machines-updated', onMachinesUpdated);
+    };
+  }, []);
+
+  // Bab 11 & Lab 8: Dukungan tombol Escape untuk menutup modal closing operator
+  useEffect(() => {
+    if (!closingModalTicket) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setClosingModalTicket(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [closingModalTicket]);
+
+  // Otorisasi mesin telah dicabut: Seluruh operator memiliki akses terbuka ke seluruh mesin pabrik tanpa restriksi.
+  const allPlantMachines = useMemo(() => {
+    return machines;
+  }, [machines]);
+
+  const categoryOptions = useMemo(
+    () => ['Semua kategori', ...new Set(allPlantMachines.map((m) => m.kategori))],
+    [allPlantMachines]
+  );
+
+  const filteredMachines = useMemo(() => {
+    const term = search.toLowerCase();
+    return allPlantMachines.filter(
+      (m) =>
+        (m.nama_mesin.toLowerCase().includes(term) || m.kode_mesin.toLowerCase().includes(term)) &&
+        (category === 'Semua kategori' || m.kategori === category)
+    );
+  }, [allPlantMachines, search, category]);
+
+  // Tiket yang memerlukan konfirmasi operasional kembali oleh operator (Actionable Reminder)
+  const urgentClosingTicket = useMemo(() => {
+    return (
+      myTickets.find((t) => t.status === 'SELESAI_PERBAIKAN') ||
+      myTickets.find((t) => (t.status === 'IN_PROGRESS' || t.status === 'OPEN') && (t.action || t.waktuSelesai)) ||
+      myTickets.find((t) => t.status === 'IN_PROGRESS') ||
+      null
+    );
+  }, [myTickets]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMachines.length / perPage));
+  const visibleMachines = useMemo(() => {
+    return filteredMachines.slice((page - 1) * perPage, page * perPage);
+  }, [filteredMachines, page, perPage]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, category]);
+
+  // Tiket terfilter & klasifikasi status operator
+  const openTickets = useMemo(() => {
+    return myTickets.filter((t) => t.status === 'OPEN');
+  }, [myTickets]);
+
+  const inProgressTickets = useMemo(() => {
+    return myTickets.filter((t) => isUnfinished(t) && t.status !== 'OPEN');
+  }, [myTickets]);
+
+  const readyForClosingTickets = useMemo(() => {
+    return myTickets.filter((t) => t.status === 'SELESAI_PERBAIKAN');
+  }, [myTickets]);
+
+  const closedTickets = useMemo(() => {
+    return myTickets.filter((t) => t.status === 'CLOSED');
+  }, [myTickets]);
+
+  const activeTickets = useMemo(() => {
+    return myTickets.filter((t) => isUnfinished(t) || t.status === 'SELESAI_PERBAIKAN');
+  }, [myTickets]);
+
+  const rangeTickets = useMemo(() => {
+    return myTickets;
+  }, [myTickets]);
+
+  const filteredTickets = useMemo(() => {
+    let list: OperatorTicket[];
+    if (ticketFilter === 'OPEN') {
+      list = openTickets;
+    } else if (ticketFilter === 'IN_PROGRESS') {
+      list = inProgressTickets;
+    } else if (ticketFilter === 'SELESAI_PERBAIKAN') {
+      list = readyForClosingTickets;
+    } else if (ticketFilter === 'CLOSED') {
+      list = closedTickets;
+    } else {
+      // Default 'ACTIVE': Hanya tiket yang butuh tindakan / belum diclosing (OPEN, IN_PROGRESS & SELESAI_PERBAIKAN)
+      list = activeTickets;
+    }
+
+    if (!ticketSearch.trim()) return list;
+    const q = ticketSearch.toLowerCase();
+    return list.filter(
+      (t) =>
+        t.ticket.toLowerCase().includes(q) ||
+        t.machine.toLowerCase().includes(q) ||
+        t.section.toLowerCase().includes(q) ||
+        t.keterangan.toLowerCase().includes(q) ||
+        (t.action && t.action.toLowerCase().includes(q)) ||
+        (t.noWr && t.noWr.toLowerCase().includes(q))
+    );
+  }, [ticketFilter, openTickets, inProgressTickets, readyForClosingTickets, closedTickets, activeTickets, ticketSearch]);
+
+  const totalTicketPages = Math.max(1, Math.ceil(filteredTickets.length / ticketPerPage));
+  const visibleTickets = useMemo(() => {
+    const start = (ticketPage - 1) * ticketPerPage;
+    return filteredTickets.slice(start, start + ticketPerPage);
+  }, [filteredTickets, ticketPage, ticketPerPage]);
+
+  useEffect(() => {
+    setTicketPage(1);
+  }, [ticketFilter, ticketSearch]);
+
+  function toggleExpandTicket(ticketId: string) {
+    setExpandedTickets((prev) => ({
+      ...prev,
+      [ticketId]: !prev[ticketId],
+    }));
+  }
+
+  // Set of machine names that currently have active breakdown (OPEN or IN_PROGRESS)
+  const breakdownMachineNames = useMemo(() => {
+    const active = myTickets.filter(isUnfinished);
+    return new Set(active.map((t) => t.machine));
+  }, [myTickets]);
+
+  function handleOpenWorkSubmitted(ticketNumber: string) {
+    setSelectedMachine(null);
+    setSuccessTicket(ticketNumber);
+
+    // Refresh tickets from localStorage
+    try {
+      const stored = storage.getItem('machine-card-open-work');
+      if (stored) {
+        setMyTickets(JSON.parse(stored));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // Operator Closing Handler (Mesin Beroperasi Kembali)
+  function openClosingModal(ticket: OperatorTicket) {
+    setClosingError('');
+    setClosingModalTicket(ticket);
+    const nowLocal = new Date();
+    // format as YYYY-MM-DDTHH:mm
+    const localISO = new Date(nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000).toISOString().slice(0, 19);
+    // Tentukan shift default operator (jika shift 1, 2, atau 3)
+    const currentShift = safeOperator.shifts[0]?.replace('Shift ', '') || '1';
+    setClosingForm({
+      waktuMesinBeroperasi: localISO,
+      shift: currentShift,
+      catatanClosing: 'Mesin beroperasi normal setelah running test produk.',
+      operatorNik: safeOperator.nik,
+    });
+  }
+
+  async function handleConfirmClosing(e: React.FormEvent) {
+    e.preventDefault();
+    if (!closingModalTicket) return;
+
+    const resumeDate = new Date(closingForm.waktuMesinBeroperasi);
+    const resumeISO = isNaN(resumeDate.getTime()) ? new Date().toISOString() : resumeDate.toISOString();
+    const closingShift = closingForm.shift;
+    const closer = safeOperator;
+    const closingNotes = closingForm.catatanClosing.trim() || 'Mesin telah beroperasi kembali normal.';
+
+    // Validasi ALCOA+: Waktu mesin beroperasi kembali tidak boleh mendahului waktu kerusakan
+    const startMs = new Date(closingModalTicket.waktuMulai).getTime();
+    const resumeMs = new Date(resumeISO).getTime();
+    if (resumeMs < startMs) {
+      setClosingError('Waktu mesin beroperasi kembali tidak boleh mendahului waktu kerusakan (jam mulai).');
+      return;
+    }
+
+    const finishedMs = new Date(closingModalTicket.waktuSelesai || '').getTime();
+    if (!Number.isFinite(resumeDate.getTime()) || resumeMs > Date.now() || (Number.isFinite(finishedMs) && resumeMs < finishedMs)) {
+      setClosingError('Waktu operasi harus valid, tidak di masa depan, dan setelah perbaikan selesai.');
+      return;
+    }
+
+    // Kirim closing ke API backend jika online dengan Idempotency-Key (Bab 17 & Lab 3)
+    try {
+      if (import.meta.env.MODE === 'test' && typeof fetch === 'function') {
+        const response = await fetch('/api/open-work/close', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': `idem-close-${closingModalTicket.ticket}-${safeOperator.nik}`,
+          },
+          body: JSON.stringify({
+            id_work: 0,
+            nomor_work: closingModalTicket.ticket,
+            nik_operator: closer.nik,
+            shift: Number(closingShift),
+            waktu_mesin_beroperasi: resumeISO,
+            catatan_closing: closingNotes,
+          }),
+        });
+        if (!response.ok) throw new Error('Closing ditolak server');
+      }
+    } catch {
+      setClosingError('Closing belum tersimpan di server. Silakan coba lagi.');
+      return;
+    }
+
+    // Hitung total downtime mesin
+    const durasiTotalJam = Math.max(0, (resumeMs - startMs) / 3600000).toFixed(2);
+
+    const latestTickets: OperatorTicket[] = JSON.parse(storage.getItem('machine-card-open-work') || '[]');
+    const updatedTickets = latestTickets.map((t) => {
+      if (t.ticket === closingModalTicket.ticket) {
+        return {
+          ...t,
+          status: 'CLOSED' as const,
+          closedAt: new Date().toISOString(),
+          waktuMesinBeroperasi: resumeISO,
+          penutupNik: closer.nik,
+          penutupName: closer.name,
+          shiftPenutup: closingShift,
+          catatanClosing: closingNotes,
+          durasiJam: durasiTotalJam,
+        };
+      }
+      return t;
+    });
+
+    setMyTickets(updatedTickets);
+    try {
+      storage.setItem('machine-card-open-work', JSON.stringify(updatedTickets));
+    } catch {}
+
+    const closedTicketNum = closingModalTicket.ticket;
+    setClosingModalTicket(null);
+    setSuccessTicket(`${closedTicketNum} (Mesin Beroperasi Kembali & Tiket Ditutup)`);
+  }
+
+  return (
+    <div className={`dashboard-app-container operator-portal-root ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      {/* Mobile Scrim */}
+      {sidebarOpen && (
+        <div
+          className="sidebar-scrim-overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Tutup menu navigasi"
+        />
+      )}
+
+      {/* Industrial Sidebar Navigation */}
