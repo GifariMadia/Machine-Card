@@ -1,0 +1,480 @@
+/* ==========================================================================
+   TECHNICIAN PORTAL — BINTANG TOEDJOE MACHINE CARD
+   Matching Login Page Palette (Organic Forest Emerald, B7 Shield, Crisp Cards)
+   ========================================================================== */
+
+.technician-portal-root {
+  min-height: 100vh;
+  background-color: var(--color-bg-app);
+  color: #0f172a;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  flex-direction: row;
+}
+
+.tech-pulse-dot {
+  width: 7px;
+  height: 7px;
+  background-color: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+.btn-tech-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-tech-logout:hover {
+  background: #fef2f2;
+  color: #e11d48;
+  border-color: #fca5a5;
+}
+
+/* Main Container */
+.tech-main {
+  flex: 1;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 2.5vw, 2rem) clamp(1rem, 2.5vw, 2rem) 3rem;
+  box-sizing: border-box;
+}
+
+/* Hero Section */
+.tech-hero-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.tech-breadcrumb {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #059669;
+  margin: 0 0 6px;
+}
+
+.tech-breadcrumb span {
+  opacity: 0.5;
+  margin: 0 4px;
+}
+
+.tech-hero-section h1 {
+  font-family: 'Manrope', 'IBM Plex Sans', sans-serif;
+  font-size: clamp(1.45rem, 2.2vw, 1.85rem);
+  font-weight: 800;
+  color: #0a1e15;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+}
+
+.tech-hero-subtitle {
+  color: #475569;
+  font-size: 0.9rem;
+  margin: 0;
+  max-width: 780px;
+  line-height: 1.55;
+}
+
+/* Metrics Grid */
+.tech-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .tech-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .tech-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+}
+
+.tech-metric-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #059669;
+  border-radius: 14px;
+  padding: 1.2rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(10, 30, 21, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tech-metric-box:hover {
+  box-shadow: 0 10px 26px rgba(10, 30, 21, 0.07);
+  transform: translateY(-2px);
+}
+
+.tech-metric-val {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #0a1e15;
+  line-height: 1;
+}
+
+.tech-metric-lbl {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 6px;
+}
+
+.tech-metric-box.alert {
+  border-left-color: #e11d48;
+}
+.tech-metric-box.alert .tech-metric-val {
+  color: #be123c;
+}
+
+.tech-metric-box.prog {
+  border-left-color: #0284c7;
+}
+.tech-metric-box.prog .tech-metric-val {
+  color: #0369a1;
+}
+
+.tech-metric-box.done {
+  border-left-color: #10b981;
+}
+.tech-metric-box.done .tech-metric-val {
+  color: #047857;
+}
+
+/* Card Container */
+.tech-content-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(10, 30, 21, 0.04);
+  overflow: hidden;
+  width: 100%;
+}
+
+/* Toolbar & Filters */
+.tech-toolbar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 16px 22px;
+  background: #f8faf9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+@media (min-width: 768px) {
+  .tech-toolbar-wrap {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.tech-search-box {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  height: 40px;
+  padding: 0 14px;
+  gap: 0.5rem;
+  flex: 1;
+  max-width: 420px;
+  color: #64748b;
+  transition: all 0.16s ease;
+}
+
+.tech-search-box:focus-within {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+}
+
+.tech-search-box input {
+  border: none;
+  outline: none;
+  font-size: 13.5px;
+  color: #0f172a;
+  width: 100%;
+  background: transparent;
+}
+
+.tech-search-box input::placeholder {
+  color: #94a3b8;
+}
+
+.btn-tech-clear-search {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.tech-filter-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tech-filter-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  margin-right: 0.2rem;
+  letter-spacing: 0.04em;
+}
+
+.tech-pill-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tech-pill-btn:hover {
+  background: #f0fdf4;
+  border-color: #059669;
+  color: #064e3b;
+}
+
+.tech-pill-btn.active {
+  background: #059669;
+  color: #ffffff;
+  border-color: #059669;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+}
+
+/* Table Responsive */
+.tech-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tech-table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13.5px;
+}
+
+.tech-table th {
+  background: #f4f7f5;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 13px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.tech-table td {
+  padding: 15px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  color: #1e293b;
+}
+
+.tech-table tr:hover td {
+  background-color: #f8faf9;
+}
+
+.tech-table tr.selected-work-row td {
+  background-color: #ecfdf5;
+}
+
+.tech-table .text-center {
+  text-align: center;
+}
+
+.tech-ticket-badge {
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 12px;
+  background: #f1f5f9;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  display: inline-block;
+}
+
+.tech-machine-col strong {
+  display: block;
+  font-size: 14px;
+  color: #0a1e15;
+}
+
+.tech-machine-col .tech-section-sub,
+.tech-section-sub {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.tech-issue-col {
+  max-width: 280px;
+}
+
+.tech-issue-col strong {
+  display: block;
+  font-size: 0.88rem;
+  color: #0f172a;
+  line-height: 1.4;
+}
+
+.tech-issue-col small {
+  display: block;
+  color: #047857;
+  font-size: 0.76rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+/* Status Badges */
+.tech-badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.tech-badge-status.open {
+  background: #ffe4e6;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.tech-badge-status.in-progress {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.tech-badge-status.closed {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+/* Action Button */
+.btn-tech-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  font-family: 'Manrope', sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.22);
+}
+
+.btn-tech-action:hover {
+  background: #047857;
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);
+}
+
+.btn-tech-action.open-mode {
+  background: #e11d48;
+  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.25);
+}
+
+.btn-tech-action.open-mode:hover {
+  background: #be123c;
+  box-shadow: 0 4px 10px rgba(225, 29, 72, 0.35);
+}
+
+.btn-tech-action.in-progress-mode {
+  background: #059669;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.22);
+}
+
+.btn-tech-action.in-progress-mode:hover {
+  background: #047857;
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);
+}
+
+.btn-tech-action.handover-mode {
+  background: #0f766e;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.25);
+}
+
+.btn-tech-action.handover-mode:hover {
+  background: #115e59;
+  box-shadow: 0 4px 10px rgba(15, 118, 110, 0.35);
+}
+
+.btn-tech-action.view-mode {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  box-shadow: none;
+}
+
+.btn-tech-action.view-mode:hover {
+  background: #f0fdf4;
+  border-color: #059669;
+  color: #064e3b;
+}
+
+/* Machine Catalog & Part Lifetime Layout */
+.tech-catalog-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
