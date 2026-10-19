@@ -958,3 +958,471 @@
 .btn-tech-finish-work {
   display: inline-flex;
   align-items: center;
+  gap: 0.4rem;
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+}
+
+.btn-tech-finish-work:hover:not(:disabled) {
+  background: #047857;
+  box-shadow: 0 4px 12px rgba(4, 120, 87, 0.35);
+}
+
+.btn-tech-finish-work:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Completed & Closed Footer Banners */
+.tech-footer-completed-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
+.tech-footer-completed-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #047857;
+  font-weight: 600;
+  line-height: 1.35;
+  flex: 1;
+}
+
+.btn-tech-rework {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  padding: 0.5rem 0.9rem !important;
+  font-size: 0.8rem !important;
+  background: #f8fafc !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: max-content !important;
+}
+
+.btn-tech-rework:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+.tech-footer-closed-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: #64748b;
+  font-style: italic;
+  padding: 0.5rem 0;
+  width: 100%;
+}
+
+/* Empty State */
+.tech-empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: #64748b;
+}
+
+.tech-empty-state strong {
+  display: block;
+  font-size: 1.05rem;
+  color: #0f172a;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.tech-empty-state p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.tech-footer-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: #047857;
+}
+
+.tech-footer-status .status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.tech-footer-status .status-dot.green {
+  background: #10b981;
+}
+
+/* ========================================================================
+   MODERN MOBILE CARD STYLING FOR TECHNICIAN MACHINE HISTORY & PARTS CATALOG
+   ======================================================================== */
+@media (max-width: 900px) {
+  /* Hilangkan duplikasi dan table header tersembunyi */
+  .desktop-only-cell,
+  .tech-history-card-row td.desktop-only-cell,
+  .tech-history-card-row td[data-label="Status"],
+  .tech-history-card-row td[data-label="Jenis"] {
+    display: none !important;
+  }
+
+  /* Sembunyikan sel mobile-collapsible saat kartu collapsed */
+  .ticket-row-card.is-card-collapsed .mobile-collapsible-cell,
+  .ticket-row-card.is-card-collapsed .mobile-collapsible-item {
+    display: none !important;
+  }
+
+  .tech-history-card-row {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 12px 14px !important;
+    margin-bottom: 10px !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .tech-history-card-row.is-card-expanded {
+    border-color: #059669 !important;
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.1) !important;
+  }
+
+  /* Header Cell: Baris 1 berisi Ticket ID + Badge PM/Breakdown di kiri, Status di kanan */
+  .tech-card-header-cell {
+    padding: 0 0 8px 0 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    margin-bottom: 8px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .tech-card-header-cell::before {
+    display: none !important;
+  }
+
+  .tech-card-header-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .tech-card-id-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tech-mobile-header-status {
+    flex-shrink: 0;
+  }
+
+  .tech-card-ref-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+
+  .tech-ref-tag,
+  .tech-batch-tag {
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* Title / Uraian Cell */
+  .tech-card-title-cell {
+    padding: 2px 0 8px 0 !important;
+    border-bottom: none !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  .tech-card-title-cell::before {
+    display: none !important;
+  }
+
+  .tech-history-title {
+    font-size: 0.94rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  /* Rincian Tambahan dalam kartu saat expanded */
+  .tech-history-card-row.is-card-expanded td[data-label].mobile-collapsible-cell {
+    padding: 8px 0 !important;
+    border-bottom: 1px dashed #e2e8f0 !important;
+    font-size: 0.82rem !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    text-align: right !important;
+  }
+
+  .tech-history-card-row.is-card-expanded td[data-label].mobile-collapsible-cell::before {
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+    max-width: 45% !important;
+  }
+
+  /* Bagian Tindakan & Part saat collapsible */
+  .tech-history-card-row.is-card-expanded td[data-label="Tindakan & Part"].mobile-collapsible-cell {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 8px 10px !important;
+    margin: 4px 0 !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  .tech-history-card-row.is-card-expanded td[data-label="Tindakan & Part"].mobile-collapsible-cell::before {
+    margin-bottom: 4px;
+  }
+
+  /* Action Cell di Footer Kartu */
+  .tech-card-action-cell {
+    padding: 8px 0 0 0 !important;
+    border-bottom: none !important;
+    border-top: 1px solid #f1f5f9 !important;
+    margin-top: 6px !important;
+  }
+
+  .tech-card-action-cell::before {
+    display: none !important;
+  }
+
+  .tech-card-action-container {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .tech-card-action-container .btn-tech-action {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 8px 10px !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    height: 36px !important;
+    gap: 6px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .tech-mobile-toggle-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-top: 0 !important;
+    padding: 8px 10px !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    height: 36px !important;
+    gap: 6px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* ==========================================================================
+   CONSOLIDATED AS-IS SHIFT REPORT & HOLD-BY-SYSTEM PIPELINE (FACTORY MODEL)
+   ========================================================================== */
+
+.tech-hold-banner {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-left: 4px solid #0284c7;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.tech-hold-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.25rem 0.65rem;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.tech-hold-badge .pulse-blue {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.35);
+}
+
+.tech-as-is-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.tech-asis-area-block {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.tech-asis-area-header {
+  background: #f1f5f9;
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.02em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tech-asis-area-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.tech-asis-incident-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.tech-asis-incident-item.done {
+  border-left: 3px solid #16a34a;
+}
+
+.tech-asis-incident-item.open {
+  border-left: 3px solid #ea580c;
+}
+
+.tech-asis-incident-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tech-asis-incident-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.tech-asis-badge-done {
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 800;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+}
+
+.tech-asis-badge-open {
+  background: #ffedd5;
+  color: #c2410c;
+  font-weight: 800;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+}
+
+.tech-asis-bullets {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.82rem;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.tech-asis-bullets li {
+  margin-bottom: 2px;
+}
+
+.tech-asis-note {
+  font-size: 0.78rem;
+  color: #b45309;
+  background: #fefce8;
+  border-left: 2px solid #eab308;
+  padding: 0.35rem 0.65rem;
+  border-radius: 4px;
+  margin-top: 2px;
+}
+
+.tech-raw-preview-box {
+  background: #0f172a;
+  color: #f1f5f9;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  padding: 1.25rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 520px;
+  border: 1px solid #334155;
+}
+
+
