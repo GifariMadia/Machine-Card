@@ -1348,3 +1348,453 @@ export default function TechnicianDashboard({ technician, onLogout }: Technician
           w.status === 'IN_PROGRESS' &&
           (w.technicianName === technician.name || !w.technicianName)
       ) ||
+      works.find((w) => w.status === 'IN_PROGRESS') ||
+      null
+    );
+  }, [works, technician.name]);
+
+  // Machine browser & Kartu Mesin state (URS 6.1 & 6.2)
+  const machineSearchWrapperRef = useRef<HTMLDivElement | null>(null);
+  const [machineSearch, setMachineSearch] = useState('');
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const [selectedMachineName, setSelectedMachineName] = useState('Ilapak 1');
+  const [expandedHistoryItems, setExpandedHistoryItems] = useState<Record<string, boolean>>({});
+  const [expandedPartsItems, setExpandedPartsItems] = useState<Record<string, boolean>>({});
+  const [machineCardPeriod, setMachineCardPeriod] = useState<'CURRENT_MONTH' | 'LAST_30_DAYS' | 'YEAR_TO_DATE' | 'ALL_TIME'>('CURRENT_MONTH');
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyActivityType, setHistoryActivityType] = useState<'ALL' | 'BREAKDOWN' | 'PREVENTIVE'>('ALL');
+  const [historyStatusFilter, setHistoryStatusFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'PENDING' | 'MENUNGGU_PART' | 'CLOSED'>('ALL');
+  const [selectedPmForDetail, setSelectedPmForDetail] = useState<PreventiveMaintenanceItem | null>(null);
+  const [showOperatingHoursLogModal, setShowOperatingHoursLogModal] = useState(false);
+
+  // Data Jam Operasi Aktual Mesin (URS 3.6 & 6.1)
+  const [operatingHoursRecords, setOperatingHoursRecords] = useState<MachineOperatingHoursRecord[]>(() => {
+    try {
+      const stored = storage.getItem('machine-card-operating-hours');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialOperatingHoursRecords;
+  });
+
+  // Filtered works for table
+  const filteredWorks = useMemo(() => {
+    const q = search.toLowerCase();
+    return works.filter((w) => {
+      const matchStatus =
+        filter === 'ALL'
+          ? true
+          : filter === 'PENDING'
+          ? w.status === 'PENDING' || w.status === 'MENUNGGU_PART' || w.status === 'MENUNGGU_DUKUNGAN'
+          : w.status === filter;
+      const matchSearch =
+        w.ticket.toLowerCase().includes(q) ||
+        w.machine.toLowerCase().includes(q) ||
+        w.issue.toLowerCase().includes(q) ||
+        (w.kategori && w.kategori.toLowerCase().includes(q)) ||
+        (w.reporterName && w.reporterName.toLowerCase().includes(q));
+      return matchStatus && matchSearch;
+    });
+  }, [works, filter, search]);
+
+  // Sync state update to local storage & state (URS 5.1 & 5.2)
+  function updateWorkStatus(status: 'IN_PROGRESS' | 'SELESAI_PERBAIKAN' | 'CLOSED') {
+    if (!selectedWork) return;
+    if (selectedWork.technicianNik && selectedWork.technicianNik !== technician.nik) { alert('Pekerjaan ini sedang ditangani teknisi lain.'); return; }
+
+    let fullAction = actionNotes.trim() || selectedWork.action || '';
+    if (quickAction === 'Penggantian Part' && partForm.name.trim()) {
+      const partSummary = ` | Penggantian Part: ${partForm.name.trim()} (${partForm.specification || 'Standar'}), qty ${partForm.quantity || '1'}, pos: ${partForm.position}`;
+      if (!fullAction.includes(partForm.name.trim())) {
+        fullAction = `${fullAction}${partSummary}`;
+      }
+    }
+
+    const isFinished = status === 'SELESAI_PERBAIKAN' || status === 'CLOSED';
+    const endTimestamp = isFinished ? new Date().toISOString() : selectedWork.waktuSelesai;
+    const startTimestamp = selectedWork.waktuMulaiTeknisi || selectedWork.waktuMulai;
+    if (!startTimestamp || (isFinished && !fullAction.trim())) { alert('Waktu mulai dan rincian tindakan wajib diisi sebelum menyelesaikan pekerjaan.'); return; }
+    const originalOpen = selectedWork.originalOpenedAt || startTimestamp;
+    const durasiJam =
+      isFinished && endTimestamp
+        ? Math.max(0, (new Date(endTimestamp).getTime() - new Date(startTimestamp).getTime()) / 3600000).toFixed(2)
+        : undefined;
+
+    let waitMinutes = selectedWork.durasiTungguMenit || 0;
+    if ((selectedWork.status === 'MENUNGGU_PART' || selectedWork.status === 'MENUNGGU_DUKUNGAN') && selectedWork.waktuMulaiTunggu) {
+      const waitMs = Date.now() - new Date(selectedWork.waktuMulaiTunggu).getTime();
+      waitMinutes += Math.max(1, Math.round(waitMs / 60000));
+    }
+
+    // URS 5.1: Keterlacakan Status
+    const statusEntry: StatusHistoryEntry = {
+      fromStatus: selectedWork.status,
+      toStatus: status,
+      changedBy: `${technician.name} (${technician.nik})`,
+      changedAt: new Date().toISOString(),
+      reason:
+        status === 'SELESAI_PERBAIKAN'
+          ? (fullAction || 'Perbaikan fisik selesai; diteruskan ke operator untuk running test & closing')
+          : status === 'CLOSED'
+          ? (fullAction || 'Pekerjaan perbaikan selesai')
+          : 'Teknisi memulai/melanjutkan perbaikan',
+    };
+
+    const updated: TechnicianWorkItem = {
+      ...selectedWork,
+      status,
+      action: fullAction,
+      technicianName: technician.name,
+      technicianNik: technician.nik,
+      followup: followupNotes.trim() || selectedWork.followup,
+      originalOpenedAt: originalOpen,
+      waktuMulaiTeknisi: startTimestamp,
+      waktuSelesai: endTimestamp,
+      durasiTungguMenit: waitMinutes,
+      waktuTungguPartMenit: waitMinutes,
+      durasiPerbaikanMenit: isFinished && endTimestamp ? Math.max(0, (new Date(endTimestamp).getTime() - new Date(startTimestamp).getTime()) / 60000 - waitMinutes) : selectedWork.durasiPerbaikanMenit,
+      statusHistory: [...(selectedWork.statusHistory || []), statusEntry],
+      partReplaced:
+        quickAction === 'Penggantian Part' && partForm.name.trim()
+          ? { ...partForm, specification: partForm.specification.trim() || 'Standar Pabrik' }
+          : selectedWork.partReplaced,
+    };
+
+    const nextWorks = works.map((w) => (w.ticket === updated.ticket ? updated : w));
+    setWorks(nextWorks);
+    setSelectedWork(updated);
+
+    // Persist to machine-card-open-work storage so operator sees updates
+    try {
+      const stored = storage.getItem('machine-card-open-work');
+      let arr = stored ? JSON.parse(stored) : [];
+      let found = false;
+      arr = arr.map((item: any) => {
+        if (item.ticket === updated.ticket) {
+          found = true;
+          return {
+            ...item,
+            status,
+            action: fullAction,
+            technicianName: technician.name,
+      technicianNik: technician.nik,
+            originalOpenedAt: updated.originalOpenedAt,
+            waktuSelesai: updated.waktuSelesai,
+            durasiJam: durasiJam || item.durasiJam,
+            durasiTungguMenit: waitMinutes,
+            waktuMulaiTeknisi: updated.waktuMulaiTeknisi,
+            durasiPerbaikanMenit: updated.durasiPerbaikanMenit,
+            waktuTungguPartMenit: updated.waktuTungguPartMenit,
+            statusHistory: updated.statusHistory,
+            partReplaced: updated.partReplaced,
+          };
+        }
+        return item;
+      });
+      if (!found) {
+        arr.unshift({
+          ticket: updated.ticket,
+          machine: updated.machine,
+          section: updated.section,
+          reporter: updated.reporter || 'OPR0001',
+          reporterName: updated.reporterName || 'Operator',
+          shift: updated.shift || '1',
+          keterangan: updated.issue,
+          kategori: updated.kategori || 'General',
+          woType: updated.woType || 'Batch',
+          kodeProduk: updated.kodeProduk || '',
+          noBatch: updated.noBatch || '',
+          noWr: updated.noWr || '',
+          originalOpenedAt: updated.originalOpenedAt,
+          waktuMulai: updated.waktuMulai,
+          waktuSelesai: updated.waktuSelesai,
+          status,
+          action: fullAction,
+          technicianName: technician.name,
+      technicianNik: technician.nik,
+          durasiJam,
+          durasiTungguMenit: waitMinutes,
+      waktuTungguPartMenit: waitMinutes,
+      durasiPerbaikanMenit: isFinished && endTimestamp ? Math.max(0, (new Date(endTimestamp).getTime() - new Date(startTimestamp).getTime()) / 60000 - waitMinutes) : selectedWork.durasiPerbaikanMenit,
+          statusHistory: updated.statusHistory,
+          partReplaced: updated.partReplaced,
+        });
+      }
+      storage.setItem('machine-card-open-work', JSON.stringify(arr));
+
+      // Jika ada penggantian part baru yang belum di master data, ajukan ke antrean justifikasi Admin
+      if (updated.partReplaced && updated.partReplaced.name) {
+        try {
+          const rawMaster = storage.getItem('mc-master-parts');
+          const masterParts: any[] = rawMaster ? JSON.parse(rawMaster) : [];
+          const isMaster = masterParts.some(
+            (p) => p.name.toLowerCase() === updated.partReplaced!.name.toLowerCase()
+          );
+          if (!isMaster) {
+            const rawPending = storage.getItem('mc-pending-part-justifications');
+            const pendingList: any[] = rawPending ? JSON.parse(rawPending) : [];
+            const exists = pendingList.some(
+              (p) =>
+                p.ticket === updated.ticket &&
+                p.partName.toLowerCase() === updated.partReplaced!.name.toLowerCase()
+            );
+            if (!exists) {
+              pendingList.unshift({
+                id: `JUSTIF-${Date.now().toString().slice(-4)}`,
+                ticket: updated.ticket,
+                machine: updated.machine,
+                technicianName: technician.name,
+                technicianNik: technician.nik,
+                partName: updated.partReplaced.name,
+                specification: updated.partReplaced.specification || 'Standar Pabrik',
+                quantity: updated.partReplaced.quantity || '1',
+                position: updated.partReplaced.position || 'Lini Produksi',
+                reportedAt: new Date().toISOString(),
+                status: 'PENDING',
+              });
+              storage.setItem('mc-pending-part-justifications', JSON.stringify(pendingList));
+            }
+          }
+        } catch {}
+      }
+    } catch {}
+  }
+
+  // Handle Pause / Pending / Delay Work (URS 3.2, 3.4, 5.1 & 5.2)
+  function handlePauseWork(
+    type: 'PENDING' | 'MENUNGGU_PART' | 'MENUNGGU_DUKUNGAN',
+    reason: string,
+    kondisi: string,
+    tindakLanjut: string
+  ) {
+    if (!selectedWork) return;
+    const nowISO = new Date().toISOString();
+    const originalOpen = selectedWork.originalOpenedAt || selectedWork.waktuMulai || nowISO;
+
+    const statusEntry: StatusHistoryEntry = {
+      fromStatus: selectedWork.status,
+      toStatus: type,
+      changedBy: `${technician.name} (${technician.nik})`,
+      changedAt: nowISO,
+      reason: reason,
+    };
+
+    const updated: TechnicianWorkItem = {
+      ...selectedWork,
+      status: type,
+      alasanPenundaan: reason,
+      kondisiTerakhir: kondisi.trim() || selectedWork.kondisiTerakhir || (type === 'PENDING' ? 'Pekerjaan belum selesai / dilanjutkan ke shift berikutnya' : 'Menunggu ketersediaan suku cadang/bantuan'),
+      rencanaTindakLanjut: tindakLanjut.trim() || selectedWork.rencanaTindakLanjut || (type === 'PENDING' ? 'Dijadwalkan penanganan shift berikutnya' : 'Melanjutkan pekerjaan setelah part/dukungan tersedia'),
+      originalOpenedAt: originalOpen,
+      waktuMulaiTunggu: type !== 'PENDING' ? nowISO : selectedWork.waktuMulaiTunggu,
+      statusHistory: [...(selectedWork.statusHistory || []), statusEntry],
+    };
+    const nextWorks = works.map((w) => (w.ticket === updated.ticket ? updated : w));
+    setWorks(nextWorks);
+    setSelectedWork(updated);
+    setPendingModalOpen(false);
+    setPendingReason('');
+    setPendingKondisiTerakhir('');
+    setPendingRencanaTindakLanjut('');
+
+    try {
+      const stored = storage.getItem('machine-card-open-work');
+      let arr = stored ? JSON.parse(stored) : [];
+      arr = arr.map((item: any) => {
+        if (item.ticket === updated.ticket) {
+          return {
+            ...item,
+            status: type,
+            alasanPenundaan: reason,
+            kondisiTerakhir: updated.kondisiTerakhir,
+            rencanaTindakLanjut: updated.rencanaTindakLanjut,
+            originalOpenedAt: updated.originalOpenedAt,
+            waktuMulaiTunggu: updated.waktuMulaiTunggu,
+            waktuMulaiTeknisi: updated.waktuMulaiTeknisi,
+            durasiPerbaikanMenit: updated.durasiPerbaikanMenit,
+            waktuTungguPartMenit: updated.waktuTungguPartMenit,
+            statusHistory: updated.statusHistory,
+          };
+        }
+        return item;
+      });
+      storage.setItem('machine-card-open-work', JSON.stringify(arr));
+    } catch {}
+  }
+
+  // Handle Record Shift Handover (URS 5.3)
+  function handleRecordHandover(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedWork || !handoverForm.progres.trim()) return;
+
+    const newHandoverEntry: HandoverHistoryEntry = {
+      shift: handoverForm.shift,
+      tanggal: handoverForm.tanggal,
+      pelaksanaNik: technician.nik,
+      pelaksanaNama: technician.name,
+      progres: handoverForm.progres.trim(),
+      kendala: handoverForm.kendala.trim() || 'Tidak ada kendala kritis',
+      tindakLanjut: handoverForm.tindakLanjut.trim() || 'Lanjut monitoring',
+      waktuDicatat: new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date()),
+      tanggungJawabShiftAsal: selectedWork.reporterName ? `Shift ${selectedWork.shift || '1'} (${selectedWork.reporterName})` : undefined,
+    };
+
+    const updated: TechnicianWorkItem = {
+      ...selectedWork,
+      action: `${selectedWork.action ? `${selectedWork.action} | ` : ''}[${handoverForm.shift} - ${technician.name}]: ${handoverForm.progres.trim()}`,
+      kondisiTerakhir: handoverForm.progres.trim(),
+      rencanaTindakLanjut: handoverForm.tindakLanjut.trim(),
+      originalOpenedAt: selectedWork.originalOpenedAt || selectedWork.waktuMulai || new Date().toISOString(),
+      riwayatHandover: [...(selectedWork.riwayatHandover || []), newHandoverEntry],
+    };
+
+    const nextWorks = works.map((w) => (w.ticket === updated.ticket ? updated : w));
+    setWorks(nextWorks);
+    setSelectedWork(updated);
+    setHandoverModalOpen(false);
+    setHandoverForm({
+      shift: 'Shift 2',
+      tanggal: new Date().toISOString().slice(0, 10),
+      progres: '',
+      kendala: '',
+      tindakLanjut: '',
+    });
+
+    try {
+      const stored = storage.getItem('machine-card-open-work');
+      let arr = stored ? JSON.parse(stored) : [];
+      arr = arr.map((item: any) => {
+        if (item.ticket === updated.ticket) {
+          return {
+            ...item,
+            action: updated.action,
+            kondisiTerakhir: updated.kondisiTerakhir,
+            rencanaTindakLanjut: updated.rencanaTindakLanjut,
+            riwayatHandover: updated.riwayatHandover,
+            originalOpenedAt: updated.originalOpenedAt,
+          };
+        }
+        return item;
+      });
+      storage.setItem('machine-card-open-work', JSON.stringify(arr));
+    } catch {}
+  }
+
+  // Handle Complete PM (URS 3.3)
+  function handleCompletePM(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedPmForComplete) return;
+    const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
+    const updated: PreventiveMaintenanceItem = {
+      ...selectedPmForComplete,
+      status: 'SELESAI',
+      tanggalSelesaiAktual: today,
+      pelaksanaNik: technician.nik,
+      pelaksanaNama: technician.name,
+      hasilTemuan: pmFindings.trim() || 'Pemeriksaan preventif selesai sesuai standar prosedur operasional.',
+    };
+    savePmUpdate(updated);
+    setCompletePmModalOpen(false);
+    setSelectedPmForComplete(null);
+    setPmFindings('');
+  }
+
+  // Handle Reschedule PM (URS 3.3)
+  function handleReschedulePM(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedPmForReschedule || !newPmDate || !rescheduleReason.trim()) return;
+    const historyEntry = {
+      tanggalSebelumnya: selectedPmForReschedule.tanggalJatuhTempo,
+      tanggalBaru: newPmDate,
+      alasan: rescheduleReason.trim(),
+      diubahOleh: `${technician.nik} (${technician.name})`,
+      waktuDiubah: new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date()),
+    };
+    const updated: PreventiveMaintenanceItem = {
+      ...selectedPmForReschedule,
+      status: 'DIRESCHEDULE',
+      tanggalSebelumReschedule: selectedPmForReschedule.tanggalJatuhTempo,
+      tanggalJatuhTempo: newPmDate,
+      alasanReschedule: rescheduleReason.trim(),
+      riwayatReschedule: [...(selectedPmForReschedule.riwayatReschedule || []), historyEntry],
+    };
+    savePmUpdate(updated);
+    setReschedulePmModalOpen(false);
+    setSelectedPmForReschedule(null);
+    setNewPmDate('');
+    setRescheduleReason('');
+  }
+
+  function handleSelectWork(work: TechnicianWorkItem) {
+    setSelectedWork(work);
+    setActionNotes(work.action || '');
+    setFollowupNotes(work.followup || '');
+    setShowFollowupNotes(Boolean(work.followup));
+    if (work.partReplaced) {
+      setQuickAction('Penggantian Part');
+      setPartForm({
+        name: work.partReplaced.name,
+        specification: work.partReplaced.specification,
+        quantity: work.partReplaced.quantity,
+        position: work.partReplaced.position,
+        note: work.partReplaced.note || '',
+      });
+    } else {
+      setQuickAction('');
+      setPartForm({
+        name: '',
+        specification: '',
+        quantity: '1',
+        position: 'Line 1',
+        note: '',
+      });
+    }
+  }
+
+  function handleTakeWork(work: TechnicianWorkItem) {
+    const updated: TechnicianWorkItem = {
+      ...work,
+      status: 'IN_PROGRESS',
+      technician: technician.name,
+      technicianName: technician.name,
+      technicianNik: technician.nik,
+      waktuMulaiTeknisi: work.waktuMulaiTeknisi || new Date().toISOString(),
+      waktuMulai: work.waktuMulai,
+    };
+    setWorks((prev) => prev.map((w) => (w.ticket === work.ticket ? updated : w)));
+    try {
+      const stored = storage.getItem('machine-card-open-work');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const updatedArr = parsed.map((item: any) =>
+          item.ticket === work.ticket
+            ? { ...item, status: 'IN_PROGRESS', technician: technician.name, technicianName: technician.name, technicianNik: technician.nik, waktuMulaiTeknisi: updated.waktuMulaiTeknisi }
+            : item
+        );
+        storage.setItem('machine-card-open-work', JSON.stringify(updatedArr));
+      }
+    } catch {}
+    handleSelectWork(updated);
+    setActiveTab('ACTIVE');
+  }
+
+  function saveShiftDraft() {
+    const suffix = `${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`;
+    storage.setItem(`machine-card-repair-notes-${suffix}`, repairWorkshopNotes);
+    storage.setItem(`machine-card-pbjt-notes-${suffix}`, pbjtNotes);
+    storage.setItem(`machine-card-pm-notes-${suffix}`, pmNotes);
+    storage.setItem(`machine-card-other-notes-${suffix}`, otherNotes);
+    storage.setItem(`machine-card-shift-overrides-${suffix}`, JSON.stringify(customWorkOverrides));
+  }
+
+  function handleCloseShift() {
+    saveShiftDraft();
+    const record = {
+      closedAt: new Date().toISOString(),
+      date: shiftReportDate,
+      closedBy: `${technician.name} (${technician.nik})`,
+      shift: technician.shifts[0] || 'Shift 1',
+      totalWorks: reportWorks.length,
+      complete: true,
