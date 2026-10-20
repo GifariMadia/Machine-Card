@@ -4098,3 +4098,569 @@ export default function TechnicianDashboard({ technician, onLogout }: Technician
             className="tech-drawer-overlay"
             aria-label="Tutup formulir tunda"
             onClick={() => setPendingModalOpen(false)}
+          />
+          <aside className="tech-drawer-panel" style={{ maxWidth: '540px' }}>
+            <header className="tech-drawer-top">
+              <div className="tech-drawer-top-brand">
+                <span className="tech-ticket-badge" style={{ background: '#d97706', color: '#fff', border: 'none' }}>
+                  {selectedWork.ticket}
+                </span>
+                <h2 id="tech-pending-title">Tunda Pengerjaan Breakdown / Pending</h2>
+                <p>Pemisahan Waktu Tunggu Part vs Waktu Kerja Murni</p>
+              </div>
+              <button
+                className="btn-tech-close-drawer"
+                onClick={() => setPendingModalOpen(false)}
+                aria-label="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!pendingReason.trim()) return;
+                handlePauseWork(
+                  pendingType,
+                  pendingReason.trim(),
+                  pendingKondisiTerakhir.trim(),
+                  pendingRencanaTindakLanjut.trim()
+                );
+              }}
+              className="tech-drawer-scroll-body"
+            >
+              <div className="tech-form-group">
+                <label>Kategori Penundaan / Pending *</label>
+                <select
+                  value={pendingType}
+                  onChange={(e) => setPendingType(e.target.value as any)}
+                >
+                  <option value="MENUNGGU_PART">Menunggu Suku Cadang (Spare Part Gudang / Procurement)</option>
+                  <option value="MENUNGGU_DUKUNGAN">Menunggu Dukungan (Vendor Luar / Workshop / Utilitas)</option>
+                  <option value="PENDING">Pekerjaan Pending (Belum Selesai / Lanjut Shift)</option>
+                </select>
+              </div>
+
+              <div className="tech-form-group">
+                <label>Alasan Pekerjaan Belum Selesai / Ditunda *</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={pendingReason}
+                  onChange={(e) => setPendingReason(e.target.value)}
+                  placeholder="Contoh: Menunggu stok seal ring 25mm tiba dari gudang spare part lantai 2, estimasi datang jam 14:00."
+                />
+              </div>
+
+              <div className="tech-form-group">
+                <label>Kondisi Terakhir Mesin / Komponen {pendingType === 'PENDING' ? '*' : '(Opsional)'}</label>
+                <textarea
+                  rows={2}
+                  required={pendingType === 'PENDING'}
+                  value={pendingKondisiTerakhir}
+                  onChange={(e) => setPendingKondisiTerakhir(e.target.value)}
+                  placeholder="Contoh: Silinder dibuka separuh, komponen lama sudah dibongkar dan dibersihkan."
+                />
+                <small style={{ color: '#64748b', display: 'block', marginTop: '2px' }}>
+                  Catatan kondisi terakhir diperlukan sebagai informasi serah-terima teknisi berikutnya.
+                </small>
+              </div>
+
+              <div className="tech-form-group">
+                <label>Rencana Penanganan / Tindak Lanjut Berikutnya {pendingType === 'PENDING' ? '*' : '(Opsional)'}</label>
+                <textarea
+                  rows={2}
+                  required={pendingType === 'PENDING'}
+                  value={pendingRencanaTindakLanjut}
+                  onChange={(e) => setPendingRencanaTindakLanjut(e.target.value)}
+                  placeholder="Contoh: Pasang spare part baru saat shift 2 dimulai dan lakukan running test."
+                />
+                <small style={{ color: '#64748b', display: 'block', marginTop: '2px' }}>
+                  Umur pekerjaan ({calculateTicketAging(selectedWork.originalOpenedAt, selectedWork.waktuMulai || selectedWork.opened)}) tetap dihitung sejak tanggal pembukaan awal.
+                </small>
+              </div>
+
+              <footer className="tech-drawer-footer" style={{ marginTop: 'auto', padding: '1rem 0 0' }}>
+                <button
+                  type="button"
+                  className="btn-tech-save-progress"
+                  onClick={() => setPendingModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!pendingReason.trim()}
+                  className="btn-tech-finish-work"
+                  style={{ background: '#d97706' }}
+                >
+                  <Clock3 size={15} style={{ marginRight: '0.35rem' }} />
+                  Konfirmasi Penundaan / Pending
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL SERAH-TERIMA SHIFT / HANDOVER (URS 5.3) */}
+      {handoverModalOpen && selectedWork && (
+        <div
+          className="tech-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tech-handover-title"
+        >
+          <button
+            className="tech-drawer-overlay"
+            aria-label="Tutup modal serah-terima shift"
+            onClick={() => setHandoverModalOpen(false)}
+          />
+          <aside className="tech-drawer-panel" style={{ maxWidth: '540px' }}>
+            <header className="tech-drawer-top">
+              <div className="tech-drawer-top-brand">
+                <span className="tech-ticket-badge" style={{ background: '#0f766e', color: '#fff', border: 'none' }}>
+                  {selectedWork.ticket}
+                </span>
+                <h2 id="tech-handover-title">Serah-Terima Shift (Handover)</h2>
+                <p>{selectedWork.machine} · Lanjutan Pengerjaan Lintas Shift</p>
+              </div>
+              <button
+                className="btn-tech-close-drawer"
+                onClick={() => setHandoverModalOpen(false)}
+                aria-label="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleRecordHandover} className="tech-drawer-scroll-body">
+              <div className="tech-incident-grid" style={{ marginBottom: '1rem' }}>
+                <div className="tech-form-group">
+                  <label>Shift Pelaksana Lanjutan *</label>
+                  <select
+                    value={handoverForm.shift}
+                    onChange={(e) => setHandoverForm({ ...handoverForm, shift: e.target.value })}
+                  >
+                    <option value="Shift 1">Shift 1 (Pagi: 06:45 - 15:15)</option>
+                    <option value="Shift 2">Shift 2 (Sore: 15:00 - 22:30)</option>
+                    <option value="Shift 3">Shift 3 (Malam: 22:15 - 06:45)</option>
+                  </select>
+                </div>
+                <div className="tech-form-group">
+                  <label>Tanggal Pelaksanaan *</label>
+                  <input
+                    type="date"
+                    required
+                    value={handoverForm.tanggal}
+                    onChange={(e) => setHandoverForm({ ...handoverForm, tanggal: e.target.value })}
+                  />
+                </div>
+                <div className="tech-kv-item" style={{ gridColumn: 'span 2' }}>
+                  <dt>Teknisi Pencatat Serah-Terima</dt>
+                  <dd>{technician.name} ({technician.nik})</dd>
+                </div>
+              </div>
+
+              <div className="tech-form-group">
+                <label>Progres Tindakan yang Telah Dilakukan *</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={handoverForm.progres}
+                  onChange={(e) => setHandoverForm({ ...handoverForm, progres: e.target.value })}
+                  placeholder="Jelaskan progres pekerjaan yang telah diselesaikan pada shift ini..."
+                />
+              </div>
+
+              <div className="tech-form-group">
+                <label>Kendala Lapangan / Komponen (Bila Ada)</label>
+                <textarea
+                  rows={2}
+                  value={handoverForm.kendala}
+                  onChange={(e) => setHandoverForm({ ...handoverForm, kendala: e.target.value })}
+                  placeholder="Contoh: Baut flange aus, perlu bantuan workshop atau tooling khusus..."
+                />
+              </div>
+
+              <div className="tech-form-group">
+                <label>Rencana Tindak Lanjut Shift Berikutnya *</label>
+                <textarea
+                  rows={2}
+                  required
+                  value={handoverForm.tindakLanjut}
+                  onChange={(e) => setHandoverForm({ ...handoverForm, tindakLanjut: e.target.value })}
+                  placeholder="Contoh: Lanjut penggantian bearing, uji putaran kecepatan bertahap..."
+                />
+              </div>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.65rem 0.85rem', fontSize: '0.75rem', color: '#475569' }}>
+                <strong style={{ color: '#0f172a', display: 'block', marginBottom: '0.2rem' }}>
+                  Tanggung Jawab Laporan Shift:
+                </strong>
+                Pengambilalihan pekerjaan ini dicatat sebagai riwayat lanjutan tanpa menghilangkan catatan shift sebelumnya. Pengambilalihan tidak otomatis mengalihkan tanggung jawab pelengkapan laporan shift asal ke petugas shift berikutnya.
+              </div>
+
+              <footer className="tech-drawer-footer" style={{ marginTop: 'auto', padding: '1rem 0 0' }}>
+                <button
+                  type="button"
+                  className="btn-tech-save-progress"
+                  onClick={() => setHandoverModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!handoverForm.progres.trim() || !handoverForm.tindakLanjut.trim()}
+                  className="btn-tech-finish-work"
+                  style={{ background: '#0f766e' }}
+                >
+                  <ArrowRightLeft size={15} style={{ marginRight: '0.35rem' }} />
+                  Simpan Riwayat Serah-Terima
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL REALISASI PM (URS 3.3 & 3.4) */}
+      {completePmModalOpen && selectedPmForComplete && (
+        <div
+          className="tech-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tech-complete-pm-title"
+        >
+          <button
+            className="tech-drawer-overlay"
+            aria-label="Tutup modal realisasi PM"
+            onClick={() => setCompletePmModalOpen(false)}
+          />
+          <aside className="tech-drawer-panel" style={{ maxWidth: '520px' }}>
+            <header className="tech-drawer-top">
+              <div className="tech-drawer-top-brand">
+                <span className="tech-ticket-badge" style={{ background: '#059669', color: '#fff', border: 'none' }}>
+                  {selectedPmForComplete.nomorPm}
+                </span>
+                <h2 id="tech-complete-pm-title">Realisasi Pelaksanaan PM</h2>
+                <p>{selectedPmForComplete.machine} · Periode {selectedPmForComplete.periode}</p>
+              </div>
+              <button
+                className="btn-tech-close-drawer"
+                onClick={() => setCompletePmModalOpen(false)}
+                aria-label="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleCompletePM} className="tech-drawer-scroll-body">
+              <div className="tech-incident-grid" style={{ marginBottom: '1rem' }}>
+                <div className="tech-kv-item">
+                  <dt>Kegiatan Preventif</dt>
+                  <dd>{selectedPmForComplete.kegiatan}</dd>
+                </div>
+                <div className="tech-kv-item">
+                  <dt>Target Jatuh Tempo</dt>
+                  <dd>{selectedPmForComplete.tanggalJatuhTempo}</dd>
+                </div>
+                <div className="tech-kv-item">
+                  <dt>Teknisi Pelaksana</dt>
+                  <dd>{technician.name} ({technician.nik})</dd>
+                </div>
+              </div>
+
+              <div className="tech-form-group">
+                <label>Hasil Pelaksanaan &amp; Temuan Lapangan *</label>
+                <textarea
+                  rows={4}
+                  required
+                  value={pmFindings}
+                  onChange={(e) => setPmFindings(e.target.value)}
+                  placeholder="Contoh: Pemeriksaan kelonggaran rantai konveyor selesai, tegangan disetel ulang, pelumasan bearing normal tanpa keausan abnormal."
+                />
+                <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
+                  Penyelesaian PM wajib menyimpan hasil/temuan dan waktu penyelesaian aktual.
+                </small>
+              </div>
+
+              <footer className="tech-drawer-footer" style={{ marginTop: 'auto', padding: '1rem 0 0' }}>
+                <button
+                  type="button"
+                  className="btn-tech-save-progress"
+                  onClick={() => setCompletePmModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!pmFindings.trim()}
+                  className="btn-tech-finish-work"
+                >
+                  <CheckCircle2 size={15} style={{ marginRight: '0.35rem' }} />
+                  Simpan &amp; Selesaikan PM
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL RESCHEDULE PM (URS 3.3) */}
+      {reschedulePmModalOpen && selectedPmForReschedule && (
+        <div
+          className="tech-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tech-reschedule-pm-title"
+        >
+          <button
+            className="tech-drawer-overlay"
+            aria-label="Tutup modal reschedule PM"
+            onClick={() => setReschedulePmModalOpen(false)}
+          />
+          <aside className="tech-drawer-panel" style={{ maxWidth: '520px' }}>
+            <header className="tech-drawer-top">
+              <div className="tech-drawer-top-brand">
+                <span className="tech-ticket-badge" style={{ background: '#d97706', color: '#fff', border: 'none' }}>
+                  {selectedPmForReschedule.nomorPm}
+                </span>
+                <h2 id="tech-reschedule-pm-title">Reschedule Jadwal PM</h2>
+                <p>{selectedPmForReschedule.machine} · Jadwal Semula: {selectedPmForReschedule.tanggalJatuhTempo}</p>
+              </div>
+              <button
+                className="btn-tech-close-drawer"
+                onClick={() => setReschedulePmModalOpen(false)}
+                aria-label="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleReschedulePM} className="tech-drawer-scroll-body">
+              <div className="tech-form-group">
+                <label>Tanggal Jadwal Baru *</label>
+                <input
+                  type="date"
+                  required
+                  value={newPmDate}
+                  onChange={(e) => setNewPmDate(e.target.value)}
+                />
+              </div>
+
+              <div className="tech-form-group">
+                <label>Alasan Perubahan Jadwal *</label>
+                <textarea
+                  rows={4}
+                  required
+                  value={rescheduleReason}
+                  onChange={(e) => setRescheduleReason(e.target.value)}
+                  placeholder="Contoh: Mesin sedang running order urgent batch ekspor sampai akhir shift, PM dijadwalkan ulang besok pagi."
+                />
+                <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
+                  Alasan dan riwayat jadwal sebelumnya tetap tersimpan dalam sistem audit.
+                </small>
+              </div>
+
+              <footer className="tech-drawer-footer" style={{ marginTop: 'auto', padding: '1rem 0 0' }}>
+                <button
+                  type="button"
+                  className="btn-tech-save-progress"
+                  onClick={() => setReschedulePmModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newPmDate || !rescheduleReason.trim()}
+                  className="btn-tech-finish-work"
+                  style={{ background: '#d97706' }}
+                >
+                  <CalendarClock size={15} style={{ marginRight: '0.35rem' }} />
+                  Simpan Perubahan Jadwal
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL DETAIL SUMBER PREVENTIVE MAINTENANCE (URS 6.1 & 6.2) */}
+      {selectedPmForDetail && (
+        <div
+          className="tech-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tech-pm-detail-title"
+        >
+          <button
+            className="tech-drawer-overlay"
+            aria-label="Tutup detail PM"
+            onClick={() => setSelectedPmForDetail(null)}
+          />
+          <aside className="tech-drawer-panel" style={{ maxWidth: '540px' }}>
+            <header className="tech-drawer-top">
+              <div className="tech-drawer-top-brand">
+                <span className="tech-ticket-badge" style={{ background: '#059669', color: '#fff', border: 'none' }}>
+                  {selectedPmForDetail.nomorPm}
+                </span>
+                <h2 id="tech-pm-detail-title">Catatan Sumber Realisasi PM</h2>
+                <p>{selectedPmForDetail.machine} · Periode {selectedPmForDetail.periode}</p>
+              </div>
+              <button
+                className="btn-tech-close-drawer"
+                onClick={() => setSelectedPmForDetail(null)}
+                aria-label="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <div className="tech-drawer-scroll-body">
+              <div className="tech-detail-card" style={{ marginBottom: '1rem' }}>
+                <div className="tech-incident-grid">
+                  <div className="tech-kv-item">
+                    <dt>Status PM</dt>
+                    <dd>
+                      <span className={`tech-badge-status ${selectedPmForDetail.status === 'SELESAI' ? 'closed' : selectedPmForDetail.status === 'DIRESCHEDULE' ? 'in-progress' : 'open'}`}>
+                        {selectedPmForDetail.status === 'SELESAI' ? 'Selesai' : selectedPmForDetail.status === 'DIRESCHEDULE' ? 'Direschedule' : 'Terjadwal'}
+                      </span>
+                    </dd>
+                  </div>
+                  <div className="tech-kv-item">
+                    <dt>Periode Rutin</dt>
+                    <dd>{selectedPmForDetail.periode}</dd>
+                  </div>
+                  <div className="tech-kv-item">
+                    <dt>Jadwal Jatuh Tempo</dt>
+                    <dd>{selectedPmForDetail.tanggalJatuhTempo}</dd>
+                  </div>
+                  <div className="tech-kv-item">
+                    <dt>Penyelesaian Aktual</dt>
+                    <dd>{selectedPmForDetail.tanggalSelesaiAktual || '—'}</dd>
+                  </div>
+                  {selectedPmForDetail.pelaksanaNama && (
+                    <div className="tech-kv-item" style={{ gridColumn: 'span 2' }}>
+                      <dt>Teknisi Pelaksana</dt>
+                      <dd>{selectedPmForDetail.pelaksanaNama} ({selectedPmForDetail.pelaksanaNik || 'Teknisi'})</dd>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="tech-detail-card" style={{ marginBottom: '1rem' }}>
+                <div className="tech-detail-card-title">
+                  <CalendarCheck size={16} />
+                  Uraian Kegiatan Preventive
+                </div>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#334155', lineHeight: 1.5 }}>
+                  {selectedPmForDetail.kegiatan}
+                </p>
+              </div>
+
+              {selectedPmForDetail.hasilTemuan && (
+                <div className="tech-detail-card" style={{ marginBottom: '1rem' }}>
+                  <div className="tech-detail-card-title">
+                    <CheckCircle2 size={16} />
+                    Hasil Pelaksanaan &amp; Temuan Lapangan
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#0f766e', lineHeight: 1.5 }}>
+                    {selectedPmForDetail.hasilTemuan}
+                  </p>
+                </div>
+              )}
+
+              {selectedPmForDetail.alasanReschedule && (
+                <div className="tech-detail-card" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+                  <div style={{ color: '#b45309', fontWeight: 700, fontSize: '0.82rem', marginBottom: '4px' }}>
+                    Riwayat Perubahan Jadwal:
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#92400e' }}>
+                    Jadwal Semula: {selectedPmForDetail.tanggalSebelumReschedule || '—'} · Alasan: "{selectedPmForDetail.alasanReschedule}"
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <footer className="tech-drawer-footer" style={{ marginTop: 'auto', padding: '1rem' }}>
+              <button
+                type="button"
+                className="btn-tech-save-progress"
+                style={{ width: '100%', justifyContent: 'center' }}
+                onClick={() => setSelectedPmForDetail(null)}
+              >
+                Tutup Detail PM
+              </button>
+            </footer>
+          </aside>
+        </div>
+      )}
+
+      {/* Footer Portal */}
+      <footer className="tech-footer">
+        <span>Machine Card · Portal Teknisi Pemeliharaan Bintang Toedjoe</span>
+        <div className="tech-footer-status">
+          <span className="status-dot green" />
+          <span>Sistem Maintenance Aktif</span>
+        </div>
+      </footer>
+
+      {/* Mobile & Tablet Bottom Navigation Bar (Jempol-Friendly Teknisi) */}
+      <nav className="mobile-bottom-nav" aria-label="Navigasi Bawah Teknisi">
+        <button
+          type="button"
+          className={`mobile-bottom-nav-item ${activeTab === 'QUEUE' || activeTab === 'WORKS' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('QUEUE')}
+          title="Antrean Tiket Breakdown Masuk"
+        >
+          <div className="bottom-nav-icon-wrap">
+            <Inbox size={20} />
+            {openWorks.length > 0 && (
+              <span className="bottom-nav-badge alert">
+                {openWorks.length}
+              </span>
+            )}
+          </div>
+          <span>Antrean</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-bottom-nav-item ${activeTab === 'ACTIVE' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('ACTIVE')}
+          title="Daftar Pekerjaan Tengah Diambil"
+        >
+          <div className="bottom-nav-icon-wrap">
+            <Wrench size={20} />
+            {(activeWorks.length > 0 || pmSchedules.some((pm) => pm.status !== 'SELESAI' && !pm.tanggalSelesaiAktual)) && (
+              <span className="bottom-nav-badge in-progress" style={{ background: '#2563eb' }}>
+                {activeWorks.length + pmSchedules.filter((pm) => pm.status !== 'SELESAI' && !pm.tanggalSelesaiAktual).length}
+              </span>
+            )}
+          </div>
+          <span>Pekerjaan</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-bottom-nav-item ${activeTab === 'SHIFT_REPORT' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('SHIFT_REPORT')}
+          title="Review Laporan Shift & Audit Closing"
+        >
+          <div className="bottom-nav-icon-wrap">
+            <ClipboardCheck size={20} />
+            {uncompletedShiftCount > 0 && (
+              <span className="bottom-nav-badge warning" style={{ background: '#ea580c' }}>
+                {uncompletedShiftCount}
+              </span>
+            )}
+          </div>
+          <span>Review Shift</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+);
+}
