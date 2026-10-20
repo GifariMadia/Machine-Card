@@ -3148,3 +3148,453 @@ export default function TechnicianDashboard({ technician, onLogout }: Technician
                               </div>
 
                               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const rawTime = (document.getElementById(`time-${work.ticket}`) as HTMLInputElement)?.value.trim();
+                                    const newTimeStr = rawTime ? ` (${rawTime})` : '';
+                                    const newWr = (document.getElementById(`wr-${work.ticket}`) as HTMLInputElement)?.value.trim() || '~';
+                                    const newStatus = (document.getElementById(`status-${work.ticket}`) as HTMLSelectElement)?.value;
+                                    const newActions = (document.getElementById(`action-${work.ticket}`) as HTMLTextAreaElement)?.value;
+                                    const newNote = (document.getElementById(`note-${work.ticket}`) as HTMLInputElement)?.value;
+                                    handleSaveWorkOverride(work.ticket, { timeRange: newTimeStr, wr: newWr, status: newStatus, actions: newActions, note: newNote });
+                                  }}
+                                  style={{ padding: '0.4rem 1rem', background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                                >
+                                  Simpan Laporan Mesin
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <ul className="tech-asis-bullets">
+                                {actionBullets.map((act, aIdx) => (
+                                  <li key={aIdx}>• {act}</li>
+                                ))}
+                              </ul>
+                              {noteStr && (
+                                <div className="tech-asis-note">
+                                  <strong>Note :</strong> {noteStr}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {reportWorks.filter((w) => getWorkArea(w) === 'FILLING').length === 0 && (
+                      <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic', padding: '0.25rem 0' }}>
+                        Tidak ada perbaikan mesin di Area Filling.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Section Packaging */}
+                <div className="tech-asis-area-block">
+                  <div className="tech-asis-area-header">
+                    <span>*AREA PACKAGING:*</span>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
+                      {reportWorks.filter((w) => getWorkArea(w) === 'PACKAGING').length} Unit Mesin
+                    </span>
+                  </div>
+                  <div className="tech-asis-area-body">
+                    {reportWorks.filter((w) => getWorkArea(w) === 'PACKAGING').map((work, idx) => {
+                      const ov = customWorkOverrides[work.ticket] || {};
+                      const wr = ov.wr !== undefined ? ov.wr : (work.noWr || '~');
+                      const rawStatus = ov.status || work.status;
+                      const isDone = rawStatus === 'CLOSED' || rawStatus === 'DONE';
+                      const timeStr = ov.timeRange !== undefined ? ov.timeRange : (work.waktuMulai && work.waktuSelesai ? ` (${formatPlantTime(work.waktuMulai)}-${formatPlantTime(work.waktuSelesai)})` : '');
+                      const actText = ov.actions !== undefined ? ov.actions : (work.action || '');
+                      const actionBullets = actText
+                        ? actText.split('\n').map((s) => s.replace(/^[•\-\*]\s*/, '').trim()).filter(Boolean)
+                        : ['Pemeriksaan & penanganan unit'];
+                      const noteStr = ov.note !== undefined ? ov.note : (work.catatanHandover || work.rencanaTindakLanjut || work.followup || '');
+
+                      return (
+                        <div key={work.ticket} className={`tech-asis-incident-item ${isDone ? 'done' : 'open'}`}>
+                          <div className="tech-asis-incident-top">
+                            <div>
+                              <span className="tech-asis-incident-title">
+                                {idx + 1}. {work.machine} : {work.issue}{timeStr}
+                              </span>
+                              <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '2px' }}>
+                                <strong>WR : {wr}</strong>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span className={isDone ? 'tech-asis-badge-done' : 'tech-asis-badge-open'}>
+                                {isDone ? '*DONE*' : '*OPEN*'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setEditingWorkTicket(editingWorkTicket === work.ticket ? null : work.ticket)}
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '6px',
+                                  background: '#ffffff',
+                                  color: '#334155',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {editingWorkTicket === work.ticket ? 'Batal' : 'Edit Laporan Mesin'}
+                              </button>
+                            </div>
+                          </div>
+
+                          {editingWorkTicket === work.ticket ? (
+                            <div style={{ marginTop: '0.65rem', padding: '0.85rem', background: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
+                                <div>
+                                  <label style={{ fontSize: '0.74rem', fontWeight: 700, display: 'block', marginBottom: '3px' }}>Waktu Penanganan</label>
+                                  <input
+                                    type="text"
+                                    id={`time-${work.ticket}`}
+                                    defaultValue={timeStr ? timeStr.replace(/[()]/g, '').trim() : '09.00-15.15'}
+                                    placeholder="Contoh: 09.00-15.15"
+                                    style={{ width: '100%', padding: '0.4rem 0.55rem', fontSize: '0.82rem', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: '0.74rem', fontWeight: 700, display: 'block', marginBottom: '3px' }}>Nomor WR</label>
+                                  <input
+                                    type="text"
+                                    id={`wr-${work.ticket}`}
+                                    defaultValue={wr}
+                                    placeholder="Contoh: 292790 atau ~"
+                                    style={{ width: '100%', padding: '0.4rem 0.55rem', fontSize: '0.82rem', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: '0.74rem', fontWeight: 700, display: 'block', marginBottom: '3px' }}>Status Penanganan</label>
+                                  <select
+                                    id={`status-${work.ticket}`}
+                                    defaultValue={isDone ? 'CLOSED' : 'OPEN'}
+                                    style={{ width: '100%', padding: '0.4rem 0.55rem', fontSize: '0.82rem', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                                  >
+                                    <option value="CLOSED">DONE (Selesai)</option>
+                                    <option value="OPEN">OPEN (Belum Selesai / Lanjutan Shift)</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label style={{ fontSize: '0.74rem', fontWeight: 700, display: 'block', marginBottom: '3px' }}>Poin Tindakan Perbaikan (Per Baris)</label>
+                                <textarea
+                                  id={`action-${work.ticket}`}
+                                  rows={3}
+                                  defaultValue={actionBullets.join('\n')}
+                                  placeholder="Pengecekkan wiring in coming machine&#10;Penggantian fuse&#10;Setting opp"
+                                  style={{ width: '100%', padding: '0.45rem 0.55rem', fontSize: '0.82rem', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                                />
+                              </div>
+
+                              <div>
+                                <label style={{ fontSize: '0.74rem', fontWeight: 700, display: 'block', marginBottom: '3px' }}>Catatan Tambahan / Operan (Note)</label>
+                                <input
+                                  type="text"
+                                  id={`note-${work.ticket}`}
+                                  defaultValue={noteStr}
+                                  placeholder="Contoh: Perlu ganti PLC pada shift berikutnya"
+                                  style={{ width: '100%', padding: '0.4rem 0.55rem', fontSize: '0.82rem', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                                />
+                              </div>
+
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const rawTime = (document.getElementById(`time-${work.ticket}`) as HTMLInputElement)?.value.trim();
+                                    const newTimeStr = rawTime ? ` (${rawTime})` : '';
+                                    const newWr = (document.getElementById(`wr-${work.ticket}`) as HTMLInputElement)?.value.trim() || '~';
+                                    const newStatus = (document.getElementById(`status-${work.ticket}`) as HTMLSelectElement)?.value;
+                                    const newActions = (document.getElementById(`action-${work.ticket}`) as HTMLTextAreaElement)?.value;
+                                    const newNote = (document.getElementById(`note-${work.ticket}`) as HTMLInputElement)?.value;
+                                    handleSaveWorkOverride(work.ticket, { timeRange: newTimeStr, wr: newWr, status: newStatus, actions: newActions, note: newNote });
+                                  }}
+                                  style={{ padding: '0.4rem 1rem', background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                                >
+                                  Simpan Laporan Mesin
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <ul className="tech-asis-bullets">
+                                {actionBullets.map((act, aIdx) => (
+                                  <li key={aIdx}>• {act}</li>
+                                ))}
+                              </ul>
+                              {noteStr && (
+                                <div className="tech-asis-note">
+                                  <strong>Note :</strong> {noteStr}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {reportWorks.filter((w) => getWorkArea(w) === 'PACKAGING').length === 0 && (
+                      <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic', padding: '0.25rem 0' }}>
+                        Tidak ada perbaikan mesin di Area Packaging.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Non-Machine Quick Notes (Workshop, PBJT, PM, OTHER) */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem' }}>
+                  <div className="tech-asis-area-block" style={{ margin: 0 }}>
+                    <div className="tech-asis-area-header" style={{ padding: '0.5rem 0.85rem' }}>
+                      <span>*Ruang Repair/Workshop:*</span>
+                    </div>
+                    <div className="tech-asis-area-body" style={{ padding: '0.65rem' }}>
+                      <input
+                        type="text"
+                        value={repairWorkshopNotes}
+                        onChange={(e) => setRepairWorkshopNotes(e.target.value)}
+                        placeholder="Contoh: 1. Pembuatan wo batch"
+                        style={{ width: '100%', padding: '0.4rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="tech-asis-area-block" style={{ margin: 0 }}>
+                    <div className="tech-asis-area-header" style={{ padding: '0.5rem 0.85rem' }}>
+                      <span>*PBJT &amp; PM:*</span>
+                    </div>
+                    <div className="tech-asis-area-body" style={{ padding: '0.65rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <input
+                        type="text"
+                        value={pbjtNotes}
+                        onChange={(e) => setPbjtNotes(e.target.value)}
+                        placeholder="Catatan PBJT"
+                        style={{ width: '100%', padding: '0.4rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                      />
+                      <input
+                        type="text"
+                        value={pmNotes}
+                        onChange={(e) => setPmNotes(e.target.value)}
+                        placeholder="Catatan PM"
+                        style={{ width: '100%', padding: '0.4rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="tech-asis-area-block" style={{ margin: 0 }}>
+                    <div className="tech-asis-area-header" style={{ padding: '0.5rem 0.85rem' }}>
+                      <span>*OTHER:*</span>
+                    </div>
+                    <div className="tech-asis-area-body" style={{ padding: '0.65rem' }}>
+                      <input
+                        type="text"
+                        value={otherNotes}
+                        onChange={(e) => setOtherNotes(e.target.value)}
+                        placeholder="Contoh: 1. Pendampingan vendor trikarya"
+                        style={{ width: '100%', padding: '0.4rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Closing Shift Action Footer */}
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '10px',
+                padding: '1.1rem 1.5rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem',
+              }}
+            >
+              <div>
+                <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>
+                  Penutupan Laporan Shift
+                </strong>
+                <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                  Setelah ditutup, rekapan laporan per mesin akan otomatis terkirim saat jam pergantian shift ({currentShiftSchedule.triggerTime} WIB).
+                </p>
+              </div>
+
+              <button
+                type="button"
+                style={{
+                  background: shiftClosingRecord ? '#94a3b8' : '#059669',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.65rem 1.4rem',
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: shiftClosingRecord ? 'not-allowed' : 'pointer',
+                  boxShadow: shiftClosingRecord ? 'none' : '0 2px 6px rgba(5, 150, 105, 0.3)',
+                }}
+                disabled={!!shiftClosingRecord}
+                onClick={handleCloseShift}
+              >
+                <ClipboardCheck size={16} />
+                <span>{shiftClosingRecord ? 'Laporan Shift Telah Ditutup' : 'Konfirmasi & Closing Laporan Shift'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* DRAWER PENANGANAN PEKERJAAN TEKNISI */}
+      {selectedWork && (
+        <div
+          className="tech-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tech-drawer-title"
+        >
+          <button
+            className="tech-drawer-overlay"
+            aria-label="Tutup panel teknisi"
+            onClick={() => setSelectedWork(null)}
+          />
+
+          <aside className="tech-drawer-panel">
+            <header className="tech-drawer-top">
+              <div className="tech-drawer-top-brand">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+                  <span className="tech-ticket-badge" style={{ background: '#e11d48', color: '#ffffff', border: 'none' }}>
+                    {selectedWork.ticket}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      padding: '0.2rem 0.55rem',
+                      borderRadius: '999px',
+                      background: selectedWork.status === 'CLOSED' ? '#dcfce7' : selectedWork.status === 'PENDING' ? '#ffedd5' : selectedWork.status === 'MENUNGGU_PART' ? '#fef3c7' : selectedWork.status === 'IN_PROGRESS' ? '#dbeafe' : '#f1f5f9',
+                      color: selectedWork.status === 'CLOSED' ? '#166534' : selectedWork.status === 'PENDING' ? '#c2410c' : selectedWork.status === 'MENUNGGU_PART' ? '#b45309' : selectedWork.status === 'IN_PROGRESS' ? '#1e40af' : '#475569',
+                    }}
+                  >
+                    Status: {selectedWork.status === 'CLOSED' ? 'Selesai' : selectedWork.status === 'PENDING' ? 'Pending' : selectedWork.status === 'MENUNGGU_PART' ? 'Menunggu Part' : selectedWork.status === 'IN_PROGRESS' ? 'Dikerjakan' : 'Terbuka (Open)'}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: '4px',
+                      background: '#f8fafc',
+                      color: '#475569',
+                      border: '1px solid #cbd5e1',
+                    }}
+                    title="Umur pekerjaan dihitung sejak awal pembukaan tiket dan dipertahankan lintas shift"
+                  >
+                    Umur Tiket: {calculateTicketAging(selectedWork.originalOpenedAt, selectedWork.waktuMulai || selectedWork.opened)}
+                  </span>
+                </div>
+                <h2 id="tech-drawer-title">{selectedWork.machine}</h2>
+                <p>
+                  Section: {selectedWork.section} · Waktu Laporan: {selectedWork.opened}
+                </p>
+              </div>
+              <button
+                className="btn-tech-close-drawer"
+                onClick={() => setSelectedWork(null)}
+                aria-label="Tutup formulir"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <div className="tech-drawer-scroll-body">
+              {/* Card 1: Konteks Laporan Operator */}
+              <div className="tech-detail-card">
+                <div className="tech-detail-card-title">
+                  <FileText size={16} />
+                  Laporan Kerusakan dari Operator
+                </div>
+
+                <div className="tech-incident-grid">
+                  <div className="tech-kv-item">
+                    <dt>Operator Pelapor</dt>
+                    <dd>{selectedWork.reporterName || selectedWork.reporter || 'Operator'}</dd>
+                  </div>
+                  <div className="tech-kv-item">
+                    <dt>Shift Pelapor</dt>
+                    <dd>Shift {selectedWork.shift || '1'}</dd>
+                  </div>
+                  {selectedWork.kodeProduk && (
+                    <div className="tech-kv-item">
+                      <dt>Produk / Batch</dt>
+                      <dd>
+                        {selectedWork.kodeProduk} / {selectedWork.noBatch || '—'}
+                      </dd>
+                    </div>
+                  )}
+                  {selectedWork.kategori && (
+                    <div className="tech-kv-item">
+                      <dt>Kategori Gangguan</dt>
+                      <dd>{selectedWork.kategori}</dd>
+                    </div>
+                  )}
+                </div>
+
+                <div className="tech-issue-callout">
+                  <strong>Deskripsi Kerusakan Mesin:</strong>
+                  <p>{selectedWork.issue}</p>
+                </div>
+              </div>
+
+              {/* State 1: OPEN (Belum ditangani) */}
+              {selectedWork.status === 'OPEN' && (
+                <div className="tech-detail-card" style={{ textAlign: 'center', padding: '1.5rem' }}>
+                  <AlertTriangle size={32} color="#e11d48" style={{ margin: '0 auto 0.5rem' }} />
+                  <h3 style={{ margin: '0 0 0.5rem', color: '#0a1e15' }}>
+                    Tiket Menunggu Penanganan Maintenance
+                  </h3>
+                  <p style={{ margin: '0 0 1.25rem', color: '#64748b', fontSize: '0.88rem' }}>
+                    Klik tombol di bawah untuk menetapkan tiket ini ke Anda ({technician.name}) dan mengubah status menjadi Sedang Dikerjakan.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn-tech-start-big"
+                    onClick={() => updateWorkStatus('IN_PROGRESS')}
+                  >
+                    <Play size={18} />
+                    Mulai Pengerjaan Breakdown
+                  </button>
+                </div>
+              )}
+
+              {/* State: MENUNGGU_PART atau MENUNGGU_DUKUNGAN (URS 3.2 & 3.4) */}
+              {(selectedWork.status === 'MENUNGGU_PART' || selectedWork.status === 'MENUNGGU_DUKUNGAN') && (
+                <div className="tech-detail-card" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b45309', fontWeight: 700, marginBottom: '6px' }}>
+                    <Clock3 size={18} />
+                    <span>Pekerjaan Ditunda: {selectedWork.status === 'MENUNGGU_PART' ? 'Menunggu Suku Cadang' : 'Menunggu Dukungan Eksternal'}</span>
+                  </div>
+                  <p style={{ margin: '0 0 6px', fontSize: '0.85rem', color: '#92400e' }}>
+                    <strong>Alasan / Tindak Lanjut:</strong> {selectedWork.alasanPenundaan || 'Menunggu ketersediaan suku cadang/bantuan.'}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#b45309' }}>
+                    Waktu Mulai Tunggu: {selectedWork.waktuMulaiTunggu ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date(selectedWork.waktuMulaiTunggu)) : '—'} · Waktu tunggu aktif ({selectedWork.durasiTungguMenit || 0} mnt) dipisahkan dari waktu perbaikan murni.
+                  </p>
+                </div>
+              )}
+
+              {/* State: PENDING (URS 5.2 - Pekerjaan Pending) */}
+              {selectedWork.status === 'PENDING' && (
+                <div className="tech-detail-card" style={{ background: '#fff7ed', borderColor: '#fed7aa', borderLeft: '4px solid #ea580c' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c2410c', fontWeight: 700, marginBottom: '6px' }}>
+                    <AlertTriangle size={18} />
