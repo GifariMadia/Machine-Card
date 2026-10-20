@@ -2248,3 +2248,453 @@ export default function TechnicianDashboard({ technician, onLogout }: Technician
                       <X size={15} />
                     </button>
                   )}
+                </div>
+
+                <div className="tech-filter-pills">
+                  <span className="tech-filter-label">Status Antrean:</span>
+                  <span className="tech-badge-status open" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
+                    <Inbox size={14} />
+                    {openWorks.length} Tiket Menunggu Teknisi
+                  </span>
+                </div>
+              </div>
+
+              {/* Tabel Antrean */}
+              <div className="tech-table-responsive">
+                <table className="tech-table">
+                  <thead>
+                    <tr>
+                      <th>NO. TIKET</th>
+                      <th>WAKTU LAPORAN</th>
+                      <th>MESIN &amp; SECTION</th>
+                      <th>PELAPOR (OPERATOR)</th>
+                      <th>KERUSAKAN &amp; KATEGORI</th>
+                      <th>STATUS</th>
+                      <th className="text-center">AKSI PENGAMBILAN</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {openWorks
+                      .filter((w) => {
+                        if (!queueSearch.trim()) return true;
+                        const q = queueSearch.toLowerCase();
+                        return (
+                          w.ticket.toLowerCase().includes(q) ||
+                          w.machine.toLowerCase().includes(q) ||
+                          w.section.toLowerCase().includes(q) ||
+                          w.issue.toLowerCase().includes(q) ||
+                          (w.reporterName || w.reporter || '').toLowerCase().includes(q)
+                        );
+                      })
+                      .map((work) => (
+                        <tr key={work.ticket}>
+                          <td data-label="No. Tiket">
+                            <span className="tech-ticket-badge">{work.ticket}</span>
+                          </td>
+                          <td data-label="Waktu Laporan">{work.opened}</td>
+                          <td data-label="Mesin & Section" className="tech-machine-col">
+                            <strong>{work.machine}</strong>
+                            <span className="tech-section-sub">Section {work.section}</span>
+                          </td>
+                          <td data-label="Pelapor">
+                            <strong>{work.reporterName || work.reporter || 'Operator'}</strong>
+                            {work.shift && <div className="tech-section-sub">Shift {work.shift}</div>}
+                          </td>
+                          <td data-label="Kerusakan & Kategori" className="tech-issue-col td-block-cell">
+                            <strong>{work.issue}</strong>
+                            {work.kategori && <small>Kategori: {work.kategori}</small>}
+                          </td>
+                          <td data-label="Status">
+                            <span className="tech-badge-status open">
+                              <AlertTriangle size={13} />
+                              Open
+                            </span>
+                            <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '3px' }}>
+                              Menunggu: {calculateTicketAging(work.originalOpenedAt, work.opened)}
+                            </div>
+                          </td>
+                          <td data-label="Aksi" className="text-center td-action-cell">
+                            <button
+                              type="button"
+                              className="btn-tech-action open-mode"
+                              style={{
+                                background: '#2563eb',
+                                color: '#ffffff',
+                                border: 'none',
+                                fontWeight: 700,
+                                padding: '0.5rem 1rem',
+                                borderRadius: '6px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                cursor: 'pointer',
+                              }}
+                              onClick={() => handleTakeWork(work)}
+                            >
+                              <Play size={14} />
+                              <span>Ambil Pekerjaan</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+
+                    {openWorks.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="tech-empty-state">
+                          <PackageSearch size={36} />
+                          <strong>Antrean Breakdown Bersih!</strong>
+                          <p>Tidak ada tiket kerusakan yang menunggu teknisi saat ini. Semua mesin beroperasi normal atau sedang ditangani.</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* TAB 2: DAFTAR PEKERJAAN TENGAH DIAMBIL */}
+        {activeTab === 'ACTIVE' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {pmSchedules.some((pm) => !pm.tanggalSelesaiAktual && pm.status !== 'SELESAI') && (
+              <section className="tech-content-card" style={{ padding: '1.25rem' }}>
+                <h3 style={{ margin: '0 0 0.4rem' }}>Tiket PM Terjadwal</h3>
+                <p style={{ margin: '0 0 1rem', color: '#64748b', fontSize: '0.85rem' }}>Jadwal dari Supervisor. PM mendatang tetap tercatat di daftar pekerjaan aktif.</p>
+                <div className="tech-table-responsive">
+                  <table className="tech-table">
+                    <thead><tr><th>Nomor PM / Mesin</th><th>Kegiatan</th><th>Jadwal</th><th>Status</th><th>Aksi</th></tr></thead>
+                    <tbody>{pmSchedules.filter((pm) => !pm.tanggalSelesaiAktual && pm.status !== 'SELESAI')
+                      .slice().sort((a, b) => a.tanggalJatuhTempo.localeCompare(b.tanggalJatuhTempo)).map((pm) => {
+                        const future = pm.tanggalJatuhTempo > new Date().toLocaleDateString('sv-SE');
+                        return <tr key={pm.id}>
+                          <td><strong>{pm.nomorPm}</strong><div>{pm.machine}</div></td>
+                          <td>{pm.kegiatan}</td><td>{pm.tanggalJatuhTempo}</td>
+                          <td>{pm.status === 'DALAM_PENGERJAAN' ? 'Dalam Pengerjaan' : future ? 'Akan Datang' : 'Siap Dikerjakan'}</td>
+                          <td><div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button type="button" className="btn-tech-action" onClick={() => setSelectedPmForDetail(pm)}>Detail PM</button>
+                            {!future && pm.status !== 'DALAM_PENGERJAAN' && <button type="button" className="btn-tech-action" onClick={() => savePmUpdate({ ...pm, status: 'DALAM_PENGERJAAN', pelaksanaNik: technician.nik, pelaksanaNama: technician.name })}>Mulai PM</button>}
+                            {pm.status === 'DALAM_PENGERJAAN' && pm.pelaksanaNik === technician.nik && <button type="button" className="btn-tech-action" onClick={() => { setSelectedPmForComplete(pm); setCompletePmModalOpen(true); }}>Selesaikan PM</button>}
+                          </div></td>
+                        </tr>;
+                      })}</tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+            {/* Active Job Spotlight Banner */}
+            {activeJobItem && (
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)',
+                  border: '2px solid #3b82f6',
+                  borderRadius: '12px',
+                  padding: '1.25rem 1.5rem',
+                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.08)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ background: '#2563eb', color: '#ffffff', padding: '3px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 800 }}>
+                      SEDANG ANDA TANGANI SAAT INI
+                    </span>
+                    <strong style={{ fontSize: '1.05rem', color: '#1e3a8a' }}>
+                      {activeJobItem.machine} ({activeJobItem.section}) · Tiket: {activeJobItem.ticket}
+                    </strong>
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: '#475569' }}>
+                    Pelapor: <strong>{activeJobItem.reporterName || 'Operator'}</strong> · Shift {activeJobItem.shift || '1'}
+                  </div>
+                </div>
+
+                <div style={{ background: '#ffffff', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #bfdbfe', fontSize: '0.82rem', color: '#1e293b' }}>
+                  <strong>Kendala Lapangan:</strong> {activeJobItem.issue}
+                  {activeJobItem.action && (
+                    <div style={{ color: '#047857', marginTop: '4px', fontWeight: 600 }}>
+                      Progres Terakhir: {activeJobItem.action}
+                    </div>
+                  )}
+                  {activeJobItem.partsReplaced && activeJobItem.partsReplaced.length > 0 && (
+                    <div style={{ color: '#475569', marginTop: '4px', fontSize: '0.78rem' }}>
+                      Part Digunakan: {activeJobItem.partsReplaced.map((p) => `${p.name} (${p.qty} ${p.unit})`).join(', ')}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn-tech-action-primary"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '0.55rem 1rem',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      background: '#2563eb',
+                      color: '#ffffff',
+                      border: 'none',
+                    }}
+                    onClick={() => handleSelectWork(activeJobItem)}
+                  >
+                    <Wrench size={15} />
+                    <span>Update Pengerjaan &amp; Part</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '0.55rem 1rem',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      background: '#ffffff',
+                      color: '#d97706',
+                      border: '1.5px solid #fcd34d',
+                    }}
+                    onClick={() => {
+                      handleSelectWork(activeJobItem);
+                      setPendingType('MENUNGGU_PART');
+                      setPendingReason('');
+                      setPendingKondisiTerakhir(activeJobItem.kondisiTerakhir || '');
+                      setPendingRencanaTindakLanjut(activeJobItem.rencanaTindakLanjut || '');
+                      setPendingModalOpen(true);
+                    }}
+                  >
+                    <PauseCircle size={15} />
+                    <span>Pause / Tunda Pekerjaan</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <section className="tech-content-card">
+              {/* Toolbar Pekerjaan Aktif */}
+              <div className="tech-toolbar-wrap">
+                <div className="tech-search-box">
+                  <Search size={18} />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Cari tiket pekerjaan aktif, mesin, kendala..."
+                    aria-label="Cari tiket pekerjaan aktif"
+                  />
+                  {search && (
+                    <button className="btn-tech-clear-search" onClick={() => setSearch('')}>
+                      <X size={15} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="tech-filter-pills">
+                  <span className="tech-filter-label">Filter:</span>
+                  <button
+                    type="button"
+                    className={`tech-pill-btn ${activeFilter === 'ALL' ? 'active' : ''}`}
+                    onClick={() => setActiveFilter('ALL')}
+                  >
+                    Semua Aktif ({activeWorks.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`tech-pill-btn ${activeFilter === 'IN_PROGRESS' ? 'active' : ''}`}
+                    onClick={() => setActiveFilter('IN_PROGRESS')}
+                  >
+                    Sedang Dikerjakan ({inProgressWorks.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`tech-pill-btn ${activeFilter === 'PENDING' ? 'active' : ''}`}
+                    onClick={() => setActiveFilter('PENDING')}
+                  >
+                    Pending / Tunggu Part ({pendingWorks.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`tech-pill-btn ${activeFilter === 'SELESAI_PERBAIKAN' ? 'active' : ''}`}
+                    onClick={() => setActiveFilter('SELESAI_PERBAIKAN')}
+                  >
+                    Selesai Perbaikan ({completedRepairWorks.length})
+                  </button>
+                </div>
+              </div>
+
+              {/* Table Pekerjaan Aktif */}
+              <div className="tech-table-responsive">
+                <table className="tech-table">
+                  <thead>
+                    <tr>
+                      <th>NO. TIKET</th>
+                      <th>WAKTU LAPORAN &amp; MULAI</th>
+                      <th>MESIN &amp; SECTION</th>
+                      <th>PELAPOR</th>
+                      <th>KERUSAKAN &amp; TINDAKAN</th>
+                      <th>STATUS PENGERJAAN</th>
+                      <th className="text-center">AKSI TEKNISI</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeWorks
+                      .filter((work) => {
+                        if (activeFilter === 'IN_PROGRESS' && work.status !== 'IN_PROGRESS') return false;
+                        if (
+                          activeFilter === 'PENDING' &&
+                          work.status !== 'PENDING' &&
+                          work.status !== 'MENUNGGU_PART' &&
+                          work.status !== 'MENUNGGU_DUKUNGAN'
+                        )
+                          return false;
+                        if (activeFilter === 'SELESAI_PERBAIKAN' && work.status !== 'SELESAI_PERBAIKAN') return false;
+                        if (activeFilter === 'CLOSED' && work.status !== 'CLOSED') return false;
+                        if (!search.trim()) return true;
+                        const q = search.toLowerCase();
+                        return (
+                          work.ticket.toLowerCase().includes(q) ||
+                          work.machine.toLowerCase().includes(q) ||
+                          work.section.toLowerCase().includes(q) ||
+                          work.issue.toLowerCase().includes(q) ||
+                          (work.action || '').toLowerCase().includes(q)
+                        );
+                      })
+                      .map((work) => {
+                        const isSelected = selectedWork?.ticket === work.ticket;
+                        return (
+                          <tr key={work.ticket} className={isSelected ? 'selected-work-row' : ''}>
+                            <td data-label="No. Tiket">
+                              <span className="tech-ticket-badge">{work.ticket}</span>
+                            </td>
+                            <td data-label="Waktu Laporan & Mulai">
+                              <div>{work.opened}</div>
+                              {work.waktuMulai && (
+                                <div style={{ fontSize: '0.72rem', color: '#059669', marginTop: '2px' }}>
+                                  Mulai: {work.waktuMulai}
+                                </div>
+                              )}
+                              <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px' }}>
+                                Durasi: {calculateTicketAging(work.originalOpenedAt, work.waktuMulai || work.opened)}
+                              </div>
+                            </td>
+                            <td data-label="Mesin & Section" className="tech-machine-col">
+                              <strong>{work.machine}</strong>
+                              <span className="tech-section-sub">Section {work.section}</span>
+                            </td>
+                            <td data-label="Pelapor">
+                              <strong>{work.reporterName || work.reporter || 'Operator'}</strong>
+                              {work.shift && <div className="tech-section-sub">Shift {work.shift}</div>}
+                            </td>
+                            <td data-label="Kerusakan & Tindakan" className="tech-issue-col td-block-cell">
+                              <strong>{work.issue}</strong>
+                              {work.action ? (
+                                <div style={{ color: '#047857', fontSize: '0.76rem', marginTop: '3px' }}>
+                                  Tindakan: {work.action}
+                                </div>
+                              ) : (
+                                <div style={{ color: '#b91c1c', fontSize: '0.74rem', marginTop: '3px' }}>
+                                  Tindakan belum diisi
+                                </div>
+                              )}
+                              {work.partsReplaced && work.partsReplaced.length > 0 && (
+                                <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '2px' }}>
+                                  Part: {work.partsReplaced.map((p) => p.name).join(', ')}
+                                </div>
+                              )}
+                            </td>
+                            <td data-label="Status Pengerjaan">
+                              {work.status === 'IN_PROGRESS' && (
+                                <span className="tech-badge-status in-progress">
+                                  <Clock3 size={13} />
+                                  Sedang Dikerjakan
+                                </span>
+                              )}
+                              {work.status === 'PENDING' && (
+                                <div>
+                                  <span className="tech-badge-status in-progress" style={{ background: '#ffedd5', color: '#c2410c', border: '1px solid #fed7aa' }}>
+                                    <AlertTriangle size={13} />
+                                    Pending
+                                  </span>
+                                  {work.alasanPenundaan && (
+                                    <div style={{ fontSize: '0.72rem', color: '#c2410c', marginTop: '2px', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={work.alasanPenundaan}>
+                                      {work.alasanPenundaan}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {(work.status === 'MENUNGGU_PART' || work.status === 'MENUNGGU_DUKUNGAN') && (
+                                <div>
+                                  <span className="tech-badge-status in-progress" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+                                    <Clock3 size={13} />
+                                    {work.status === 'MENUNGGU_PART' ? 'Menunggu Part' : 'Menunggu Dukungan'}
+                                  </span>
+                                  {work.alasanPenundaan && (
+                                    <div style={{ fontSize: '0.72rem', color: '#b45309', marginTop: '2px', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={work.alasanPenundaan}>
+                                      {work.alasanPenundaan}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {work.status === 'SELESAI_PERBAIKAN' && (
+                                <div>
+                                  <span className="tech-badge-status in-progress" style={{ background: '#dcfce7', color: '#166534', border: '1px solid #86efac' }}>
+                                    <CheckCircle2 size={13} />
+                                    Selesai Perbaikan
+                                  </span>
+                                  <div style={{ fontSize: '0.72rem', color: '#047857', marginTop: '2px', fontWeight: 600 }}>
+                                    Menunggu Closing Opr
+                                  </div>
+                                </div>
+                              )}
+                              {work.status === 'CLOSED' && (
+                                <div>
+                                  <span className="tech-badge-status closed">
+                                    <CheckCircle2 size={13} />
+                                    Closed
+                                  </span>
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                                    Ditutup Operator
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                            <td data-label="Aksi Teknisi" className="text-center td-action-cell">
+                              <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  className="btn-tech-action"
+                                  onClick={() => handleSelectWork(work)}
+                                  title="Update Catatan & Pergantian Part"
+                                >
+                                  <Wrench size={13} />
+                                  <span>Update</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-tech-action"
+                                  style={{ background: '#fffbeb', color: '#d97706', borderColor: '#fcd34d' }}
+                                  onClick={() => {
+                                    handleSelectWork(work);
+                                    setPendingType('MENUNGGU_PART');
+                                    setPendingReason('');
+                                    setPendingKondisiTerakhir(work.kondisiTerakhir || '');
+                                    setPendingRencanaTindakLanjut(work.rencanaTindakLanjut || '');
+                                    setPendingModalOpen(true);
+                                  }}
+                                  title="Tunda / Pause Pekerjaan"
+                                >
+                                  <PauseCircle size={13} />
+                                  <span>Pause</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
