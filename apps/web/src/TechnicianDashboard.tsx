@@ -448,3 +448,453 @@ const baseSeedWorks: TechnicianWorkItem[] = [
     action: '• Buka valve bypass steam trap\n• Test running\n• Pemantauan mesin',
   },
   {
+    ticket: 'OW-292778',
+    machine: 'FBD jaw chuan',
+    section: 'Compounding',
+    reporter: 'OPR0012',
+    reporterName: 'Wahyudi',
+    shift: '1',
+    issue: 'Thermocontrol tidak stabil',
+    kategori: 'Heater / Temperatur',
+    noWr: '292778',
+    opened: 'Hari ini, 08:13',
+    waktuMulai: '2026-09-08T08:13:00.000Z',
+    waktuSelesai: '2026-09-08T09:00:00.000Z',
+    status: 'CLOSED',
+    action: '• Pengecekkan wiring thermocontrol\n• Pengencangan kabel thermocontrol\n• Test running\n• Pemantauan mesin',
+  },
+  {
+    ticket: 'OW-292780',
+    machine: 'Sig 5',
+    section: 'Filling',
+    reporter: 'OPR0003',
+    reporterName: 'Sudarso',
+    shift: '1',
+    issue: 'Rubber putus',
+    kategori: 'Rubber Sealing',
+    noWr: '~',
+    opened: 'Hari ini, 08:30',
+    waktuMulai: '2026-09-08T08:30:00.000Z',
+    waktuSelesai: '2026-09-08T14:30:00.000Z',
+    status: 'CLOSED',
+    action: '• Pembongkaran rubber all line\n• Penggantian rubber 3 line\n• Setting rubber\n• Penggantian pisau vertical 6 pcs\n• Penggantian heater sealing horizontal 2pcs right\n• Test running\n• Pemantauan mesin',
+  },
+  {
+    ticket: 'OW-292785',
+    machine: 'ILapak 5',
+    section: 'Filling',
+    reporter: 'OPR0001',
+    reporterName: 'A. Dahlan',
+    shift: '1',
+    issue: 'Lanjutan shift 3, baru bongkar filling blok 3 line',
+    kategori: 'Unit Pengisian / Nozzle',
+    noWr: '~',
+    opened: 'Hari ini, 07:45',
+    waktuMulai: '2026-09-08T07:45:00.000Z',
+    waktuSelesai: '2026-09-08T15:15:00.000Z',
+    status: 'OPEN',
+    action: '• Penggantian conus dan as 3 pcs\n• Penggantian housing as conus 3pcs\n• Penggantian oring as conus 1pcs\n• Setting penampang\n• Setting rubber\n• Test running',
+    catatanHandover: 'Perlu verifikasi pengisian batch berikutnya',
+  },
+  {
+    ticket: 'OW-292772',
+    machine: 'Ilapak 12',
+    section: 'Filling',
+    reporter: 'OPR0006',
+    reporterName: 'Kuswanto',
+    shift: '1',
+    issue: 'Pisau vertical sealing vertical error',
+    kategori: 'Unit Sealing Vertikal',
+    noWr: '292772',
+    opened: 'Hari ini, 07:09',
+    waktuMulai: '2026-09-08T07:09:00.000Z',
+    waktuSelesai: '2026-09-08T15:00:00.000Z',
+    status: 'CLOSED',
+    action: '• Pengecekkan alarm heater\n• Pengecekkan heater (putus)\n• Pembongkaran heater\n• Penggantian heater\n• Connect wiring heater\n• Test running\n• Pemantauan mesin',
+  },
+  {
+    ticket: 'OW-292790',
+    machine: 'SIG 5',
+    section: 'Filling',
+    reporter: 'OPR0003',
+    reporterName: 'Sudarso',
+    shift: '1',
+    issue: 'Mesin tiba tiba mati',
+    kategori: 'Kelistrikan / Power',
+    noWr: '292790',
+    opened: 'Hari ini, 12:00',
+    waktuMulai: '2026-09-08T12:00:00.000Z',
+    waktuSelesai: '2026-09-08T15:00:00.000Z',
+    status: 'CLOSED',
+    action: '• Reset alarm\n• Setting potongan\n• Setting pisau vertical\n• Setting rubber\n• Penggantian kabel inkjet\n• Test running\n• Pemantauan mesin',
+  },
+  {
+    ticket: 'OW-292796',
+    machine: 'Chimei js 05',
+    section: 'Packaging',
+    reporter: 'OPR0008',
+    reporterName: 'Nita',
+    shift: '1',
+    issue: 'Short mati',
+    kategori: 'Kelistrikan / PLC',
+    noWr: '~',
+    opened: 'Hari ini, 09:00',
+    waktuMulai: '2026-09-08T09:00:00.000Z',
+    waktuSelesai: '2026-09-08T15:15:00.000Z',
+    status: 'OPEN',
+    action: '• Pengecekkan wiring in coming machine\n• Penggantian fuse\n• Setting opp',
+    catatanHandover: 'Perlu ganti PLC pada shift berikutnya',
+  },
+];
+
+const initialSeedWorks: TechnicianWorkItem[] = isTestEnv ? baseSeedWorks : [];
+
+const featuredMachinePartHistory: MachinePartHistory[] = [
+  {
+    id: 'PRT-ILA1-001',
+    machine: 'Ilapak 1',
+    part: 'Pisau I-Cut',
+    partNumber: 'CUT-8025-HSS',
+    specification: 'HSS 80 × 25 mm',
+    position: 'Line 1 (Sealer Vertikal)',
+    replacedAt: '2026-09-18',
+    intervalBasis: 'KALENDER',
+    intervalTarget: 90,
+    unit: 'Hari',
+    currentUsage: 26,
+    lifetimeDays: 90,
+    usedDays: 26,
+    isDataComplete: true,
+  },
+  {
+    id: 'PRT-ILA1-002',
+    machine: 'Ilapak 1',
+    part: 'Sealing heater',
+    partNumber: 'HTR-220-350W',
+    specification: '220 V / 350 W',
+    position: 'Vertikal Jaw Sealer',
+    replacedAt: '2026-08-12',
+    intervalBasis: 'JAM_OPERASI',
+    intervalTarget: 1500,
+    unit: 'Jam Operasi',
+    currentUsage: 680,
+    lifetimeDays: 180,
+    usedDays: 63,
+    isDataComplete: true,
+  },
+  {
+    id: 'PRT-ILA1-003',
+    machine: 'Ilapak 1',
+    part: 'Gasket pneumatic',
+    partNumber: 'GSK-NBR-1825',
+    specification: 'NBR 18 x 2.5 mm',
+    position: 'Cylinder line 1',
+    replacedAt: '2026-09-20',
+    intervalBasis: 'KALENDER',
+    intervalTarget: 120,
+    unit: 'Hari',
+    currentUsage: 24,
+    lifetimeDays: 120,
+    usedDays: 24,
+    isDataComplete: true,
+  },
+  {
+    id: 'PRT-ILA1-004',
+    machine: 'Ilapak 1',
+    part: 'Bearing Utama Roller',
+    partNumber: 'BRG-6204-2RS',
+    specification: 'Deep groove ball 20x47x14 mm',
+    position: 'Roller Penarik Film',
+    replacedAt: undefined, // URS 2.4 Data Tidak Lengkap
+    intervalBasis: 'KALENDER',
+    intervalTarget: 180,
+    unit: 'Hari',
+    currentUsage: 0,
+    lifetimeDays: 180,
+    usedDays: 0,
+    isDataComplete: false,
+    incompleteReason: 'Tanggal pemasangan awal belum terdata di master maintenance',
+  },
+  {
+    id: 'PRT-ILA8-001',
+    machine: 'Ilapak 8',
+    part: 'Teflon belt',
+    partNumber: 'BLT-PTFE-30',
+    specification: 'Lebar 30 mm',
+    position: 'Sealer vertikal',
+    replacedAt: '2026-09-02',
+    intervalBasis: 'KALENDER',
+    intervalTarget: 60,
+    unit: 'Hari',
+    currentUsage: 42,
+    lifetimeDays: 60,
+    usedDays: 42,
+    isDataComplete: true,
+  },
+  {
+    id: 'PRT-SIG6-001',
+    machine: 'SIG 6',
+    part: 'Sensor inkjet',
+    partNumber: 'SNR-OPT-24V',
+    specification: 'Photoelectric 24 VDC',
+    position: 'Conveyor outfeed',
+    replacedAt: '2026-07-30',
+    intervalBasis: 'JAM_OPERASI',
+    intervalTarget: 2500,
+    unit: 'Jam Operasi',
+    currentUsage: 1450,
+    lifetimeDays: 365,
+    usedDays: 76,
+    isDataComplete: true,
+  },
+  {
+    id: 'PRT-ILA5-001',
+    machine: 'Ilapak 5',
+    part: 'Pisau I-Cut',
+    partNumber: 'CUT-8025-HSS',
+    specification: 'HSS 80 × 25 mm',
+    position: 'Line 1',
+    replacedAt: '2026-06-10',
+    intervalBasis: 'KALENDER',
+    intervalTarget: 90,
+    unit: 'Hari',
+    currentUsage: 95,
+    lifetimeDays: 90,
+    usedDays: 95,
+    isDataComplete: true,
+  },
+  {
+    id: 'PRT-UNIB-001',
+    machine: 'Unifill B',
+    part: 'Pisau perforasi',
+    partNumber: 'PRF-4M-SKD11',
+    specification: 'Gandeng 4 mata, SKD11',
+    position: 'Perforation unit',
+    replacedAt: '2026-09-24',
+    intervalBasis: 'KALENDER',
+    intervalTarget: 60,
+    unit: 'Hari',
+    currentUsage: 20,
+    lifetimeDays: 60,
+    usedDays: 20,
+    isDataComplete: true,
+  },
+  {
+    id: 'PRT-UNIB-002',
+    machine: 'Unifill B',
+    part: 'Seal piston',
+    partNumber: 'SL-PTFE-32FG',
+    specification: 'Food grade PTFE 32 mm',
+    position: 'Filling line 2',
+    replacedAt: '2026-07-09',
+    intervalBasis: 'JAM_OPERASI',
+    intervalTarget: 1000,
+    unit: 'Jam Operasi',
+    currentUsage: 890,
+    lifetimeDays: 120,
+    usedDays: 97,
+    isDataComplete: true,
+  },
+];
+
+
+
+export default function TechnicianDashboard({ technician, onLogout }: TechnicianDashboardProps) {
+  const safeTechnician = useMemo(() => {
+    const raw = technician || ({} as Partial<Technician>);
+    return {
+      nik: raw.nik || 'TKN0001',
+      name: raw.name || 'Teknisi',
+      role: 'TEKNISI' as const,
+      shifts: Array.isArray(raw.shifts) && raw.shifts.length > 0 ? raw.shifts : ['Shift 1'],
+      departments: Array.isArray(raw.departments) && raw.departments.length > 0 ? raw.departments : ['Maintenance'],
+      active: raw.active !== false,
+      password: raw.password || '',
+    };
+  }, [technician]);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return storage.getItem('mc-sidebar-collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  function toggleSidebarCollapse() {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        storage.setItem('mc-sidebar-collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  }
+  const [activeTab, setActiveTab] = useNavigationState<'QUEUE' | 'ACTIVE' | 'SHIFT_REPORT' | 'WORKS' | 'MACHINES'>('mc-nav-TechnicianDashboard-activeTab', 'QUEUE');
+  const [queueSearch, setQueueSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'IN_PROGRESS' | 'PENDING' | 'SELESAI_PERBAIKAN' | 'CLOSED'>('ALL');
+  const [shiftReportDate, setShiftReportDate] = useNavigationState<string>(`mc-nav-report-date-${technician.nik}`, operationalDate(new Date().toISOString(), (technician.shifts[0] || 'Shift 1').replace('Shift ', '')) || plantDate());
+  const [shiftClosingRecord, setShiftClosingRecord] = useState<{
+    closedAt: string;
+    closedBy: string;
+    shift: string;
+    totalWorks: number;
+    complete: boolean;
+  } | null>(() => {
+    try {
+      const stored = storage.getItem(`machine-card-shift-closing-${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Preventive Maintenance (PM) state (URS 3.3)
+  const [pmSchedules, setPmSchedules] = useState<PreventiveMaintenanceItem[]>(() => {
+    try {
+      const stored = storage.getItem('machine-card-pm-schedules');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return initialSeedPMs;
+  });
+
+  function savePmUpdate(updated: PreventiveMaintenanceItem) {
+    const raw = storage.getItem('machine-card-pm-schedules');
+    const parsed = raw ? JSON.parse(raw) : pmSchedules;
+    const latest: PreventiveMaintenanceItem[] = Array.isArray(parsed) ? parsed : pmSchedules;
+    const next = latest.map((item) => item.id === updated.id ? { ...item, ...updated } : item);
+    storage.setItem('machine-card-pm-schedules', JSON.stringify(next));
+    setPmSchedules(next);
+    window.dispatchEvent(new Event('mc-pm-updated'));
+  }
+
+
+  useEffect(() => {
+    const refresh = () => {
+      try {
+        const parsed = JSON.parse(storage.getItem('machine-card-pm-schedules') || '[]');
+        if (Array.isArray(parsed)) setPmSchedules(parsed);
+      } catch {}
+    };
+    window.addEventListener('storage', refresh);
+    window.addEventListener('mc-pm-updated', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('mc-pm-updated', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
+
+  const [pmFilter, setPmFilter] = useState<'ALL' | 'TERJADWAL' | 'SELESAI' | 'TERLAMBAT' | 'DIRESCHEDULE'>('ALL');
+  const [pmSearch, setPmSearch] = useState('');
+  const [completePmModalOpen, setCompletePmModalOpen] = useState(false);
+  const [selectedPmForComplete, setSelectedPmForComplete] = useState<PreventiveMaintenanceItem | null>(null);
+  const [pmFindings, setPmFindings] = useState('');
+
+  const [reschedulePmModalOpen, setReschedulePmModalOpen] = useState(false);
+  const [selectedPmForReschedule, setSelectedPmForReschedule] = useState<PreventiveMaintenanceItem | null>(null);
+  const [newPmDate, setNewPmDate] = useState('');
+  const [rescheduleReason, setRescheduleReason] = useState('');
+
+  // Pending / Delay Modal state (URS 3.2, 3.4, 5.1 & 5.2)
+  const [pendingModalOpen, setPendingModalOpen] = useState(false);
+  const [pendingType, setPendingType] = useState<'PENDING' | 'MENUNGGU_PART' | 'MENUNGGU_DUKUNGAN'>('MENUNGGU_PART');
+  const [pendingReason, setPendingReason] = useState('');
+  const [pendingKondisiTerakhir, setPendingKondisiTerakhir] = useState('');
+  const [pendingRencanaTindakLanjut, setPendingRencanaTindakLanjut] = useState('');
+
+  // Handover Modal state (URS 5.3)
+  const [handoverModalOpen, setHandoverModalOpen] = useState(false);
+  const [handoverForm, setHandoverForm] = useState({
+    shift: 'Shift 2',
+    tanggal: new Date().toISOString().slice(0, 10),
+    progres: '',
+    kendala: '',
+    tindakLanjut: '',
+  });
+  const [works, setWorks] = useState<TechnicianWorkItem[]>(() => {
+    try {
+      const stored = storage.getItem('machine-card-open-work');
+      if (stored) {
+        const parsed = JSON.parse(stored) as Array<any>;
+
+        // Map from operator format to technician format
+        const fromOperator = parsed.map((item) => ({
+          ...item,
+          ticket: item.ticket,
+          machine: item.machine,
+          id_mesin: item.id_mesin,
+          section: item.section || 'Filling',
+          reporter: item.reporter,
+          reporterName: item.reporterName || item.reporter,
+          shift: item.shift || '1',
+          issue: item.issue || item.keterangan || 'Kerusakan mesin',
+          kategori: item.kategori,
+          woType: item.woType,
+          kodeProduk: item.kodeProduk,
+          noBatch: item.noBatch,
+          noWr: item.noWr,
+          opened: item.waktuMulai
+            ? new Intl.DateTimeFormat('id-ID', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Asia/Jakarta',
+              }).format(new Date(item.waktuMulai))
+            : 'Baru saja',
+          waktuMulai: item.waktuMulai,
+          waktuSelesai: item.waktuSelesai,
+          status: item.status,
+          action: item.action,
+          technician: item.technician,
+          technicianName: item.technicianName,
+          technicianNik: item.technicianNik,
+          originalOpenedAt: item.originalOpenedAt,
+          alasanPenundaan: item.alasanPenundaan,
+          kondisiTerakhir: item.kondisiTerakhir,
+          rencanaTindakLanjut: item.rencanaTindakLanjut,
+          catatanHandover: item.catatanHandover,
+          statusHistory: item.statusHistory,
+          riwayatHandover: item.riwayatHandover,
+          partsReplaced: item.partsReplaced,
+          partReplaced: item.partReplaced,
+        }));
+
+        // Combine unique by ticket
+        const ticketSet = new Set(fromOperator.map((i) => i.ticket));
+        const combined = [...fromOperator, ...(isTestEnv ? initialSeedWorks.filter((s) => !ticketSet.has(s.ticket)) : [])];
+        return combined;
+      }
+    } catch {
+      // Fallback
+    }
+    return initialSeedWorks;
+  });
+
+  const [selectedWork, setSelectedWork] = useState<TechnicianWorkItem | null>(null);
+
+  // Sinkronisasi otomatis saat Operator melakukan closing tiket atau pembaruan (Realtime Cross-Tab)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'machine-card-open-work' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setWorks((prevWorks) => {
+              const ticketMap = new Map(parsed.map((p: any) => [p.ticket, p]));
+              return prevWorks.map((w) => {
+                const fresh = ticketMap.get(w.ticket);
+                if (fresh) {
+                  return {
+                    ...w,
+                    status: fresh.status || w.status,
+                    action: fresh.action || w.action,
+                    technicianName: fresh.technicianName || w.technicianName,
+                    waktuSelesai: fresh.waktuSelesai || w.waktuSelesai,
+                  };
