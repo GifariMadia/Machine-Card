@@ -3598,3 +3598,503 @@ export default function TechnicianDashboard({ technician, onLogout }: Technician
                 <div className="tech-detail-card" style={{ background: '#fff7ed', borderColor: '#fed7aa', borderLeft: '4px solid #ea580c' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c2410c', fontWeight: 700, marginBottom: '6px' }}>
                     <AlertTriangle size={18} />
+                    <span>Pekerjaan Pending</span>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: '#9a3412', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <p style={{ margin: 0 }}>
+                      <strong>Alasan Pending:</strong> {selectedWork.alasanPenundaan || 'Pekerjaan belum selesai / dilanjutkan ke shift berikutnya.'}
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      <strong>Kondisi Terakhir Mesin:</strong> {selectedWork.kondisiTerakhir || 'Menunggu tindak lanjut teknisi shift selanjutnya.'}
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      <strong>Rencana Penanganan Berikutnya:</strong> {selectedWork.rencanaTindakLanjut || 'Pemeriksaan lanjutan sesuai serah-terima.'}
+                    </p>
+                    <small style={{ color: '#c2410c', marginTop: '0.2rem' }}>
+                      Umur tiket ({calculateTicketAging(selectedWork.originalOpenedAt, selectedWork.waktuMulai || selectedWork.opened)}) tetap berjalan dari waktu pembukaan asal dan tidak direset oleh perubahan status pending.
+                    </small>
+                  </div>
+                </div>
+              )}
+
+              {/* State: SELESAI_PERBAIKAN (Perbaikan Fisik Selesai) */}
+              {selectedWork.status === 'SELESAI_PERBAIKAN' && (
+                <div className="tech-detail-card" style={{ background: '#f0fdf4', borderColor: '#86efac', borderLeft: '4px solid #10b981' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#047857', fontWeight: 700, marginBottom: '6px' }}>
+                    <CheckCircle2 size={18} />
+                    <span>Perbaikan Fisik Selesai — Menunggu Finishing &amp; Closing oleh Operator</span>
+                  </div>
+                  <p style={{ margin: '0 0 6px', fontSize: '0.85rem', color: '#065f46' }}>
+                    Tindakan perbaikan teknisi telah selesai dicatat. Tiket ini sekarang berada pada wewenang Operator untuk melakukan uji coba (running test produk), memastikan kestabilan mesin, dan melakukan closing tiket secara resmi saat mesin beroperasi kembali normal.
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #10b981',
+                        color: '#047857',
+                        padding: '0.35rem 0.75rem',
+                        borderRadius: '6px',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                      onClick={() => updateWorkStatus('IN_PROGRESS')}
+                    >
+                      <Play size={14} />
+                      Buka Kembali Pengerjaan (Rework / Lanjutan)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* State: CLOSED (Tiket Ditutup Operator) */}
+              {selectedWork.status === 'CLOSED' && (
+                <div className="tech-detail-card" style={{ background: '#f8fafc', borderColor: '#cbd5e1', borderLeft: '4px solid #059669' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: 700, marginBottom: '6px' }}>
+                    <CheckCircle2 size={18} color="#059669" />
+                    <span>Tiket Selesai &amp; Ditutup (Closed) oleh Operator</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569' }}>
+                    Mesin telah selesai diuji coba running test dan telah beroperasi normal kembali. Tiket ini telah resmi di-closing oleh Operator produksi.
+                  </p>
+                </div>
+              )}
+
+              {/* State 2 & 3: IN_PROGRESS atau SELESAI_PERBAIKAN atau CLOSED (Formulir Tindakan Teknisi) */}
+              {selectedWork.status !== 'OPEN' && (
+                <div className="tech-detail-card">
+                  <div className="tech-detail-card-title">
+                    <Wrench size={16} />
+                    {selectedWork.status === 'CLOSED'
+                      ? 'Laporan Tindakan Perbaikan (Selesai & Ditutup Operator)'
+                      : selectedWork.status === 'SELESAI_PERBAIKAN'
+                      ? 'Laporan Tindakan Perbaikan (Selesai Perbaikan - Menunggu Closing Operator)'
+                      : 'Formulir Tindakan Teknisi Maintenance'}
+                  </div>
+
+                  <div className="tech-form-group" style={{ position: 'relative' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                      <label htmlFor="tech-action-input" style={{ margin: 0 }}>
+                        Rincian Tindakan Maintenance / Perbaikan *
+                      </label>
+
+                    </div>
+                    <textarea
+                      id="tech-action-input"
+                      rows={3}
+                      value={actionNotes}
+                      onChange={(e) => {
+                        setActionNotes(e.target.value);
+                      }}
+                      placeholder="Ketik tindakan teknisi (misal: ganti pisau, reset alarm, ganti heater, dsb)..."
+                      readOnly={selectedWork.status === 'CLOSED' || selectedWork.status === 'SELESAI_PERBAIKAN'}
+                    />
+
+                  </div>
+
+                  {/* Bagian Penggantian Part */}
+                  {(quickAction === 'Penggantian Part' || Boolean(partForm.name.trim()) || selectedWork.partReplaced) ? (
+                    <div className="tech-part-form-box">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <h4 style={{ margin: 0 }}>Rincian Spare Part yang Diganti</h4>
+                        {selectedWork.status !== 'CLOSED' && selectedWork.status !== 'SELESAI_PERBAIKAN' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickAction('');
+                              setPartForm({
+                                name: '',
+                                specification: '',
+                                quantity: '1',
+                                position: 'Line 1',
+                                note: '',
+                              });
+                            }}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: '#64748b',
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                              textDecoration: 'underline',
+                            }}
+                          >
+                            Hapus Part
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="tech-incident-grid" style={{ marginTop: '0.45rem' }}>
+                        <div className="tech-form-group">
+                          <label>Nama Part *</label>
+                          <input
+                            type="text"
+                            value={partForm.name}
+                            onChange={(e) => setPartForm({ ...partForm, name: e.target.value })}
+                            placeholder="Contoh: Pisau I-Cut"
+                            readOnly={selectedWork.status === 'CLOSED' || selectedWork.status === 'SELESAI_PERBAIKAN'}
+                          />
+                          {partForm.name.trim() && (
+                            <span
+                              style={{
+                                display: 'block',
+                                fontSize: '0.72rem',
+                                marginTop: '3px',
+                                fontWeight: 600,
+                                color: ['pisau i-cut', 'sealing heater', 'teflon belt', 'gasket pneumatic', 'sensor inkjet', 'seal piston', 'pisau perforasi', 'proximity sensor'].includes(partForm.name.trim().toLowerCase())
+                                  ? '#059669'
+                                  : '#b45309',
+                              }}
+                            >
+                              {['pisau i-cut', 'sealing heater', 'teflon belt', 'gasket pneumatic', 'sensor inkjet', 'seal piston', 'pisau perforasi', 'proximity sensor'].includes(partForm.name.trim().toLowerCase())
+                                ? '✓ Part terdaftar di master data'
+                                : '● Part Baru: Akan diajukan ke Admin untuk penetapan rumus lifetime & standarisasi nama'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="tech-form-group">
+                          <label>Jumlah (Qty) *</label>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            min="1"
+                            value={partForm.quantity}
+                            onChange={(e) => setPartForm({ ...partForm, quantity: e.target.value })}
+                            readOnly={selectedWork.status === 'CLOSED' || selectedWork.status === 'SELESAI_PERBAIKAN'}
+                          />
+                        </div>
+                        <div className="tech-form-group">
+                          <label>Spesifikasi (Standar)</label>
+                          <input
+                            type="text"
+                            value={partForm.specification}
+                            onChange={(e) =>
+                              setPartForm({ ...partForm, specification: e.target.value })
+                            }
+                            placeholder="Contoh: HSS 80 x 25 mm"
+                            readOnly={selectedWork.status === 'CLOSED' || selectedWork.status === 'SELESAI_PERBAIKAN'}
+                          />
+                        </div>
+                        <div className="tech-form-group">
+                          <label>Posisi / Lini</label>
+                          <input
+                            type="text"
+                            value={partForm.position}
+                            onChange={(e) =>
+                              setPartForm({ ...partForm, position: e.target.value })
+                            }
+                            placeholder="Contoh: Line 1"
+                            readOnly={selectedWork.status === 'CLOSED' || selectedWork.status === 'SELESAI_PERBAIKAN'}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    selectedWork.status !== 'CLOSED' && selectedWork.status !== 'SELESAI_PERBAIKAN' && (
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuickAction('Penggantian Part');
+                            setPartForm({
+                              name: '',
+                              specification: '',
+                              quantity: '1',
+                              position: 'Line 1',
+                              note: '',
+                            });
+                          }}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#047857',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            padding: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          + Tambah Penggantian Spare Part (Opsional)
+                        </button>
+                      </div>
+                    )
+                  )}
+
+                  {selectedWork.status !== 'CLOSED' && selectedWork.status !== 'SELESAI_PERBAIKAN' && !showFollowupNotes && !followupNotes ? (
+                    <div style={{ marginTop: '0.65rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowFollowupNotes(true)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#047857',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          padding: 0,
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        + Tambah Catatan Handover / Shift Lanjutan (Opsional)
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="tech-form-group" style={{ marginTop: '0.85rem' }}>
+                      <label htmlFor="tech-followup-input">
+                        Catatan Handover / Shift Lanjutan (Opsional)
+                      </label>
+                      <textarea
+                        id="tech-followup-input"
+                        rows={2}
+                        value={followupNotes}
+                        onChange={(e) => setFollowupNotes(e.target.value)}
+                        placeholder="Catatan tambahan untuk shift berikutnya atau pengawasan part..."
+                        readOnly={selectedWork.status === 'CLOSED' || selectedWork.status === 'SELESAI_PERBAIKAN'}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Card Serah-Terima Shift / Handover (URS 5.3) */}
+              <div className="tech-detail-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div className="tech-detail-card-title" style={{ margin: 0 }}>
+                    <ArrowRightLeft size={16} />
+                    Serah-Terima Shift (Handover)
+                  </div>
+                  {selectedWork.status !== 'CLOSED' && selectedWork.status !== 'SELESAI_PERBAIKAN' && (
+                    <button
+                      type="button"
+                      onClick={() => setHandoverModalOpen(true)}
+                      style={{
+                        padding: '0.35rem 0.75rem',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        borderRadius: '6px',
+                        border: '1px solid #0d9488',
+                        background: '#f0fdfa',
+                        color: '#0f766e',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                      }}
+                    >
+                      <PlusCircle size={14} />
+                      + Catat Lanjutan Shift
+                    </button>
+                  )}
+                </div>
+
+                {selectedWork.riwayatHandover && selectedWork.riwayatHandover.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    {selectedWork.riwayatHandover.map((entry, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          padding: '0.75rem 0.9rem',
+                          fontSize: '0.82rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                          <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                            {entry.shift} ({entry.tanggal})
+                          </span>
+                          <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                            {entry.waktuDicatat}
+                          </span>
+                        </div>
+                        <div style={{ color: '#334155', marginBottom: '0.25rem' }}>
+                          <strong>Teknisi:</strong> {entry.pelaksanaNama} ({entry.pelaksanaNik})
+                        </div>
+                        <div style={{ color: '#334155', marginBottom: '0.25rem' }}>
+                          <strong>Progres:</strong> {entry.progres}
+                        </div>
+                        <div style={{ color: '#b45309', marginBottom: '0.25rem' }}>
+                          <strong>Kendala:</strong> {entry.kendala}
+                        </div>
+                        <div style={{ color: '#0f766e', marginBottom: '0.25rem' }}>
+                          <strong>Tindak Lanjut:</strong> {entry.tindakLanjut}
+                        </div>
+                        {entry.tanggungJawabShiftAsal && (
+                          <div style={{ fontSize: '0.73rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '0.35rem', borderTop: '1px dashed #cbd5e1', paddingTop: '0.25rem' }}>
+                            * Tanggung jawab pelengkapan laporan shift asal tetap pada: {entry.tanggungJawabShiftAsal}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>
+                    Belum ada riwayat handover lanjutan. Apabila pengerjaan diteruskan oleh teknisi shift berikutnya, klik tombol "+ Catat Lanjutan Shift".
+                  </p>
+                )}
+              </div>
+
+              {/* Card Jejak Audit Keterlacakan Perubahan Status */}
+              {selectedWork.statusHistory && selectedWork.statusHistory.length > 0 && (
+                <div className="tech-detail-card">
+                  <div className="tech-detail-card-title">
+                    <History size={16} />
+                    Jejak Perubahan Status
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {selectedWork.statusHistory.map((item, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          padding: '0.55rem 0.8rem',
+                          fontSize: '0.78rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.2rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 700, color: '#1e293b' }}>
+                            {item.fromStatus} ➔ {item.toStatus}
+                          </span>
+                          <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
+                            {new Intl.DateTimeFormat('id-ID', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date(item.changedAt))}
+                          </span>
+                        </div>
+                        <span style={{ color: '#475569' }}>
+                          Oleh: <strong>{item.changedBy}</strong>
+                        </span>
+                        {item.reason && (
+                          <span style={{ color: '#64748b', fontStyle: 'italic' }}>
+                            Alasan: "{item.reason}"
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Aksi Drawer */}
+            {(selectedWork.status === 'IN_PROGRESS' || selectedWork.status === 'PENDING' || selectedWork.status === 'MENUNGGU_PART' || selectedWork.status === 'MENUNGGU_DUKUNGAN' || selectedWork.status === 'SELESAI_PERBAIKAN' || selectedWork.status === 'CLOSED') && (
+              <footer className="tech-drawer-footer">
+                {selectedWork.status === 'IN_PROGRESS' ? (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-tech-save-progress"
+                      onClick={() => updateWorkStatus('IN_PROGRESS')}
+                      title="Simpan progres pekerjaan saat ini"
+                    >
+                      <Save size={15} style={{ flexShrink: 0, marginRight: '0.35rem' }} />
+                      <span>Simpan Progres</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-tech-action in-progress-mode"
+                      onClick={() => {
+                        setPendingReason('');
+                        setPendingModalOpen(true);
+                      }}
+                      title="Tunda pekerjaan / tunggu spare part"
+                    >
+                      <PauseCircle size={15} style={{ flexShrink: 0, marginRight: '0.35rem' }} />
+                      <span>Tunda / Tunggu Part</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-tech-action handover-mode"
+                      onClick={() => setHandoverModalOpen(true)}
+                      title="Oper shift / handover tiket ke teknisi shift berikutnya"
+                    >
+                      <ArrowRightLeft size={15} style={{ flexShrink: 0, marginRight: '0.35rem' }} />
+                      <span>Oper Shift (Handover)</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-tech-finish-work"
+                      onClick={() => updateWorkStatus('SELESAI_PERBAIKAN')}
+                      disabled={
+                        !actionNotes.trim() ||
+                        (quickAction === 'Penggantian Part' && !partForm.name.trim())
+                      }
+                      title="Selesaikan tindakan perbaikan dan serahkan ke Operator untuk tahap running test & closing"
+                    >
+                      <CheckCircle2 size={15} style={{ flexShrink: 0, marginRight: '0.35rem' }} />
+                      <span>Selesaikan Perbaikan</span>
+                    </button>
+                  </>
+                ) : selectedWork.status === 'SELESAI_PERBAIKAN' ? (
+                  <div className="tech-footer-completed-banner">
+                    <div className="tech-footer-completed-text">
+                      <CheckCircle2 size={16} style={{ color: '#059669', flexShrink: 0 }} />
+                      <span>Perbaikan fisik selesai. Menunggu running test &amp; closing Operator.</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-tech-action btn-tech-rework"
+                      onClick={() => updateWorkStatus('IN_PROGRESS')}
+                      title="Buka kembali pengerjaan tiket jika dibutuhkan perbaikan lanjutan (rework)"
+                    >
+                      <RotateCcw size={14} style={{ flexShrink: 0 }} />
+                      <span>Buka Rework</span>
+                    </button>
+                  </div>
+                ) : selectedWork.status === 'CLOSED' ? (
+                  <div className="tech-footer-closed-banner">
+                    <CheckCircle2 size={16} style={{ color: '#059669', flexShrink: 0 }} />
+                    <span>Tiket telah ditutup (closed) oleh Operator setelah running test selesai.</span>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-tech-start-big"
+                      onClick={() => updateWorkStatus('IN_PROGRESS')}
+                    >
+                      <Play size={16} />
+                      <span>Lanjutkan Pengerjaan (Aktifkan Kembali)</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-tech-action handover-mode btn-tech-handover-pending"
+                      onClick={() => setHandoverModalOpen(true)}
+                    >
+                      <ArrowRightLeft size={16} style={{ marginRight: '0.35rem' }} />
+                      <span>Serah-Terima Shift (Handover)</span>
+                    </button>
+                  </>
+                )}
+              </footer>
+            )}
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL TUNDA / PENDING */}
+      {pendingModalOpen && selectedWork && (
+        <div
+          className="tech-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tech-pending-title"
+        >
+          <button
+            className="tech-drawer-overlay"
+            aria-label="Tutup formulir tunda"
+            onClick={() => setPendingModalOpen(false)}
