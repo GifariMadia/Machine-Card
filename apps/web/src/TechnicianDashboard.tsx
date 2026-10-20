@@ -898,3 +898,453 @@ export default function TechnicianDashboard({ technician, onLogout }: Technician
                     technicianName: fresh.technicianName || w.technicianName,
                     waktuSelesai: fresh.waktuSelesai || w.waktuSelesai,
                   };
+                }
+                return w;
+              });
+            });
+            setSelectedWork((prev) => {
+              if (!prev) return null;
+              const freshSelected = parsed.find((p: any) => p.ticket === prev.ticket);
+              if (freshSelected) {
+                return {
+                  ...prev,
+                  status: freshSelected.status || prev.status,
+                  action: freshSelected.action || prev.action,
+                  technicianName: freshSelected.technicianName || prev.technicianName,
+                  waktuSelesai: freshSelected.waktuSelesai || prev.waktuSelesai,
+                };
+              }
+              return prev;
+            });
+          }
+        } catch {}
+      }
+    };
+    const handleInjected = () => {
+      try {
+        const stored = storage.getItem('machine-card-open-work');
+        if (stored) {
+          const parsed = JSON.parse(stored) as Array<any>;
+          const fromOperator = parsed.map((item) => ({
+          ...item,
+            ticket: item.ticket,
+            machine: item.machine,
+            id_mesin: item.id_mesin,
+            section: item.section || 'Filling',
+            reporter: item.reporter,
+            reporterName: item.reporterName || item.reporter,
+            shift: item.shift || '1',
+            issue: item.issue || item.keterangan || 'Kerusakan mesin',
+            kategori: item.kategori,
+            woType: item.woType,
+            kodeProduk: item.kodeProduk,
+            noBatch: item.noBatch,
+            noWr: item.noWr,
+            opened: item.waktuMulai
+              ? new Intl.DateTimeFormat('id-ID', {
+                  day: '2-digit',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  timeZone: 'Asia/Jakarta',
+                }).format(new Date(item.waktuMulai))
+              : 'Baru saja',
+            waktuMulai: item.waktuMulai,
+            waktuSelesai: item.waktuSelesai,
+            status: item.status,
+            action: item.action,
+            technician: item.technician,
+            technicianName: item.technicianName,
+            technicianNik: item.technicianNik,
+            originalOpenedAt: item.originalOpenedAt,
+            alasanPenundaan: item.alasanPenundaan,
+            kondisiTerakhir: item.kondisiTerakhir,
+            rencanaTindakLanjut: item.rencanaTindakLanjut,
+            catatanHandover: item.catatanHandover,
+            statusHistory: item.statusHistory,
+            riwayatHandover: item.riwayatHandover,
+            partsReplaced: item.partsReplaced,
+            partReplaced: item.partReplaced,
+          }));
+          setWorks(fromOperator);
+        }
+      } catch {}
+    };
+
+    const handleCleared = () => {
+      setWorks([]);
+      setSelectedWork(null);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('mc-maintenance-data-injected', handleInjected);
+    window.addEventListener('mc-maintenance-data-cleared', handleCleared);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('mc-maintenance-data-injected', handleInjected);
+      window.removeEventListener('mc-maintenance-data-cleared', handleCleared);
+    };
+  }, []);
+  const [filter, setFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'PENDING' | 'CLOSED'>('ALL');
+  const [search, setSearch] = useState('');
+  const [actionNotes, setActionNotes] = useState('');
+  const [quickAction, setQuickAction] = useState('');
+  const [followupNotes, setFollowupNotes] = useState('');
+  const [showFollowupNotes, setShowFollowupNotes] = useState(false);
+  const [partForm, setPartForm] = useState({
+    name: '',
+    specification: '',
+    quantity: '1',
+    position: 'Line 1',
+    note: '',
+  });
+
+  // Shift Report States (As-Is Format Auto-Merge & Hold by System)
+  const [shiftMembers, setShiftMembers] = useState<string>(() => {
+    try {
+      const stored = storage.getItem('machine-card-shift-members');
+      if (stored) return stored;
+    } catch {}
+    return isTestEnv ? 'PDA, RMA, DEFA, FAUZI' : technician.nik;
+  });
+
+  const [repairWorkshopNotes, setRepairWorkshopNotes] = useState<string>(() => {
+    try {
+      const stored = storage.getItem(`machine-card-repair-notes-${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`);
+      if (stored !== null) return stored;
+    } catch {}
+    return isTestEnv ? '1. Pembuatan wo bacth' : '';
+  });
+
+  const [pbjtNotes, setPbjtNotes] = useState<string>(() => {
+    try {
+      const stored = storage.getItem(`machine-card-pbjt-notes-${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`);
+      if (stored !== null) return stored;
+    } catch {}
+    return '';
+  });
+
+  const [pmNotes, setPmNotes] = useState<string>(() => {
+    try {
+      const stored = storage.getItem(`machine-card-pm-notes-${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`);
+      if (stored !== null) return stored;
+    } catch {}
+    return '';
+  });
+
+  const [otherNotes, setOtherNotes] = useState<string>(() => {
+    try {
+      const stored = storage.getItem(`machine-card-other-notes-${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`);
+      if (stored !== null) return stored;
+    } catch {}
+    return isTestEnv ? '1. Pendampingan vendor trikarya' : '';
+  });
+
+  const [customWorkOverrides, setCustomWorkOverrides] = useState<Record<string, {
+    wr?: string;
+    actions?: string;
+    note?: string;
+    timeRange?: string;
+    status?: string;
+  }>>(() => {
+    try {
+      const stored = storage.getItem(`machine-card-shift-overrides-${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`);
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return {};
+  });
+
+  const [editingWorkTicket, setEditingWorkTicket] = useState<string | null>(null);
+  useEffect(() => {
+    if (isTestEnv) return;
+    const suffix = `${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`;
+    setRepairWorkshopNotes(storage.getItem(`machine-card-repair-notes-${suffix}`) || '');
+    setPbjtNotes(storage.getItem(`machine-card-pbjt-notes-${suffix}`) || '');
+    setPmNotes(storage.getItem(`machine-card-pm-notes-${suffix}`) || '');
+    setOtherNotes(storage.getItem(`machine-card-other-notes-${suffix}`) || '');
+    setCustomWorkOverrides(JSON.parse(storage.getItem(`machine-card-shift-overrides-${suffix}`) || '{}'));
+    setShiftClosingRecord(JSON.parse(storage.getItem(`machine-card-shift-closing-${suffix}`) || 'null'));
+  }, [shiftReportDate, technician.nik]);
+
+  const [reportViewMode, setReportViewMode] = useState<'CARDS' | 'RAW'>('CARDS');
+  const [discordSendStatus, setDiscordSendStatus] = useState<{
+    sending: boolean;
+    success?: boolean;
+    message?: string;
+  }>({ sending: false });
+  const [copiedRawText, setCopiedRawText] = useState(false);
+
+  useEffect(() => {
+    if (!isTestEnv) return;
+    try {
+      storage.setItem('machine-card-shift-members', shiftMembers);
+    } catch {}
+  }, [shiftMembers]);
+
+  useEffect(() => {
+    if (!isTestEnv) return;
+    try {
+      storage.setItem(`machine-card-repair-notes-${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`, repairWorkshopNotes);
+    } catch {}
+  }, [repairWorkshopNotes]);
+
+  useEffect(() => {
+    if (!isTestEnv) return;
+    try {
+      storage.setItem(`machine-card-pbjt-notes-${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`, pbjtNotes);
+    } catch {}
+  }, [pbjtNotes]);
+
+  useEffect(() => {
+    if (!isTestEnv) return;
+    try {
+      storage.setItem(`machine-card-pm-notes-${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`, pmNotes);
+    } catch {}
+  }, [pmNotes]);
+
+  useEffect(() => {
+    if (!isTestEnv) return;
+    try {
+      storage.setItem(`machine-card-other-notes-${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`, otherNotes);
+    } catch {}
+  }, [otherNotes]);
+
+  useEffect(() => {
+    if (!isTestEnv) return;
+    try {
+      storage.setItem(`machine-card-shift-overrides-${technician.nik}-${shiftReportDate}-${(technician.shifts[0] || 'Shift 1').replace('Shift ', '')}`, JSON.stringify(customWorkOverrides));
+    } catch {}
+  }, [customWorkOverrides]);
+
+  function getWorkArea(work: TechnicianWorkItem): 'COMPOUNDING' | 'FILLING' | 'PACKAGING' | 'RUANG_REPAIR' {
+    const sec = (work.section || '').toLowerCase();
+    const m = (work.machine || '').toLowerCase();
+    if (sec.includes('compound')) return 'COMPOUNDING';
+    if (sec.includes('pack')) return 'PACKAGING';
+    if (sec.includes('fill')) return 'FILLING';
+    if (sec.includes('repair') || sec.includes('workshop')) return 'RUANG_REPAIR';
+    if (sec.includes('compound') || m.includes('fbd') || m.includes('jaw chuan') || m.includes('compounding')) return 'COMPOUNDING';
+    if (sec.includes('pack') || m.includes('chimei') || m.includes('joyea') || m.includes('jinsung') || m.includes('kartoning') || m.includes('packaging')) return 'PACKAGING';
+    if (sec.includes('repair') || sec.includes('workshop')) return 'RUANG_REPAIR';
+    return 'FILLING';
+  }
+
+  const currentShiftSchedule = useMemo(() => {
+    const s = safeTechnician.shifts && safeTechnician.shifts[0] ? safeTechnician.shifts[0].replace(/[^0-9]/g, '') || '1' : '1';
+    switch (s) {
+      case '1':
+        return { shift: '1', label: 'Shift 1 (Pagi)', timeRange: '06:45 - 15:15', triggerTime: '15:15' };
+      case '2':
+        return { shift: '2', label: 'Shift 2 (Sore)', timeRange: '15:00 - 22:30', triggerTime: '22:30' };
+      case '3':
+        return { shift: '3', label: 'Shift 3 (Malam)', timeRange: '22:15 - 06:45', triggerTime: '06:45' };
+      default:
+        return { shift: '1', label: 'Shift 1 (Pagi)', timeRange: '06:45 - 15:15', triggerTime: '15:15' };
+    }
+  }, [safeTechnician.shifts]);
+
+  const reportWorks = useMemo(() => isTestEnv ? works : works.filter((work) => (work.status as string) !== 'VOID' && (
+    ((work.technicianNik === technician.nik || !work.technicianNik) && String(work.shift || '1') === currentShiftSchedule.shift && operationalDate(work.waktuMulai || '', currentShiftSchedule.shift) === shiftReportDate)
+    || (work.riwayatHandover || []).some((entry) => entry.pelaksanaNik === technician.nik && entry.tanggal === shiftReportDate && entry.shift.replace('Shift ', '') === currentShiftSchedule.shift)
+  )), [works, technician.nik, currentShiftSchedule.shift, shiftReportDate]);
+
+  const generateShiftReportPlainText = () => {
+    const shiftNum = currentShiftSchedule.shift;
+    const todayDate = new Intl.DateTimeFormat('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Asia/Jakarta',
+    }).format(new Date());
+
+    let lines: string[] = [];
+    lines.push(`LAPORAN SHIFT ${shiftNum}`);
+    lines.push(`Tanggal :${todayDate}`);
+    lines.push(`Anggota : ${shiftMembers}`);
+    lines.push('');
+
+    // 1. Ruang Repair / Workshop
+    lines.push('*Ruang Repair/Workshop:*');
+    if (repairWorkshopNotes.trim()) {
+      lines.push(repairWorkshopNotes.trim());
+    }
+    lines.push('');
+
+    const formatAreaWorks = (areaWorks: TechnicianWorkItem[]) => {
+      return areaWorks.map((work, idx) => {
+        const ov = customWorkOverrides[work.ticket] || {};
+        const wr = ov.wr !== undefined ? ov.wr : (work.noWr || '~');
+        const timeStr = ov.timeRange !== undefined ? ov.timeRange : (work.waktuMulai && work.waktuSelesai ? ` (${formatPlantTime(work.waktuMulai)}-${formatPlantTime(work.waktuSelesai)})` : '');
+        const rawStatus = ov.status || work.status;
+        const statusStr = (rawStatus === 'CLOSED' || rawStatus === 'DONE') ? '*DONE*' : '*OPEN*';
+
+        const actText = ov.actions !== undefined ? ov.actions : (work.action || '');
+        let actionBullets: string[] = [];
+        if (actText.trim()) {
+          actionBullets = actText
+            .split('\n')
+            .map((s) => s.replace(/^[•\-\*]\s*/, '').trim())
+            .filter(Boolean)
+            .map((s) => `• ${s}`);
+        } else {
+          actionBullets = ['• Pemeriksaan & penanganan teknisi'];
+        }
+
+        if (work.partsReplaced && work.partsReplaced.length > 0) {
+          work.partsReplaced.forEach((p) => {
+            if (!actText.includes(p.name)) {
+              actionBullets.push(`• Penggantian ${p.name} (${p.qty || 1} ${p.unit || 'pcs'})`);
+            }
+          });
+        }
+
+        const noteStr = ov.note !== undefined ? ov.note : (work.catatanHandover || work.rencanaTindakLanjut || work.followup || '');
+
+        let entry = `${idx + 1}. ${work.machine} : ${work.issue}${timeStr}\nWR : ${wr}\n${actionBullets.join('\n')}\nStatus : ${statusStr}`;
+        if (noteStr.trim()) {
+          entry += `\nNote : ${noteStr.trim()}`;
+        }
+        return entry;
+      });
+    };
+
+    // 2. Compounding
+    lines.push('*AREA COMPOUNDING:*');
+    const compWorks = reportWorks.filter((w) => getWorkArea(w) === 'COMPOUNDING');
+    if (compWorks.length > 0) {
+      lines.push(formatAreaWorks(compWorks).join('\n\n'));
+    }
+    lines.push('');
+
+    // 3. Filling
+    lines.push('*AREA FILLING:*');
+    const fillWorks = reportWorks.filter((w) => getWorkArea(w) === 'FILLING');
+    if (fillWorks.length > 0) {
+      lines.push(formatAreaWorks(fillWorks).join('\n\n'));
+    }
+    lines.push('');
+
+    // 4. Packaging
+    lines.push('*AREA PACKAGING:*');
+    const packWorks = reportWorks.filter((w) => getWorkArea(w) === 'PACKAGING');
+    if (packWorks.length > 0) {
+      lines.push(formatAreaWorks(packWorks).join('\n\n'));
+    }
+    lines.push('');
+
+    // 5. PBJT
+    lines.push('*PBJT :*');
+    if (pbjtNotes.trim()) {
+      lines.push(pbjtNotes.trim());
+    }
+    lines.push('');
+
+    // 6. PM
+    lines.push('*PM :*');
+    if (pmNotes.trim()) {
+      lines.push(pmNotes.trim());
+    }
+    lines.push('');
+
+    // 7. OTHER
+    lines.push('*OTHER :*');
+    if (otherNotes.trim()) {
+      lines.push(otherNotes.trim());
+    }
+
+    return lines.join('\n');
+  };
+
+  async function handleTestSendDiscord() {
+    setDiscordSendStatus({ sending: true });
+    try {
+      const todayDate = new Intl.DateTimeFormat('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'Asia/Jakarta',
+      }).format(new Date());
+
+      const shiftNum = currentShiftSchedule.shift;
+      const ticketPayload = reportWorks.map((w) => {
+        const ov = customWorkOverrides[w.ticket] || {};
+        const area = getWorkArea(w);
+        const actText = ov.actions !== undefined ? ov.actions : (w.action || '');
+        const actions = actText
+          ? actText.split('\n').map((s) => s.replace(/^[•\-\*]\s*/, '').trim()).filter(Boolean)
+          : [];
+        return {
+          ticket: w.ticket,
+          machine: w.machine,
+          issue: w.issue,
+          status: (ov.status || w.status) === 'CLOSED' ? 'DONE' : 'OPEN',
+          area: area,
+          wr: ov.wr || w.noWr || '~',
+          actions: actions,
+          note: ov.note || w.catatanHandover || w.rencanaTindakLanjut || '',
+        };
+      });
+
+      const payload = {
+        webhookUrl: 'https://discord.com/api/webhooks/simulate',
+        supervisorName: safeTechnician.name,
+        supervisorNik: safeTechnician.nik,
+        department: safeTechnician.departments[0] || 'Maintenance',
+        plant: 'PT Bintang Toedjoe Pulogadung',
+        shift: shiftNum,
+        date: todayDate,
+        teamMembers: shiftMembers.split(',').map((s) => s.trim()).filter(Boolean),
+        summary: generateShiftReportPlainText(),
+        openTickets: ticketPayload,
+      };
+
+      const res = await fetch('/api/shift-report/discord', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `manual:${shiftReportDate}:${currentShiftSchedule.shift}:${crypto.randomUUID()}` },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setDiscordSendStatus({
+          sending: false,
+          success: true,
+          message: data.simulated
+            ? 'Pengujian Berhasil! Laporan shift disimulasikan & tervalidasi pada endpoint Discord Webhook.'
+            : 'Pengujian Berhasil! Laporan shift telah dikirim langsung ke Discord Webhook.',
+        });
+      } else {
+        setDiscordSendStatus({
+          sending: false,
+          success: false,
+          message: 'Laporan belum terkirim. Periksa koneksi dan ulangi pengiriman.',
+        });
+      }
+    } catch {
+      setDiscordSendStatus({
+        sending: false,
+        success: false,
+        message: 'Laporan belum terkirim. Periksa koneksi dan ulangi pengiriman.',
+      });
+    }
+  }
+
+  function handleSaveWorkOverride(ticket: string, overrideData: { wr?: string; actions?: string; note?: string; status?: string; timeRange?: string }) {
+    setCustomWorkOverrides((prev) => ({
+      ...prev,
+      [ticket]: {
+        ...(prev[ticket] || {}),
+        ...overrideData,
+      },
+    }));
+    setEditingWorkTicket(null);
+  }
+
+  // Pekerjaan aktif yang sedang ditangani saat ini (Active Job Spotlight untuk kemudahan teknisi di lapangan)
+  const activeJobItem = useMemo(() => {
+    return (
+      works.find(
+        (w) =>
+          w.status === 'IN_PROGRESS' &&
+          (w.technicianName === technician.name || !w.technicianName)
+      ) ||
