@@ -1798,3 +1798,453 @@ export default function TechnicianDashboard({ technician, onLogout }: Technician
       shift: technician.shifts[0] || 'Shift 1',
       totalWorks: reportWorks.length,
       complete: true,
+    };
+    try {
+      storage.setItem(`machine-card-shift-closing-${technician.nik}`, JSON.stringify(record));
+      storage.setItem(`machine-card-shift-closing-${technician.nik}-${record.date}-${record.shift.replace('Shift ', '')}`, JSON.stringify(record));
+    } catch {}
+    setShiftClosingRecord(record);
+  }
+
+  function handleChooseQuickAction(act: string) {
+    setQuickAction(act);
+    if (!actionNotes.trim()) {
+      setActionNotes(`${act}: `);
+    } else if (!actionNotes.includes(act)) {
+      setActionNotes((prev) => `${prev}; ${act}: `);
+    }
+  }
+
+  function handleQuickSelectPartPreset(preset: { name: string; spec: string; pos: string }) {
+    setPartForm((prev) => ({
+      ...prev,
+      name: preset.name,
+      specification: preset.spec,
+      position: preset.pos,
+    }));
+    const templateText = `Penggantian Part: Ganti ${preset.name} (${preset.spec}) pada ${preset.pos}, setting celah & uji fungsi normal`;
+    if (!actionNotes.trim() || actionNotes.trim() === 'Penggantian Part:') {
+      setActionNotes(templateText);
+    }
+  }
+
+  // Machine catalog data
+  const machineNames = useMemo(
+    () => [...new Set([...getStoredMachines().map((m) => m.nama_mesin), ...works.map((w) => w.machine)])],
+    [works]
+  );
+
+  const filteredMachineNames = useMemo(() => {
+    return machineNames.filter((name) =>
+      name.toLowerCase().includes(machineSearch.toLowerCase())
+    );
+  }, [machineNames, machineSearch]);
+
+  const selectedMachine = getStoredMachines().find((m) => m.nama_mesin === selectedMachineName);
+  const selectedMachineParts = featuredMachinePartHistory.filter(
+    (p) => p.machine === selectedMachineName
+  );
+  const selectedMachineBreakdowns = works.filter((w) => w.machine === selectedMachineName);
+  const selectedMachineHistory = selectedMachineBreakdowns; // Backwards compatibility for existing tests
+
+  // Operating Hours Record per selected machine (URS 3.6 & 6.1)
+  const machineOperatingRec = operatingHoursRecords.find(
+    (r) => r.namaMesin === selectedMachineName
+  ) || {
+    id: `MOH-${selectedMachineName}`,
+    kodeMesin: selectedMachine?.kode_mesin || 'MESIN-MC',
+    namaMesin: selectedMachineName,
+    periode: 'Oktober 2026',
+    jamOperasiAktual: 148.5,
+    jamShiftKalender: 176.0,
+    sumberData: 'Logbook Running Counter Mesin',
+    penanggungJawab: 'Budi Santoso (SPV Maintenance)',
+    isComplete: true,
+    catatanPenjelasan: 'Data operasional terdata otomatis',
+  };
+
+  // URS 6.1: Indikator Maintenance (Frekuensi, Downtime, MTTR, MTBF)
+  const machineKpis = useMemo(() => {
+    const totalBreakdowns = selectedMachineBreakdowns.length;
+    const closedBreakdowns = selectedMachineBreakdowns.filter((w) => w.status === 'CLOSED');
+
+    let totalDowntimeMins = 0;
+    selectedMachineBreakdowns.forEach((w) => {
+      let mins = w.durasiTungguMenit || 0;
+      if ((w as any).durasiJam) {
+        mins += Math.round(parseFloat((w as any).durasiJam) * 60);
+      } else if (w.waktuMulai && w.waktuSelesai) {
+        const diff = Math.round((new Date(w.waktuSelesai).getTime() - new Date(w.waktuMulai).getTime()) / 60000);
+        mins += Math.max(0, diff);
+      } else {
+        mins += 45; // estimasi breakdown aktif
+      }
+      totalDowntimeMins += mins;
+    });
+
+    const totalDowntimeHours = (totalDowntimeMins / 60).toFixed(1);
+    const mttrMins = closedBreakdowns.length > 0
+      ? Math.round(totalDowntimeMins / closedBreakdowns.length)
+      : totalDowntimeMins > 0 ? totalDowntimeMins : 0;
+    const mttrHours = (mttrMins / 60).toFixed(2);
+
+    const rawMtbf = totalBreakdowns > 0
+      ? (machineOperatingRec.jamOperasiAktual / totalBreakdowns).toFixed(1)
+      : machineOperatingRec.jamOperasiAktual.toFixed(1);
+
+    return {
+      breakdownCount: totalBreakdowns,
+      closedCount: closedBreakdowns.length,
+      totalDowntimeMins,
+      totalDowntimeHours,
+      mttrMins,
+      mttrHours,
+      operatingHours: machineOperatingRec.jamOperasiAktual,
+      calendarHours: machineOperatingRec.jamShiftKalender,
+      mtbf: rawMtbf,
+      isDataComplete: machineOperatingRec.isComplete,
+      sourceLog: machineOperatingRec.sumberData,
+      supervisorInCharge: machineOperatingRec.penanggungJawab,
+    };
+  }, [selectedMachineBreakdowns, machineOperatingRec]);
+
+  // URS 6.1 & 6.2: Riwayat Terintegrasi (Breakdown + PM + Penggantian Part)
+  const integratedMachineHistory = useMemo(() => {
+    type HistoryItem = {
+      id: string;
+      type: 'BREAKDOWN' | 'PREVENTIVE';
+      title: string;
+      action?: string;
+      date: string;
+      shift?: string;
+      technician: string;
+      status: string;
+      downtimeMinutes?: number;
+      partReplaced?: string;
+      noWr?: string;
+      noBatch?: string;
+      rawTicket?: TechnicianWorkItem;
+      rawPm?: PreventiveMaintenanceItem;
+    };
+
+    const list: HistoryItem[] = [];
+
+    // 1. Breakdown Events
+    selectedMachineBreakdowns.forEach((w) => {
+      list.push({
+        id: w.ticket,
+        type: 'BREAKDOWN',
+        title: w.issue,
+        action: w.action,
+        date: w.opened,
+        shift: w.shift ? `Shift ${w.shift}` : 'Shift 1',
+        technician: w.technicianName || (w.status === 'OPEN' ? 'Menunggu Teknisi' : 'Tim Maintenance'),
+        status: w.status,
+        downtimeMinutes: ticketDowntime(w) ?? 0,
+        partReplaced: w.partReplaced ? `${w.partReplaced.name} (${w.partReplaced.quantity} pcs)` : undefined,
+        noWr: w.noWr,
+        noBatch: w.noBatch,
+        rawTicket: w,
+      });
+    });
+
+    // 2. Preventive Maintenance Events
+    const machinePms = pmSchedules.filter((p) => p.machine === selectedMachineName);
+    machinePms.forEach((p) => {
+      list.push({
+        id: p.nomorPm,
+        type: 'PREVENTIVE',
+        title: p.kegiatan,
+        action: p.hasilTemuan || 'Pemeriksaan rutin sesuai checklist PM',
+        date: p.tanggalSelesaiAktual || p.tanggalJatuhTempo,
+        shift: 'Shift 1',
+        technician: p.pelaksanaNama || 'Teknisi PM',
+        status: p.status === 'SELESAI' ? 'CLOSED' : p.status === 'DIRESCHEDULE' ? 'PENDING' : 'OPEN',
+        noWr: p.nomorPm,
+        rawPm: p,
+      });
+    });
+
+    // URS 6.2: Filter & Search
+    const q = historySearch.toLowerCase().trim();
+    return list.filter((item) => {
+      const matchType = historyActivityType === 'ALL' || item.type === historyActivityType;
+      const matchStatus = historyStatusFilter === 'ALL' || item.status === historyStatusFilter;
+      const matchSearch =
+        !q ||
+        item.id.toLowerCase().includes(q) ||
+        item.title.toLowerCase().includes(q) ||
+        (item.action && item.action.toLowerCase().includes(q)) ||
+        (item.noWr && item.noWr.toLowerCase().includes(q)) ||
+        (item.noBatch && item.noBatch.toLowerCase().includes(q)) ||
+        (item.partReplaced && item.partReplaced.toLowerCase().includes(q)) ||
+        item.technician.toLowerCase().includes(q);
+      return matchType && matchStatus && matchSearch;
+    });
+  }, [selectedMachineBreakdowns, pmSchedules, selectedMachineName, historySearch, historyActivityType, historyStatusFilter]);
+
+  const openWorks = useMemo(() => works.filter((w) => w.status === 'OPEN'), [works]);
+  const activeWorks = useMemo(() => works.filter((w) => (isTestEnv || !w.technicianNik || w.technicianNik === technician.nik) && ['IN_PROGRESS', 'PENDING', 'MENUNGGU_PART', 'MENUNGGU_DUKUNGAN', 'SELESAI_PERBAIKAN'].includes(w.status)), [works]);
+  const inProgressWorks = useMemo(() => works.filter((w) => w.status === 'IN_PROGRESS'), [works]);
+  const pendingWorks = useMemo(() => works.filter((w) => w.status === 'PENDING' || w.status === 'MENUNGGU_PART' || w.status === 'MENUNGGU_DUKUNGAN'), [works]);
+  const completedRepairWorks = useMemo(() => works.filter((w) => w.status === 'SELESAI_PERBAIKAN'), [works]);
+  const closedShiftWorks = useMemo(() => works.filter((w) => w.status === 'CLOSED'), [works]);
+
+  const uncompletedShiftCount = useMemo(() => {
+    return works.filter((w) => {
+      if (w.status === 'CLOSED') {
+        return !Boolean(w.action && w.action.trim().length > 3);
+      }
+      return !Boolean(w.riwayatHandover && w.riwayatHandover.length > 0);
+    }).length;
+  }, [works]);
+
+  return (
+    <div className={`dashboard-app-container technician-portal-root ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      {/* Mobile Scrim */}
+      {sidebarOpen && (
+        <div
+          className="sidebar-scrim-overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Tutup menu navigasi"
+        />
+      )}
+
+      {/* Industrial Sidebar Navigation */}
+      <aside className={`dashboard-sidebar ${sidebarOpen ? 'is-open' : ''} ${sidebarCollapsed ? 'is-collapsed' : ''}`}>
+        <div className="sidebar-brand-header">
+          <div className="sidebar-brand-logo" title="BINTANG TOEDJOE · Machine Card Portal Teknisi">
+            <span className="brand-badge-box" aria-label="Logo Bintang Toedjoe">
+              <img
+                src="/assets/bintang-toedjoe-mark.webp"
+                alt="Logo Bintang Toedjoe"
+                className="brand-logo-mark"
+              />
+            </span>
+            <div className="brand-text-block">
+              <strong>BINTANG TOEDJOE</strong>
+              <small>Machine Card · Portal Teknisi Maintenance</small>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-sidebar-collapse-desktop"
+            onClick={toggleSidebarCollapse}
+            title={sidebarCollapsed ? 'Perluas Sidebar (Tampilkan Teks)' : 'Ciutkan Sidebar (Hanya Ikon)'}
+            aria-label={sidebarCollapsed ? 'Perluas Sidebar' : 'Ciutkan Sidebar'}
+          >
+            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+          <button
+            type="button"
+            className="btn-sidebar-close"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Tutup sidebar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="sidebar-role-indicator" title="TEKNISI · Ranah Maintenance">
+          <span className="role-pill-tag role-teknisi">
+            <span className="pulse-green-dot" />
+            <span className="role-pill-text">TEKNISI</span>
+          </span>
+          <span className="sidebar-plant-label">Ranah Maintenance</span>
+        </div>
+
+        <nav className="sidebar-navigation-menu" role="tablist" aria-label="Menu Modul Teknisi">
+          <div className="sidebar-nav-heading">NAVIGASI MODUL</div>
+
+          {/* 1. Antrean Breakdown */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'QUEUE' || activeTab === 'WORKS'}
+            title={`Antrean Breakdown (${openWorks.length})`}
+            data-tooltip={`Antrean Breakdown (${openWorks.length})`}
+            className={`sidebar-nav-btn ${activeTab === 'QUEUE' || activeTab === 'WORKS' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('QUEUE');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <Inbox size={18} />
+              <span>Antrean Breakdown</span>
+            </div>
+            {openWorks.length > 0 && (
+              <span className="sidebar-nav-counter alert">
+                {openWorks.length}
+              </span>
+            )}
+          </button>
+
+          {/* 2. Pekerjaan yang Tengah Diambil */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'ACTIVE'}
+            title={`Pekerjaan Tengah Diambil (${activeWorks.length + pmSchedules.filter((pm) => pm.status !== 'SELESAI' && !pm.tanggalSelesaiAktual).length})`}
+            data-tooltip={`Pekerjaan Tengah Diambil (${activeWorks.length + pmSchedules.filter((pm) => pm.status !== 'SELESAI' && !pm.tanggalSelesaiAktual).length})`}
+            className={`sidebar-nav-btn ${activeTab === 'ACTIVE' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('ACTIVE');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <Wrench size={18} />
+              <span>Pekerjaan Tengah Diambil</span>
+            </div>
+            {(activeWorks.length > 0 || pmSchedules.some((pm) => pm.status !== 'SELESAI' && !pm.tanggalSelesaiAktual)) && (
+              <span className="sidebar-nav-counter" style={{ background: '#0284c7', color: '#fff' }}>
+                {activeWorks.length + pmSchedules.filter((pm) => pm.status !== 'SELESAI' && !pm.tanggalSelesaiAktual).length}
+              </span>
+            )}
+          </button>
+
+          {/* 3. Review Laporan Shift */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'SHIFT_REPORT' || activeTab === 'MACHINES'}
+            title="Review Laporan Shift & Kelengkapan"
+            data-tooltip="Review Laporan Shift & Kelengkapan"
+            className={`sidebar-nav-btn ${activeTab === 'SHIFT_REPORT' || activeTab === 'MACHINES' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('SHIFT_REPORT');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <ClipboardCheck size={18} />
+              <span>Review Laporan Shift</span>
+            </div>
+            {uncompletedShiftCount > 0 ? (
+              <span className="sidebar-nav-counter warning" style={{ background: '#f59e0b', color: '#fff' }}>
+                {uncompletedShiftCount}
+              </span>
+            ) : (
+              <span className="sidebar-nav-counter" style={{ background: '#10b981', color: '#fff' }}>
+                ✓
+              </span>
+            )}
+          </button>
+        </nav>
+
+        {/* Sidebar Footer User Card */}
+        <div className="sidebar-footer-profile">
+          <div className="sidebar-user-info" title={`${safeTechnician.name} (${safeTechnician.nik}) · Dept: ${safeTechnician.departments.join(', ')}`}>
+            <div className="sidebar-avatar-circle">
+              {safeTechnician.name.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="sidebar-user-text">
+              <strong>{safeTechnician.name} · {safeTechnician.nik}</strong>
+              <small>Dept: {safeTechnician.departments.join(', ')}</small>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-sidebar-logout-icon"
+            onClick={onLogout}
+            title="Keluar dari sesi"
+            aria-label="Logout"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="dashboard-main-area">
+        {/* Top Navbar */}
+        <header className="dashboard-topbar tech-topbar">
+          <div className="topbar-left-zone">
+            <div className="topbar-breadcrumb-trail">
+              <span>Beranda</span>
+              <span>/</span>
+              <strong>
+                {activeTab === 'QUEUE'
+                  ? 'Antrean Breakdown'
+                  : activeTab === 'ACTIVE'
+                  ? 'Pekerjaan Tengah Diambil'
+                  : 'Review Laporan Shift'}
+              </strong>
+            </div>
+          </div>
+
+          <div className="topbar-right-zone tech-topbar-context">
+            <div className="topbar-chip tech-context-chip">
+              <span className="chip-label">Teknisi:</span>
+              <strong>{safeTechnician.name}</strong>
+            </div>
+            <div className="topbar-chip tech-context-chip">
+              <span className="chip-label">Divisi:</span>
+              <strong>{safeTechnician.departments.join(', ')}</strong>
+            </div>
+            <div className="topbar-chip tech-context-chip">
+              <span className="chip-label">Shift:</span>
+              <strong>{safeTechnician.shifts.map((s) => s.replace('Shift ', '')).join('/')}</strong>
+            </div>
+            <div className="topbar-chip tech-context-chip live">
+              <span className="tech-pulse-dot" />
+              <span>Workshop On-Duty</span>
+            </div>
+            <button className="btn-tech-logout" onClick={onLogout} title="Keluar dari sesi">
+              <LogOut size={16} />
+              <span>Keluar</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Main Workspace */}
+        <main className="dashboard-content-scroll tech-main">
+          {/* Hero & Metrics */}
+          <section className="tech-hero-section">
+            <div>
+              <p className="tech-breadcrumb">
+                Teknisi <span>/</span>{' '}
+                {activeTab === 'QUEUE'
+                  ? 'Antrean Breakdown'
+                  : activeTab === 'ACTIVE'
+                  ? 'Pekerjaan Tengah Diambil'
+                  : 'Review Laporan Shift'}
+              </p>
+              <h1>
+                {activeTab === 'QUEUE'
+                  ? 'Antrean Breakdown Mesin'
+                  : activeTab === 'ACTIVE'
+                  ? 'Daftar Pekerjaan Tengah Diambil'
+                  : 'Review Laporan Shift & Kelengkapan Sebelum Closing'}
+              </h1>
+              <p className="tech-hero-subtitle">
+                {activeTab === 'QUEUE'
+                  ? 'Pantau laporan kerusakan mesin dari operator secara real-time dan segera ambil pekerjaan perbaikan.'
+                  : activeTab === 'ACTIVE'
+                  ? 'Kelola tiket yang sedang dalam perbaikan teknisi, catat tindakan teknis, dan input pergantian spare part.'
+                  : 'Verifikasi kelengkapan catatan tindakan, spare part, dan handover tiket sebelum melakukan serah terima shift.'}
+              </p>
+            </div>
+          </section>
+
+        {/* TAB 1: ANTREAN BREAKDOWN (TIKET MASUK DARI OPERATOR) */}
+        {(activeTab === 'QUEUE' || activeTab === 'WORKS') && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <section className="tech-content-card">
+              {/* Toolbar Antrean */}
+              <div className="tech-toolbar-wrap">
+                <div className="tech-search-box">
+                  <Search size={18} />
+                  <input
+                    type="text"
+                    value={queueSearch}
+                    onChange={(e) => setQueueSearch(e.target.value)}
+                    placeholder="Cari antrean tiket, mesin, section, kendala..."
+                    aria-label="Cari antrean tiket"
+                  />
+                  {queueSearch && (
+                    <button className="btn-tech-clear-search" onClick={() => setQueueSearch('')}>
+                      <X size={15} />
+                    </button>
+                  )}
