@@ -1498,3 +1498,503 @@ export default function SupervisorDashboard({ supervisor, onLogout }: Supervisor
 
   const [pmSchedules, setPmSchedules] = useState<PreventiveMaintenanceItem[]>(() => {
     try {
+      const stored = storage.getItem('machine-card-pm-schedules');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return isTestEnv ? initialSeedPMs : [];
+  });
+
+  useEffect(() => {
+    const refresh = () => {
+      const value = storage.getItem('machine-card-pm-schedules');
+      if (value !== null) setPmSchedules(readPartsArray('machine-card-pm-schedules'));
+    };
+    window.addEventListener('storage', refresh);
+    window.addEventListener('mc-pm-updated', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('mc-pm-updated', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
+
+  // Filter Analitik (URS 7.1 Klausul 2)
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<'ALL' | 'THIS_MONTH' | 'LAST_7_DAYS' | 'TODAY'>('ALL');
+  const [analyticsSection, setAnalyticsSection] = useState<string>('ALL');
+  // Sub-menu Tab Analytics untuk keterbacaan yang fokus & tidak padat
+  const [analyticsSubTab, setAnalyticsSubTab] = useNavigationState<'POLA_LAPANGAN' | 'KPI_METRICS' | 'PREVENTIVE_PARTS' | 'AGING_AUDIT'>('mc-nav-SupervisorDashboard-analyticsSubTab', 'POLA_LAPANGAN');
+
+  // Modal Penyesuaian Target KPI (URS 7.1 Klausul 6)
+  const [isKpiModalOpen, setIsKpiModalOpen] = useState(false);
+  const [selectedKpiForEdit, setSelectedKpiForEdit] = useState<KPITargetRecord | null>(null);
+  const [kpiEditForm, setKpiEditForm] = useState({
+    targetValue: 0,
+    unit: '',
+    direction: 'LESS_THAN_OR_EQUAL' as 'LESS_THAN_OR_EQUAL' | 'GREATER_THAN_OR_EQUAL',
+    scope: 'Semua Mesin Plant Pulogadung',
+    effectivePeriod: 'Oktober 2026',
+    reason: '',
+  });
+
+  // URS 7.10: Evaluasi Ketepatan Pelaporan Shift
+  const [shiftSubmitScenario, setShiftSubmitScenario] = useState<'TEPAT_WAKTU' | 'TERLAMBAT'>('TEPAT_WAKTU');
+  const [shiftTimelinessLateReason, setShiftTimelinessLateReason] = useState<'KELALAIAN_PETUGAS' | 'GANGGUAN_SISTEM'>('KELALAIAN_PETUGAS');
+
+  // URS 8.1: Audit Trail Review & Koreksi Data Pengukuran
+  const [correctionLogs, setCorrectionLogs] = useState<DataCorrectionEntry[]>(() => {
+    try {
+      const stored = storage.getItem('machine-card-correction-logs');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return isTestEnv ? initialSeedCorrectionLogs : [];
+  });
+
+  // URS 8.1 Klausul 5: Revisi Laporan Shift Terkirim (Non-Destructive Versioning)
+  const [shiftRevisions, setShiftRevisions] = useState<ShiftReportRevision[]>(() => {
+    try {
+      const stored = storage.getItem('machine-card-shift-revisions');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return isTestEnv ? initialShiftRevisions : [];
+  });
+
+  // URS 8.1 Klausul 6: Filter untuk melihat Catatan yang Dibatalkan (Void)
+  const [showVoidTickets, setShowVoidTickets] = useState(false);
+
+  // Modal Pembatalan Catatan (Void Only, No Hard-Delete)
+  const [isVoidModalOpen, setIsVoidModalOpen] = useState(false);
+  const [ticketToVoid, setTicketToVoid] = useState<SupervisorWorkTicket | null>(null);
+  const [voidReasonInput, setVoidReasonInput] = useState('');
+
+  // Modal Koreksi Data Pengukuran (URS 8.1 Klausul 3 & 4)
+  const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState(false);
+  const [ticketToCorrect, setTicketToCorrect] = useState<SupervisorWorkTicket | null>(null);
+  const [correctionForm, setCorrectionForm] = useState({
+    field: 'durasiPerbaikanMenit' as 'durasiPerbaikanMenit' | 'waktuTungguPartMenit' | 'waktuMulai' | 'kategori',
+    fieldLabel: 'Durasi Perbaikan Aktif',
+    beforeValue: '',
+    afterValue: '',
+    reason: '',
+  });
+
+  // Modal Revisi Laporan Shift Terkirim (URS 8.1 Klausul 5)
+  const [isShiftRevisionModalOpen, setIsShiftRevisionModalOpen] = useState(false);
+  const [shiftRevisionForm, setShiftRevisionForm] = useState({
+    reason: '',
+    changesSummary: '',
+  });
+
+  // Selected ticket for supervisor review & sign-off
+  const [selectedTicket, setSelectedTicket] = useState<SupervisorWorkTicket | null>(null);
+  const [verificationNote, setVerificationNote] = useState('');
+
+  // Selected Machine for Direct Machine Analysis & Detail (Breakdown, Spare Part, PM, Operasional)
+  const [selectedMachineForAnalysis, setSelectedMachineForAnalysis] = useNavigationState<Machine | null>('mc-nav-SupervisorDashboard-selectedMachineForAnalysis', null);
+
+  // URS 3.6 - Data Waktu Operasi Mesin & MTBF (Cakupan Seluruh 43 Mesin)
+  const [operatingHoursRecords, setOperatingHoursRecords] = useState<MachineOperatingHoursRecord[]>(() => {
+    try {
+      const stored = storage.getItem('machine-card-operating-hours');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          if (parsed.length < initialOperatingHoursRecords.length) {
+            const parsedMap = new Map(parsed.map((r: MachineOperatingHoursRecord) => [r.kodeMesin, r]));
+            const fullList = initialOperatingHoursRecords.map((rec) => {
+              if (parsedMap.has(rec.kodeMesin)) {
+                return parsedMap.get(rec.kodeMesin)!;
+              }
+              return rec;
+            });
+            storage.setItem('machine-card-operating-hours', JSON.stringify(fullList));
+            return fullList;
+          }
+          return parsed;
+        }
+      }
+    } catch {}
+    return initialOperatingHoursRecords;
+  });
+
+  const [selectedOperatingRecord, setSelectedOperatingRecord] = useState<MachineOperatingHoursRecord | null>(null);
+  const [isNewOperatingModalOpen, setIsNewOperatingModalOpen] = useState(false);
+  const [operatingForm, setOperatingForm] = useState({
+    jamOperasiAktual: 0,
+    jamShiftKalender: 176,
+    sumberData: '',
+    penanggungJawab: '',
+    isComplete: true,
+    catatanPenjelasan: '',
+  });
+
+  const [newOperatingForm, setNewOperatingForm] = useState({
+    kodeMesin: 'MESIN-001',
+    namaMesin: 'Ilapak 1',
+    periode: 'Oktober 2026',
+    jamOperasiAktual: 7.0,
+    jamShiftKalender: 7.0,
+    sumberData: 'Logbook Shift Fisik',
+    penanggungJawab: `${supervisor.name} (SPV Maintenance)`,
+    isComplete: true,
+    catatanPenjelasan: '',
+  });
+
+  function handleSaveOperatingHours(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedOperatingRecord) return;
+    const updated: MachineOperatingHoursRecord = {
+      ...selectedOperatingRecord,
+      jamOperasiAktual: Number(operatingForm.jamOperasiAktual),
+      jamShiftKalender: Number(operatingForm.jamShiftKalender),
+      sumberData: operatingForm.sumberData.trim() || 'Logbook Manual Produksi',
+      penanggungJawab: operatingForm.penanggungJawab.trim() || `${supervisor.name} (SPV Maintenance)`,
+      isComplete: operatingForm.isComplete,
+      catatanPenjelasan: operatingForm.catatanPenjelasan.trim(),
+      diverifikasiOleh: `${supervisor.name} (SPV)`,
+      tanggalVerifikasi: new Date().toISOString().slice(0, 10),
+    };
+    const nextList = operatingHoursRecords.map((r) => (r.id === updated.id ? updated : r));
+    setOperatingHoursRecords(nextList);
+    try {
+      storage.setItem('machine-card-operating-hours', JSON.stringify(nextList));
+    } catch {}
+    setSelectedOperatingRecord(null);
+  }
+
+  function handleCreateOperatingHours(e: React.FormEvent) {
+    e.preventDefault();
+    const targetMachine = machines.find((m) => m.kode_mesin === newOperatingForm.kodeMesin) || machines[0];
+    const newRecord: MachineOperatingHoursRecord = {
+      id: `MOH-${Date.now()}`,
+      kodeMesin: targetMachine.kode_mesin,
+      namaMesin: targetMachine.nama_mesin,
+      periode: newOperatingForm.periode.trim() || 'Oktober 2026',
+      jamOperasiAktual: Number(newOperatingForm.jamOperasiAktual),
+      jamShiftKalender: Number(newOperatingForm.jamShiftKalender),
+      sumberData: newOperatingForm.sumberData.trim() || 'Logbook Shift Fisik',
+      penanggungJawab: newOperatingForm.penanggungJawab.trim() || `${supervisor.name} (SPV Maintenance)`,
+      isComplete: newOperatingForm.isComplete,
+      catatanPenjelasan: newOperatingForm.catatanPenjelasan.trim(),
+      diverifikasiOleh: `${supervisor.name} (SPV)`,
+      tanggalVerifikasi: new Date().toISOString().slice(0, 10),
+    };
+    const nextList = [newRecord, ...operatingHoursRecords];
+    setOperatingHoursRecords(nextList);
+    try {
+      storage.setItem('machine-card-operating-hours', JSON.stringify(nextList));
+    } catch {}
+    setIsNewOperatingModalOpen(false);
+  }
+
+  // Search & Filter for Line Tab
+  const [lineSearch, setLineSearch] = useState('');
+  const [lineSection, setLineSection] = useState('ALL');
+  const [linePage, setLinePage] = useState(1);
+  const linePerPage = 10;
+
+  // Search & Filter for Tickets Tab (Format As-Is Pabrik)
+  const [ticketStatusFilter, setTicketStatusFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'CLOSED'>('ALL');
+  const [ticketSearch, setTicketSearch] = useState('');
+  const [ticketReviewFilter, setTicketReviewFilter] = useState<'ALL' | 'UNREVIEWED' | 'REVIEWED'>('ALL');
+  const [ticketShiftFilter, setTicketShiftFilter] = useState<'ALL' | '1' | '2' | '3'>('ALL');
+  const [ticketSectionFilter, setTicketSectionFilter] = useState<'ALL' | 'Filling' | 'Packaging' | 'Compounding'>('ALL');
+  const [ticketWoTypeFilter, setTicketWoTypeFilter] = useState<'ALL' | 'Batch' | 'Non Batch'>('ALL');
+  const [isWeeklyReviewPageActive, setIsWeeklyReviewPageActive] = useState(false);
+  const [weeklyReviewPeriod, setWeeklyReviewPeriod] = useState('PEKAN_INI');
+  const [weeklyOverallNote, setWeeklyOverallNote] = useState('');
+  const [weeklySelectedActionMachine, setWeeklySelectedActionMachine] = useState('');
+  const [weeklyFollowUpAction, setWeeklyFollowUpAction] = useState('');
+  const [weeklyFollowUpList, setWeeklyFollowUpList] = useState<Array<{ id: string; machine: string; action: string; priority: 'HIGH' | 'MEDIUM'; targetDate: string }>>(() => {
+    try { const saved = storage.getItem('machine-card-weekly-followups'); if (saved) return JSON.parse(saved); } catch {}
+    return isTestEnv ? [
+    {
+      id: 'ACT-01',
+      machine: 'SIG 5',
+      action: 'Kalibrasi tegangan tension rubber & ganti pisau vertikal saat window PM akhir pekan',
+      priority: 'HIGH',
+      targetDate: '26/10/2026',
+    },
+    {
+      id: 'ACT-02',
+      machine: 'Ilapak 1',
+      action: 'Inspeksi berkala pneumatic seal fitting preventif kebocoran mikro',
+      priority: 'MEDIUM',
+      targetDate: '28/10/2026',
+    },
+  ] : [];
+  });
+  useEffect(() => { storage.setItem('machine-card-weekly-followups', JSON.stringify(weeklyFollowUpList)); }, [weeklyFollowUpList]);
+
+  const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [batchReviewNote, setBatchReviewNote] = useState('');
+  const [ticketPage, setTicketPage] = useState(1);
+  const ticketPerPage = 10;
+  const [openActionDropdownId, setOpenActionDropdownId] = useState<string | null>(null);
+  const [expandedDescTicketIds, setExpandedDescTicketIds] = useState<Set<string>>(new Set());
+  const [breakdownViewMode, setBreakdownViewMode] = useState<'FIT' | 'SCROLL'>('FIT');
+  const [showPatternInsights, setShowPatternInsights] = useState(false);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+
+  function toggleSelectTicket(ticketId: string) {
+    setSelectedTicketIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(ticketId)) {
+        next.delete(ticketId);
+      } else {
+        next.add(ticketId);
+      }
+      return next;
+    });
+  }
+
+  function handleBatchReviewSubmit() {
+    if (selectedTicketIds.size === 0) return;
+    const note = batchReviewNote.trim() || 'Evaluasi Mingguan: Tren breakdown telah ditinjau oleh SPV Maintenance';
+    const verifiedAt = new Intl.DateTimeFormat('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Jakarta',
+    }).format(new Date());
+
+    const nextTickets = tickets.map((t) => {
+      if (selectedTicketIds.has(t.ticket)) {
+        return {
+          ...t,
+          supervisorVerified: true,
+          supervisorNote: note,
+          verifiedAt,
+        };
+      }
+      return t;
+    });
+
+    setTickets(nextTickets);
+    try {
+      storage.setItem('machine-card-open-work', JSON.stringify(nextTickets));
+    } catch {}
+
+    setSelectedTicketIds(new Set());
+    setBatchModalOpen(false);
+    setBatchReviewNote('');
+  }
+
+  function toggleDescExpanded(ticketId: string) {
+    setExpandedDescTicketIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(ticketId)) {
+        next.delete(ticketId);
+      } else {
+        next.add(ticketId);
+      }
+      return next;
+    });
+  }
+
+  // Jadwal Kategori Hari (Weekdays vs Weekend) & Shift Monitoring
+  const [reportDate, setReportDate] = useState(plantDate());
+  const [clock, setClock] = useState(Date.now());
+  useEffect(() => { const interval = setInterval(() => setClock(Date.now()), 30000); return () => clearInterval(interval); }, []);
+  const [dayCategory, setDayCategory] = useState<DayCategory>(() => { const day = new Date().getDay(); return day === 0 || day === 6 ? 'WEEKEND' : 'WEEKDAY'; });
+  const currentActiveShift = useMemo(() => getAutoShiftByTime(new Date(clock), dayCategory), [dayCategory, clock]);
+  const [selectedShift, setSelectedShift] = useState<'1' | '2' | '3'>(() => getAutoShiftByTime().shift);
+  const [ursScenario, setUrsScenario] = useState<'COMPLETE' | 'PENDING' | 'LATE_COMPLETED'>('COMPLETE');
+
+  const activeShiftList = useMemo(() => getShiftsByCategory(dayCategory), [dayCategory]);
+
+  const deliveries = JSON.parse(storage.getItem('machine-card-report-deliveries') || '[]') as Array<{ key: string; status: string; updated_at: string }>;
+  const sentForShift = deliveries.filter((item) => item.key.includes(reportDate) && item.key.includes(`:${selectedShift}`) && item.status === 'SENT');
+
+  // Operators On-Duty (Shift 1)
+  const onDutyOperators = useMemo(() => {
+    return seedOperators.slice(0, 8);
+  }, []);
+
+  // Set of machine names with active breakdown
+  const activeBreakdownMachines = useMemo(() => {
+    const active = tickets.filter((t) => isUnfinished(t));
+    return new Set(active.map((t) => t.machine));
+  }, [tickets]);
+
+  // Selected Shift Window details
+  const selectedShiftWindow = useMemo(() => {
+    return activeShiftList.find((s) => s.shift === selectedShift) || activeShiftList[0];
+  }, [selectedShift, activeShiftList]);
+
+  // Data Rekapan Riil per Shift berdasarkan Standar Laporan Harian Teknisi Maintenance Pulogadung
+  const currentShiftTemplate = useMemo(() => {
+    const shiftTemplates: Record<
+      '1' | '2' | '3',
+      {
+        teamMembers: Array<{ code: string; name: string }>;
+        items: Array<{
+          ticket: string;
+          area: string;
+          areaLabel: string;
+          machine: string;
+          issue: string;
+          timeRange?: string;
+          wr?: string;
+          actions: string[];
+          status: 'DONE' | 'OPEN';
+          note?: string;
+        }>;
+      }
+    > = {
+      '1': {
+        teamMembers: [
+          { code: 'PDA', name: 'PDA (Teknisi Shift 1)' },
+          { code: 'RMA', name: 'RMA (Teknisi Shift 1)' },
+          { code: 'DEFA', name: 'DEFA (Teknisi Shift 1)' },
+          { code: 'FAUZI', name: 'FAUZI (Teknisi Shift 1)' },
+        ],
+        items: [
+          {
+            ticket: 'WS-S1-01',
+            area: 'RUANG_REPAIR',
+            areaLabel: 'Ruang Repair / Workshop',
+            machine: 'Workshop',
+            issue: 'Pembuatan WO Batch',
+            actions: ['Pembuatan wo batch harian'],
+            status: 'DONE',
+          },
+          {
+            ticket: 'CMP-S1-01',
+            area: 'COMPOUNDING',
+            areaLabel: 'Area Compounding',
+            machine: 'FBD Jaw Chuan',
+            issue: 'Suhu tidak bisa naik',
+            timeRange: '07.27-08.00',
+            wr: '~',
+            actions: ['Buka valve bypass steam trap', 'Test running', 'Pemantauan mesin'],
+            status: 'DONE',
+          },
+          {
+            ticket: 'WR-292778',
+            area: 'COMPOUNDING',
+            areaLabel: 'Area Compounding',
+            machine: 'FBD Jaw Chuan',
+            issue: 'Thermocontrol tidak stabil',
+            timeRange: '08.13-09.00',
+            wr: '292778',
+            actions: [
+              'Pengecekkan wiring thermocontrol',
+              'Pengencangan kabel thermocontrol',
+              'Test running',
+              'Pemantauan mesin',
+            ],
+            status: 'DONE',
+          },
+          {
+            ticket: 'FIL-S1-01',
+            area: 'FILLING',
+            areaLabel: 'Area Filling',
+            machine: 'SIG 5',
+            issue: 'Rubber putus',
+            timeRange: '08.30-14.30',
+            wr: '~',
+            actions: [
+              'Pembongkaran rubber all line',
+              'Penggantian rubber 3 line',
+              'Setting rubber',
+              'Penggantian pisau vertical 6 pcs',
+              'Penggantian heater sealing horizontal 2pcs right',
+              'Test running',
+              'Pemantauan mesin',
+            ],
+            status: 'DONE',
+          },
+          {
+            ticket: 'FIL-S1-02',
+            area: 'FILLING',
+            areaLabel: 'Area Filling',
+            machine: 'Ilapak 5',
+            issue: 'Lanjutan shift 3, baru bongkar filling blok 3 line',
+            timeRange: '07.45-15.15',
+            wr: '~',
+            actions: [
+              'Penggantian conus dan as 3 pcs',
+              'Penggantian housing as conus 3pcs',
+              'Penggantian oring as conus 1pcs',
+              'Setting penampang',
+              'Setting rubber',
+              'Test running',
+            ],
+            status: 'OPEN',
+          },
+          {
+            ticket: 'WR-292772',
+            area: 'FILLING',
+            areaLabel: 'Area Filling',
+            machine: 'Ilapak 12',
+            issue: 'Pisau vertical sealing vertical error',
+            timeRange: '07.09-15.00',
+            wr: '292772',
+            actions: [
+              'Pengecekkan alarm heater',
+              'Pengecekkan heater (putus)',
+              'Pembongkaran heater',
+              'Penggantian heater',
+              'Connect wiring heater',
+              'Test running',
+              'Pemantauan mesin',
+            ],
+            status: 'DONE',
+          },
+          {
+            ticket: 'WR-292790',
+            area: 'FILLING',
+            areaLabel: 'Area Filling',
+            machine: 'SIG 5',
+            issue: 'Mesin tiba tiba mati',
+            timeRange: '12.00-15.00',
+            wr: '292790',
+            actions: [
+              'Reset alarm',
+              'Setting potongan',
+              'Setting pisau vertical',
+              'Setting rubber',
+              'Penggantian kabel inkjet',
+              'Test running',
+              'Pemantauan mesin',
+            ],
+            status: 'DONE',
+          },
+          {
+            ticket: 'PKG-S1-01',
+            area: 'PACKAGING',
+            areaLabel: 'Area Packaging',
+            machine: 'Chimei JS 05',
+            issue: 'Short mati',
+            timeRange: '09.00-15.15',
+            wr: '~',
+            actions: ['Pengecekkan wiring in coming machine', 'Penggantian fuse', 'Setting opp'],
+            status: 'OPEN',
+          },
+          {
+            ticket: 'OTH-S1-01',
+            area: 'OTHER',
+            areaLabel: 'Other / Pendampingan',
+            machine: 'Vendor Support',
+            issue: 'Pendampingan vendor Trikarya',
+            actions: ['Pendampingan pekerjaan vendor Trikarya di area produksi'],
+            status: 'DONE',
+          },
+        ],
+      },
+      '2': {
+        teamMembers: [
+          { code: 'ISO', name: 'ISO (Teknisi Shift 2)' },
+          { code: 'KON', name: 'KON (Teknisi Shift 2)' },
