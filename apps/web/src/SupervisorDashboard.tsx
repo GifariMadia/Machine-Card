@@ -2498,3 +2498,503 @@ export default function SupervisorDashboard({ supervisor, onLogout }: Supervisor
       recommendations.push(
         `Pola kerusakan tertinggi terkonsentrasi pada "${topCategories[0].kategori}" (${topCategories[0].percent}% dari total insiden). Pastikan ketersediaan buffer part kritis di ruang workshop.`
       );
+    }
+
+    return {
+      topMachines,
+      topCategories,
+      shiftDistribution: shiftMap,
+      wrCompliancePercent,
+      withWrCount,
+      missingWrCount: validTickets.length - withWrCount,
+      spvVerifiedPercent,
+      verifiedCount,
+      unverifiedClosedCount: closedTickets.length - verifiedCount,
+      avgResponseLagMin,
+      recommendations,
+    };
+  }, [tickets]);
+
+  // Verifikasi Cepat (Quick Sign-Off SPV langsung dari tabel 15 Kolom)
+  function handleQuickVerifyTicket(ticketId: string) {
+    const verifiedAt = new Intl.DateTimeFormat('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Jakarta',
+    }).format(new Date());
+
+    const nextTickets = tickets.map((t) => {
+      if (t.ticket === ticketId) {
+        return {
+          ...t,
+          supervisorVerified: true,
+          supervisorNote: t.supervisorNote || 'Terverifikasi oleh Supervisor Maintenance',
+          verifiedAt,
+        };
+      }
+      return t;
+    });
+
+    setTickets(nextTickets);
+    try {
+      storage.setItem('machine-card-open-work', JSON.stringify(nextTickets));
+    } catch {}
+  }
+
+  // Unduh CSV 15 Kolom Format As-Is Spreadsheet Pabrik
+  function handleExportBreakdownCsv() {
+    const headers = [
+      'TANGGAL',
+      'BULAN',
+      'SHIFT',
+      'MESIN',
+      'SECTION',
+      'Keterangan',
+      'OPERATOR',
+      'KODE PRODUK',
+      'NO BATCH',
+      'START',
+      'END',
+      'DURASI',
+      'NO.WR',
+      'WO Type',
+      'KATEGORI',
+    ];
+
+    const rows = filteredTickets.map((t) => {
+      const asIs = getTicketAsIsRow(t);
+      return [
+        `"${asIs.tanggal}"`,
+        `"${asIs.bulan}"`,
+        `"${asIs.shift}"`,
+        `"${asIs.mesin.replace(/"/g, '""')}"`,
+        `"${asIs.section.replace(/"/g, '""')}"`,
+        `"${asIs.keterangan.replace(/"/g, '""')}"`,
+        `"${asIs.operator.replace(/"/g, '""')}"`,
+        `"${asIs.kodeProduk === '—' ? '' : asIs.kodeProduk}"`,
+        `"${asIs.noBatch === '—' ? '' : asIs.noBatch}"`,
+        `"${asIs.start}"`,
+        `"${asIs.end === '—' ? '' : asIs.end}"`,
+        `"${asIs.durasi}"`,
+        `"${asIs.noWr === '~' ? '' : asIs.noWr}"`,
+        `"${asIs.woType}"`,
+        `"${asIs.kategori.replace(/"/g, '""')}"`,
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Verifikasi_Breakdown_AsIs_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Analisis Statistik & Tren Mingguan Breakdown
+  const weeklyAnalyticsData = useMemo(() => {
+    // Saring tiket yang aktif / valid dalam jendela review
+    const activeValidTickets = tickets.filter((t) => !t.isVoid && t.status !== 'VOID');
+    const totalCount = activeValidTickets.length;
+    const completedCount = activeValidTickets.filter((t) => t.status === 'CLOSED').length;
+    const openCount = activeValidTickets.filter((t) => isUnfinished(t)).length;
+    const reviewedCount = activeValidTickets.filter((t) => t.supervisorVerified).length;
+    const unreviewedCount = totalCount - reviewedCount;
+
+    // Kalkulasi Total Downtime & Rata-rata Durasi Perbaikan
+    let totalDowntimeMin = 0;
+    activeValidTickets.forEach((t) => {
+      totalDowntimeMin += (ticketDowntime(t) ?? 0);
+    });
+    const totalDowntimeHoursFormatted = activeValidTickets.some((ticket) => ticketDowntime(ticket) === null) ? 'N/A' : (totalDowntimeMin / 60).toFixed(1);
+    const avgRepairMin = totalCount > 0 ? Math.round(totalDowntimeMin / totalCount) : 0;
+
+    // Distribusi Kerusakan per Mesin (Top Impacted Machines)
+    const machineCounts: Record<string, { count: number; downtime: number; section: string }> = {};
+    activeValidTickets.forEach((t) => {
+      if (!machineCounts[t.machine]) {
+        machineCounts[t.machine] = { count: 0, downtime: 0, section: t.section || 'General' };
+      }
+      machineCounts[t.machine].count += 1;
+      machineCounts[t.machine].downtime += (ticketDowntime(t) ?? 0);
+    });
+
+    const topMachines = Object.entries(machineCounts)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.count - a.count || b.downtime - a.downtime);
+
+    // Distribusi Kategori Kerusakan (Root Cause Pattern)
+    const categoryCounts: Record<string, number> = {};
+    activeValidTickets.forEach((t) => {
+      const cat = t.kategori || 'Mekanikal Umum';
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+    });
+
+    const topCategories = Object.entries(categoryCounts)
+      .map(([category, count]) => ({ category, count, percentage: Math.round((count / (totalCount || 1)) * 100) }))
+      .sort((a, b) => b.count - a.count);
+
+    // Distribusi per Section
+    const sectionCounts: Record<string, number> = {};
+    activeValidTickets.forEach((t) => {
+      const sec = t.section || 'General';
+      sectionCounts[sec] = (sectionCounts[sec] || 0) + 1;
+    });
+
+    return {
+      totalCount,
+      completedCount,
+      openCount,
+      reviewedCount,
+      unreviewedCount,
+      totalDowntimeHoursFormatted,
+      avgRepairMin,
+      topMachines,
+      topCategories,
+      sectionCounts,
+      activeValidTickets,
+    };
+  }, [tickets]);
+
+  function handleBatchReviewAllWeek() {
+    const note = weeklyOverallNote.trim() || 'Evaluasi Mingguan: Tren kerusakan sepekan telah ditinjau & diarsipkan oleh SPV Maintenance';
+    const verifiedAt = new Intl.DateTimeFormat('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Jakarta',
+    }).format(new Date());
+
+    const nextTickets = tickets.map((t) => {
+      if (!t.isVoid && t.status !== 'VOID') {
+        return {
+          ...t,
+          supervisorVerified: true,
+          supervisorNote: t.supervisorNote || note,
+          verifiedAt: t.verifiedAt || verifiedAt,
+        };
+      }
+      return t;
+    });
+
+    setTickets(nextTickets);
+    try {
+      storage.setItem('machine-card-open-work', JSON.stringify(nextTickets));
+    } catch {}
+
+    setWeeklyOverallNote('');
+  }
+
+  // Handle Supervisor Review & Evaluation Note
+  function handleSignOffTicket() {
+    if (!selectedTicket) return;
+
+    const note = verificationNote.trim() || 'Evaluasi SPV: Pekerjaan dan tindakan perbaikan telah ditinjau';
+    const verifiedAt = new Intl.DateTimeFormat('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Jakarta',
+    }).format(new Date());
+
+    const updated: SupervisorWorkTicket = {
+      ...selectedTicket,
+      supervisorVerified: true,
+      supervisorNote: note,
+      verifiedAt,
+    };
+
+    const nextTickets = tickets.map((t) => (t.ticket === updated.ticket ? updated : t));
+    setTickets(nextTickets);
+    setSelectedTicket(updated);
+
+    // Persist to localStorage
+    try {
+      const stored = storage.getItem('machine-card-open-work');
+      let arr = stored ? JSON.parse(stored) : [];
+      arr = arr.map((item: any) => {
+        if (item.ticket === updated.ticket) {
+          return {
+            ...item,
+            supervisorVerified: true,
+            supervisorNote: note,
+            verifiedAt,
+          };
+        }
+        return item;
+      });
+      storage.setItem('machine-card-open-work', JSON.stringify(arr));
+    } catch {
+      // Ignore
+    }
+  }
+
+  // Discord Integration State
+  const [discordWebhookUrl, setDiscordWebhookUrl] = useState('');
+  const [discordSending, setDiscordSending] = useState(false);
+  const [showRawJson, setShowRawJson] = useState(false);
+  const [discordResult, setDiscordResult] = useState<{
+    success: boolean;
+    simulated: boolean;
+    reportStatus?: 'COMPLETE' | 'PENDING';
+    message: string;
+    payload: any;
+  } | null>(null);
+  const [discordError, setDiscordError] = useState<string | null>(null);
+
+  async function handleSendDiscordReport(mock = false) {
+    setDiscordSending(true);
+    setDiscordError(null);
+
+    const targetWebhook = mock ? 'https://example.com/simulate' : discordWebhookUrl.trim();
+    const payloadData = {
+      supervisorName: safeSupervisor.name,
+      supervisorNik: safeSupervisor.nik,
+      department: safeSupervisor.departments.join(', '),
+      plant: 'Pulogadung',
+      shift: selectedShiftWindow.shift,
+      dayCategory,
+      date: autoGeneratedData.date,
+      teamMembers: currentShiftTemplate.teamMembers.map((m) => m.code),
+      isLateSubmission: autoGeneratedData.isLateSubmission,
+      actualInputTime: autoGeneratedData.actualInputTime,
+      summary: autoGeneratedData.summary,
+      handoverNotes: autoGeneratedData.handoverNotes,
+      activeMachinesCount: autoGeneratedData.activeCount,
+      breakdownCount: autoGeneratedData.breakdownCount,
+      assignedTechnicians: assignedTechnicians.map((t) => ({
+        nik: t.nik,
+        name: t.name,
+        hasReported: t.hasReported,
+        isNihil: t.isNihil,
+      })),
+      openTickets: currentShiftTemplate.items.map((item) => ({
+        ticket: item.ticket,
+        area: item.area,
+        machine: item.machine,
+        issue: item.issue,
+        timeRange: item.timeRange,
+        wr: item.wr,
+        actions: item.actions,
+        status: item.status,
+        note: item.note,
+        progres: item.actions.join(', '),
+        tindakLanjut: item.status === 'OPEN' ? 'Dilanjutkan ke shift berikutnya' : undefined,
+      })),
+      webhookUrl: targetWebhook,
+    };
+
+    try {
+      const res = await fetch('/api/shift-report/discord', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `manual:${reportDate}:${selectedShift}:${crypto.randomUUID()}` },
+        body: JSON.stringify(payloadData),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(errData.message || 'Gagal mengirim laporan ke Discord');
+      }
+
+      const data = await res.json();
+      setDiscordResult(data);
+    } catch (err: any) {
+      const isMockMode = !targetWebhook || targetWebhook.includes('simulate') || targetWebhook.includes('example.com');
+      if (mock && import.meta.env.MODE === 'test') {
+        const isPending = autoGeneratedData.reportStatus === 'PENDING';
+        const isAllNormal = autoGeneratedData.breakdownCount === 0 && !isPending;
+        const headerTag = autoGeneratedData.isLateSubmission
+          ? 'LAPORAN SHIFT SUSULAN (OVERTIME COMPLETED)'
+          : isPending
+          ? 'NOTIFIKASI LAPORAN SHIFT PENDING (BELUM LENGKAP)'
+          : 'LAPORAN SHIFT OTOMATIS & SUMMARY MAINTENANCE';
+
+        const localPayload = {
+          username: 'B7 Machine Card Bot',
+          avatar_url: 'https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/factory.png',
+          embeds: [
+            {
+              title: `${isPending ? '🟡' : isAllNormal ? '🟢' : '🔴'} ${headerTag} — ${selectedShiftWindow.label.toUpperCase()} (${selectedShiftWindow.timeRange})`,
+              description: `**PT BINTANG TOEDJOE** · Engineering Maintenance Site Pulogadung\n**Tanggal :** ${autoGeneratedData.date} · **Anggota Shift :** \`${currentShiftTemplate.teamMembers.map((m) => m.code).join(', ')}\``,
+              color: isPending ? 0xd97706 : isAllNormal ? 0x059669 : 0xe11d48,
+              fields: [
+                {
+                  name: 'Supervisor Pemantau Shift (SPV Maintenance)',
+                  value: `${supervisor.name} (${supervisor.nik})`,
+                  inline: true,
+                },
+                {
+                  name: 'Shift & Jam Operasional',
+                  value: `${selectedShiftWindow.label} (${dayCategory})\n**${selectedShiftWindow.timeRange} WIB**`,
+                  inline: true,
+                },
+                {
+                  name: 'Status Laporan Shift',
+                  value: isPending
+                    ? '**PENDING** (Menunggu Kelengkapan Catatan)'
+                    : autoGeneratedData.isLateSubmission
+                    ? `**LENGKAP SUSULAN**\nInput: ${autoGeneratedData.actualInputTime}`
+                    : '**LENGKAP & TERKIRIM OTOMATIS**',
+                  inline: true,
+                },
+                {
+                  name: 'Ringkasan Operasional & Kesiapan Mesin',
+                  value: `${autoGeneratedData.summary}\n• Mesin Tanpa Gangguan Dalam Penanganan: **${autoGeneratedData.activeCount}** | Pekerjaan Open Lintas Shift: **${autoGeneratedData.breakdownCount}**`,
+                  inline: false,
+                },
+                {
+                  name: isPending ? 'Kekurangan Catatan Wajib' : 'Catatan Serah-Terima Shift (Handover)',
+                  value: autoGeneratedData.handoverNotes,
+                  inline: false,
+                },
+                {
+                  name: 'Daftar Aktivitas & Pekerjaan Maintenance :',
+                  value:
+                    payloadData.openTickets.length > 0
+                      ? payloadData.openTickets.map((t) => `• **${t.ticket}** (${t.machine}) - ${t.issue} [${t.status}]`).join('\n')
+                      : '_Tidak ada breakdown aktif (Nihil)._',
+                  inline: false,
+                },
+              ],
+              footer: {
+                text: `PT Bintang Toedjoe • Engineering Pulogadung • Akhir Shift ${selectedShiftWindow.handoverTime} • ${new Date().toISOString()}`,
+              },
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        };
+        setDiscordResult({
+          success: true,
+          simulated: true,
+          reportStatus: autoGeneratedData.reportStatus,
+          message: isPending
+            ? 'Simulasi pengiriman laporan shift ke Discord berhasil (Status PENDING: Notifikasi pengingat dikirim ke teknisi & SPV)'
+            : 'Simulasi pengiriman laporan shift ke Discord berhasil (Mock Mode)',
+          payload: localPayload,
+        });
+      } else {
+        setDiscordError(err.message || 'Terjadi kesalahan saat menghubungkan ke Discord');
+      }
+    } finally {
+      setDiscordSending(false);
+    }
+  }
+
+  // =========================================================================
+  // LOGIKA MONITORING & PENGUKURAN KINERJA MAINTENANCE (URS BAGIAN 7)
+  // =========================================================================
+
+  // URS 7.1 Klausul 6: Penyesuaian Target KPI Maintenance oleh SPV
+  function handleOpenKpiModal(kpi?: KPITargetRecord) {
+    if (kpi) {
+      setSelectedKpiForEdit(kpi);
+      setKpiEditForm({
+        targetValue: kpi.targetValue,
+        unit: kpi.unit,
+        direction: kpi.direction,
+        scope: kpi.scope,
+        effectivePeriod: kpi.effectivePeriod,
+        reason: '',
+      });
+    } else {
+      const first = kpiTargets[0] || null;
+      setSelectedKpiForEdit(first);
+      if (first) {
+        setKpiEditForm({
+          targetValue: first.targetValue,
+          unit: first.unit,
+          direction: first.direction,
+          scope: first.scope,
+          effectivePeriod: first.effectivePeriod,
+          reason: '',
+        });
+      }
+    }
+    setIsKpiModalOpen(true);
+  }
+
+  function handleSaveKpiTarget(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedKpiForEdit) return;
+    const prevVal = selectedKpiForEdit.targetValue;
+    const newVal = Number(kpiEditForm.targetValue);
+    const reasonText = kpiEditForm.reason.trim() || 'Penyesuaian target rutin maintenance plant Pulogadung';
+
+    const updated: KPITargetRecord = {
+      ...selectedKpiForEdit,
+      targetValue: newVal,
+      unit: kpiEditForm.unit,
+      direction: kpiEditForm.direction,
+      scope: kpiEditForm.scope,
+      effectivePeriod: kpiEditForm.effectivePeriod,
+      lastUpdatedBy: `${supervisor.name} (SPV Maintenance)`,
+      lastUpdatedAt: new Date().toISOString().slice(0, 10),
+    };
+
+    const nextTargets = kpiTargets.map((k) => (k.id === updated.id ? updated : k));
+    setKpiTargets(nextTargets);
+    try {
+      storage.setItem('machine-card-kpi-targets', JSON.stringify(nextTargets));
+    } catch {}
+
+    const newHistory: KPITargetHistory = {
+      id: `hist-${Date.now()}`,
+      kpiId: updated.id,
+      indicator: updated.label,
+      previousValue: prevVal,
+      newValue: newVal,
+      unit: updated.unit,
+      direction: updated.direction,
+      reason: reasonText,
+      changedBy: `${supervisor.name} (SPV Maintenance)`,
+      changedAt: `${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`,
+    };
+
+    const nextHistory = [newHistory, ...kpiHistory];
+    setKpiHistory(nextHistory);
+    try {
+      storage.setItem('machine-card-kpi-target-history', JSON.stringify(nextHistory));
+    } catch {}
+
+    setIsKpiModalOpen(false);
+  }
+
+  // =========================================================================
+  // HANDLER REVIEW & PERBAIKAN DATA (URS 8.1)
+  // =========================================================================
+
+  // URS 8.1 Klausul 1 & 6: Pembatalan Catatan Tanpa Hard-Delete
+  function handleOpenVoidModal(ticket: SupervisorWorkTicket) {
+    setTicketToVoid(ticket);
+    setVoidReasonInput('');
+    setIsVoidModalOpen(true);
+  }
+
+  function handleConfirmVoidTicket(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ticketToVoid) return;
+    const reason = voidReasonInput.trim();
+    if (!reason) return;
+
+    const voidTimestamp = `${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+    const updated: SupervisorWorkTicket = {
+      ...ticketToVoid,
+      status: 'VOID',
+      isVoid: true,
+      voidReason: reason,
+      voidBy: `${supervisor.name} (SPV Maintenance)`,
+      voidAt: voidTimestamp,
+    };
+
+    const nextTickets = tickets.map((t) => (t.ticket === updated.ticket ? updated : t));
+    setTickets(nextTickets);
+    try {
+      storage.setItem('machine-card-open-work', JSON.stringify(nextTickets));
+    } catch {}
+
