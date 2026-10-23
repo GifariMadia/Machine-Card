@@ -998,3 +998,503 @@ const baseSupervisorSeedTickets: SupervisorWorkTicket[] = [
     operatorEnd: '14.30',
     operatorDurasi: 6.0,
     technicianStart: '08.40',
+    technicianEnd: '14.15',
+    technicianDurasi: 5.58,
+    noWr: '292790',
+    woType: 'Batch',
+    kategori: 'Pisau Vertical & Rubber',
+    status: 'CLOSED',
+    action: 'Pembongkaran rubber all line, penggantian rubber 3 line, setting rubber, ganti pisau vertical 6 pcs, ganti heater sealing horizontal 2 pcs right, test running',
+    technicianName: 'PDA, RMA',
+    supervisorVerified: true,
+    supervisorNote: 'Tension rubber sudah dikalibrasi dan hasil potongan stabil',
+    verifiedAt: '08/09/2026, 14:45',
+    durasiPerbaikanMenit: 360,
+    waktuTungguPartMenit: 30,
+    partReplaced: 'Rubber 3 line & Pisau vertical 6 pcs',
+    waktuMulai: '2026-09-08T08:30:00.000Z',
+    waktuSelesai: '2026-09-08T14:30:00.000Z',
+    originalOpenedAt: '2026-09-08T08:30:00.000Z',
+  },
+  {
+    ticket: 'OW-233174',
+    tanggal: '08/09/2026',
+    bulan: 'September',
+    shift: '1',
+    machine: 'Ilapak 1',
+    section: 'Filling',
+    keterangan: 'Gasket pneumatic line 1 bocor',
+    reporter: 'OPR0001',
+    reporterName: 'A. Dahlan',
+    kodeProduk: 'LNKOA',
+    noBatch: 'HM758',
+    operatorStart: '07.30',
+    operatorEnd: '09.30',
+    operatorDurasi: 2.0,
+    technicianStart: '07.35',
+    technicianEnd: '09.15',
+    technicianDurasi: 1.67,
+    noWr: '233174',
+    woType: 'Batch',
+    kategori: 'Pneumatik & Silinder',
+    status: 'CLOSED',
+    action: 'Penggantian gasket pneumatic NBR 18x2.5mm dan leak test',
+    technicianName: 'Budi Santoso',
+    supervisorVerified: true,
+    supervisorNote: 'Uji jalan 50 sachet normal tanpa bocor, mesin siap produksi',
+    verifiedAt: '08/09/2026, 09:40',
+    durasiPerbaikanMenit: 120,
+    waktuTungguPartMenit: 0,
+    partReplaced: 'Gasket pneumatic',
+    waktuMulai: '2026-09-08T07:30:00.000Z',
+    waktuSelesai: '2026-09-08T09:30:00.000Z',
+    originalOpenedAt: '2026-09-08T07:30:00.000Z',
+  },
+  {
+    ticket: 'OW-292772',
+    tanggal: '08/09/2026',
+    bulan: 'September',
+    shift: '1',
+    machine: 'Ilapak 12',
+    section: 'Filling',
+    keterangan: 'Pisau vertical sealing vertical error & alarm heater',
+    reporter: 'OPR0022',
+    reporterName: 'Dedi Kurniawan',
+    kodeProduk: 'LKJTA',
+    noBatch: 'HM310',
+    operatorStart: '07.09',
+    operatorEnd: '15.00',
+    operatorDurasi: 7.85,
+    technicianStart: '07.15',
+    technicianEnd: '14.40',
+    technicianDurasi: 7.42,
+    noWr: '292772',
+    woType: 'Batch',
+    kategori: 'Heater Sealing Vertikal',
+    status: 'CLOSED',
+    action: 'Pengecekan alarm heater, pengecekan heater (putus), pembongkaran heater, penggantian heater, connect wiring heater, test running, pemantauan mesin',
+    technicianName: 'DEFA, FAUZI',
+    supervisorVerified: false,
+    supervisorNote: '',
+    durasiPerbaikanMenit: 471,
+    waktuTungguPartMenit: 15,
+    partReplaced: 'Elemen heater sealing',
+    waktuMulai: '2026-09-08T07:09:00.000Z',
+    waktuSelesai: '2026-09-08T15:00:00.000Z',
+    originalOpenedAt: '2026-09-08T07:09:00.000Z',
+  },
+  {
+    ticket: 'OW-292778',
+    tanggal: '08/09/2026',
+    bulan: 'September',
+    shift: '1',
+    machine: 'FBD Jaw Chuan',
+    section: 'Compounding',
+    keterangan: 'Thermocontrol tidak stabil fluktuatif',
+    reporter: 'OPR0005',
+    reporterName: 'Supriyanto',
+    operatorStart: '08.13',
+    operatorEnd: '09.00',
+    operatorDurasi: 0.78,
+    technicianStart: '08.15',
+    technicianEnd: '08.50',
+    technicianDurasi: 0.58,
+    noWr: '292778',
+    woType: 'Non Batch',
+    kategori: 'Wiring Thermocontrol',
+    status: 'CLOSED',
+    action: 'Pengecekkan wiring thermocontrol, pengencangan kabel thermocontrol, test running, pemantauan mesin',
+    technicianName: 'RMA',
+    supervisorVerified: false,
+    supervisorNote: '',
+    durasiPerbaikanMenit: 47,
+    waktuTungguPartMenit: 0,
+    waktuMulai: '2026-09-08T08:13:00.000Z',
+    waktuSelesai: '2026-09-08T09:00:00.000Z',
+    originalOpenedAt: '2026-09-08T08:13:00.000Z',
+  },
+  {
+    ticket: 'OW-233110',
+    tanggal: '08/09/2026',
+    bulan: 'September',
+    shift: '1',
+    machine: 'FBD Jaw Chuan',
+    section: 'Compounding',
+    keterangan: 'Suhu tidak bisa naik',
+    reporter: 'OPR0005',
+    reporterName: 'Supriyanto',
+    operatorStart: '07.27',
+    operatorEnd: '08.00',
+    operatorDurasi: 0.55,
+    technicianStart: '07.30',
+    technicianEnd: '07.55',
+    technicianDurasi: 0.42,
+    noWr: '~',
+    woType: 'Non Batch',
+    kategori: 'Sistem Pemanas / Steam Trap',
+    status: 'CLOSED',
+    action: 'Buka valve bypass steam trap, test running, pemantauan mesin',
+    technicianName: 'PDA',
+    supervisorVerified: true,
+    supervisorNote: 'Steam trap beroperasi lancar',
+    verifiedAt: '08/09/2026, 08:05',
+    durasiPerbaikanMenit: 33,
+    waktuTungguPartMenit: 0,
+    waktuMulai: '2026-09-08T07:27:00.000Z',
+    waktuSelesai: '2026-09-08T08:00:00.000Z',
+    originalOpenedAt: '2026-09-08T07:27:00.000Z',
+  },
+  {
+    ticket: 'OW-233115',
+    tanggal: '08/09/2026',
+    bulan: 'September',
+    shift: '1',
+    machine: 'FBD Jaw Chuan',
+    section: 'Compounding',
+    reporter: 'OPR0005',
+    reporterName: 'Supriyanto',
+    operatorStart: '08.13',
+    operatorEnd: '09.00',
+    operatorDurasi: 0.78,
+    technicianStart: '08.15',
+    technicianEnd: '08.50',
+    technicianDurasi: 0.58,
+    noWr: '292778',
+    woType: 'Non Batch',
+    kategori: 'Sistem Pemanas / Steam Trap',
+    keterangan: 'Thermocontrol tidak stabil (Kerusakan Berulang)',
+    status: 'CLOSED',
+    action: 'Pengecekan wiring dan pengencangan kabel thermocontrol',
+    technicianName: 'Budi Santoso',
+    supervisorVerified: true,
+    supervisorNote: 'Kalibrasi PID suhu telah stabil di 65C',
+    verifiedAt: 'Kemarin, 10:00',
+    durasiPerbaikanMenit: 50,
+    waktuTungguPartMenit: 0,
+    partReplaced: 'Kabel sensor thermocontrol',
+    waktuMulai: new Date(Date.now() - 3600000 * 20).toISOString(),
+    waktuSelesai: new Date(Date.now() - 3600000 * 19).toISOString(),
+    originalOpenedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
+  },
+  {
+    ticket: 'OW-292808',
+    tanggal: '08/09/2026',
+    bulan: 'September',
+    shift: '2',
+    machine: 'Ilapak 5',
+    section: 'Filling',
+    keterangan: 'Ganti bantalan pisau tumpul',
+    reporter: 'OPR0028',
+    reporterName: 'Hendra Saputra',
+    kodeProduk: 'POSNA',
+    noBatch: 'JA692',
+    operatorStart: '16.00',
+    operatorEnd: '16.45',
+    operatorDurasi: 0.75,
+    technicianStart: '16.05',
+    technicianEnd: '16.35',
+    technicianDurasi: 0.5,
+    noWr: '292808',
+    woType: 'Batch',
+    kategori: 'Bantalan Pisau',
+    status: 'CLOSED',
+    action: 'Ganti bantalan pisau by OP didampingi teknisi, test running',
+    technicianName: 'ISO, KON',
+    supervisorVerified: false,
+    supervisorNote: '',
+    durasiPerbaikanMenit: 45,
+    waktuTungguPartMenit: 0,
+    waktuMulai: '2026-09-08T16:00:00.000Z',
+    waktuSelesai: '2026-09-08T16:45:00.000Z',
+    originalOpenedAt: '2026-09-08T16:00:00.000Z',
+  },
+  {
+    ticket: 'OW-292797',
+    tanggal: '08/09/2026',
+    bulan: 'September',
+    shift: '2',
+    machine: 'SIG 5',
+    section: 'Filling',
+    keterangan: 'Potongan tidak stabil',
+    reporter: 'OPR0003',
+    reporterName: 'Sutrisno',
+    kodeProduk: 'LNKOA',
+    noBatch: 'HM758',
+    operatorStart: '15.30',
+    operatorEnd: '16.15',
+    operatorDurasi: 0.75,
+    technicianStart: '15.35',
+    technicianEnd: '16.05',
+    technicianDurasi: 0.5,
+    noWr: '292797',
+    woType: 'Batch',
+    kategori: 'Pisau Vertical & Rubber',
+    status: 'CLOSED',
+    action: 'Setting potongan, setting pisau vertical, setting rubber, test running, pemantauan mesin',
+    technicianName: 'ISO, KON',
+    supervisorVerified: true,
+    supervisorNote: 'Potongan sudah presisi',
+    verifiedAt: '08/09/2026, 16:20',
+    durasiPerbaikanMenit: 45,
+    waktuTungguPartMenit: 0,
+    waktuMulai: '2026-09-08T15:30:00.000Z',
+    waktuSelesai: '2026-09-08T16:15:00.000Z',
+    originalOpenedAt: '2026-09-08T15:30:00.000Z',
+  },
+  // Tiket Aktif / Open
+  {
+    ticket: 'OW-233183',
+    tanggal: '08/09/2026',
+    bulan: 'September',
+    shift: '1',
+    machine: 'Ilapak 1',
+    section: 'Filling',
+    reporter: 'OPR0001',
+    reporterName: 'A. Dahlan',
+    keterangan: 'Potongan tidak stabil pada unit sealer vertikal',
+    kategori: 'Pisau I-Cut / Cutting',
+    woType: 'Batch',
+    kodeProduk: 'LNKQA',
+    noBatch: 'HM758',
+    noWr: '233183',
+    operatorStart: '07.45',
+    operatorEnd: '—',
+    operatorDurasi: 0.0,
+    waktuMulai: new Date(Date.now() - 3600000 * 2).toISOString(),
+    originalOpenedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    status: 'OPEN',
+    durasiPerbaikanMenit: 0,
+    waktuTungguPartMenit: 0,
+  },
+  {
+    ticket: 'OW-233229',
+    tanggal: '08/09/2026',
+    bulan: 'September',
+    shift: '1',
+    machine: 'Ilapak 8',
+    section: 'Filling',
+    reporter: 'OPR0002',
+    reporterName: 'Ramdhani',
+    kodeProduk: 'POSNA',
+    noBatch: 'JA692',
+    operatorStart: '07.45',
+    operatorEnd: '—',
+    operatorDurasi: 0.0,
+    noWr: '~',
+    woType: 'Batch',
+    kategori: 'Unit Sealing Vertikal',
+    keterangan: 'Potongan tidak stabil',
+    waktuMulai: new Date(Date.now() - 3600000 * 4).toISOString(),
+    originalOpenedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+    status: 'OPEN',
+    action: 'Investigasi pisau dan sealing vertikal',
+    technicianName: 'PDA, RMA',
+    durasiPerbaikanMenit: 0,
+    waktuTungguPartMenit: 0,
+  },
+  {
+    ticket: 'OW-233090',
+    tanggal: '08/09/2026',
+    bulan: 'September',
+    shift: '1',
+    machine: 'Chimei JS 05',
+    section: 'Packaging',
+    reporter: 'OPR0035',
+    reporterName: 'Slamet',
+    operatorStart: '09.00',
+    operatorEnd: '—',
+    operatorDurasi: 0.0,
+    noWr: '~',
+    woType: 'Non Batch',
+    kategori: 'Kelistrikan & Fuse',
+    keterangan: 'Short mati incoming machine & panel kontrol',
+    waktuMulai: new Date(Date.now() - 3600000 * 27).toISOString(),
+    originalOpenedAt: new Date(Date.now() - 3600000 * 27).toISOString(),
+    status: 'OPEN',
+    action: 'Pengecekan wiring in coming machine, penggantian fuse, setting opp',
+    technicianName: 'FAUZI',
+    durasiPerbaikanMenit: 30,
+    waktuTungguPartMenit: 180,
+    alasanTungguPart: 'Menunggu pengadaan fuse 10A time-delay khusus dari warehouse',
+    supervisorVerified: false,
+  },
+];
+
+const initialSupervisorSeedTickets: SupervisorWorkTicket[] = isTestEnv ? baseSupervisorSeedTickets : [];
+
+export default function SupervisorDashboard({ supervisor, onLogout }: SupervisorDashboardProps) {
+  const safeSupervisor = useMemo(() => {
+    const raw = supervisor || ({} as Partial<Supervisor>);
+    return {
+      nik: raw.nik || 'SPV0001',
+      name: raw.name || 'Supervisor',
+      role: 'SUPERVISOR' as const,
+      shifts: Array.isArray(raw.shifts) && raw.shifts.length > 0 ? raw.shifts : ['Shift 1'],
+      departments: Array.isArray(raw.departments) && raw.departments.length > 0 ? raw.departments : ['Maintenance'],
+      machines: Array.isArray(raw.machines) ? raw.machines : [],
+      active: raw.active !== false,
+      password: raw.password || '',
+    };
+  }, [supervisor]);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return storage.getItem('mc-sidebar-collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  function toggleSidebarCollapse() {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        storage.setItem('mc-sidebar-collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  }
+  const [activeTab, setActiveTab] = useNavigationState<'LINES' | 'WORKORDERS' | 'ANALYTICS' | 'HANDOVER'>('mc-nav-SupervisorDashboard-activeTab', 'LINES');
+
+  // Machines State synced with localStorage & Admin actions
+  const [machines, setMachines] = useState<Machine[]>(getStoredMachines);
+
+  useEffect(() => {
+    const onStorageSync = (e: StorageEvent) => {
+      if (e.key === MACHINE_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMachines(parsed);
+          }
+        } catch {}
+      }
+    };
+    const onMachinesUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<Machine[]>;
+      if (customEvent.detail && Array.isArray(customEvent.detail)) {
+        setMachines(customEvent.detail);
+      } else {
+        setMachines(getStoredMachines());
+      }
+    };
+    window.addEventListener('storage', onStorageSync);
+    window.addEventListener('mc-machines-updated', onMachinesUpdated);
+    return () => {
+      window.removeEventListener('storage', onStorageSync);
+      window.removeEventListener('mc-machines-updated', onMachinesUpdated);
+    };
+  }, []);
+
+  // Breakdown Tickets synced with localStorage
+  const [tickets, setTickets] = useState<SupervisorWorkTicket[]>(() => {
+    try {
+      const stored = storage.getItem('machine-card-open-work');
+      if (stored) {
+        const parsed = JSON.parse(stored) as Array<SupervisorWorkTicket>;
+        const ticketMap = new Map<string, SupervisorWorkTicket>();
+        parsed.forEach((t) => ticketMap.set(t.ticket, t));
+        if (isTestEnv) {
+          initialSupervisorSeedTickets.forEach((t) => {
+            if (!ticketMap.has(t.ticket)) ticketMap.set(t.ticket, t);
+          });
+        }
+        return Array.from(ticketMap.values());
+      }
+    } catch {
+      // Fallback
+    }
+    return isTestEnv ? initialSupervisorSeedTickets : [];
+  });
+
+  // Sinkronisasi dinamis ketika 100 skenario diinjeksi atau dibersihkan
+  useEffect(() => {
+    const handleInjected = () => {
+      try {
+        const stored = storage.getItem('machine-card-open-work');
+        if (stored) {
+          const parsed = JSON.parse(stored) as Array<any>;
+          setTickets(parsed);
+        }
+      } catch {}
+    };
+    const handleCleared = () => {
+      setTickets([]);
+      setMonitoredParts([]);
+      try {
+        storage.setItem('machine-card-parts', JSON.stringify([]));
+      } catch {}
+    };
+    window.addEventListener('mc-maintenance-data-injected', handleInjected);
+    window.addEventListener('storage', handleInjected);
+    window.addEventListener('focus', handleInjected);
+    window.addEventListener('mc-maintenance-data-cleared', handleCleared);
+    return () => {
+      window.removeEventListener('mc-maintenance-data-injected', handleInjected);
+      window.removeEventListener('storage', handleInjected);
+      window.removeEventListener('focus', handleInjected);
+      window.removeEventListener('mc-maintenance-data-cleared', handleCleared);
+    };
+  }, []);
+
+  // URS 7.1 Klausul 6: Target KPI Maintenance dikelola oleh SPV
+  const [kpiTargets, setKpiTargets] = useState<KPITargetRecord[]>(() => {
+    try {
+      const stored = storage.getItem('machine-card-kpi-targets');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialKpiTargets;
+  });
+
+  // Riwayat Perubahan Target KPI
+  const [kpiHistory, setKpiHistory] = useState<KPITargetHistory[]>(() => {
+    try {
+      const stored = storage.getItem('machine-card-kpi-target-history');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return isTestEnv ? initialKpiTargetHistory : [];
+  });
+
+  // URS 7.2 & 7.7: Komponen & PM Schedules
+  const [monitoredParts, setMonitoredParts] = useState<MachinePartHistory[]>(() => {
+    try {
+      const stored = storage.getItem('machine-card-parts');
+      if (stored !== null) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return isTestEnv ? initialMonitoringParts : [];
+  });
+
+  useEffect(() => {
+    const handlePartsUpdate = () => {
+      try {
+        const stored = storage.getItem('machine-card-parts');
+        if (stored !== null) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) setMonitoredParts(parsed);
+        } else {
+          setMonitoredParts((previous) => [...previous]);
+        }
+      } catch {}
+    };
+    window.addEventListener('storage', handlePartsUpdate);
+    window.addEventListener('mc-parts-updated', handlePartsUpdate);
+    window.addEventListener('focus', handlePartsUpdate);
+    return () => {
+      window.removeEventListener('storage', handlePartsUpdate);
+      window.removeEventListener('mc-parts-updated', handlePartsUpdate);
+      window.removeEventListener('focus', handlePartsUpdate);
+    };
+  }, []);
+
+  const [pmSchedules, setPmSchedules] = useState<PreventiveMaintenanceItem[]>(() => {
+    try {
