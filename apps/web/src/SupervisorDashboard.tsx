@@ -3498,3 +3498,503 @@ export default function SupervisorDashboard({ supervisor, onLogout }: Supervisor
               <span>Pola Breakdown, Monitoring &amp; KPI Maintenance</span>
             </div>
             {recurrentIssues.length > 0 && (
+              <span className="sidebar-nav-counter alert" title={`${recurrentIssues.length} Kerusakan Berulang Terdeteksi`}>
+                {recurrentIssues.length}
+              </span>
+            )}
+          </button>
+
+          {activeTab === 'ANALYTICS' && (
+            <div className="sidebar-sub-menu">
+              <button
+                type="button"
+                className={`sidebar-sub-item ${analyticsSubTab === 'POLA_LAPANGAN' ? 'is-active' : ''}`}
+                onClick={() => {
+                  setAnalyticsSubTab('POLA_LAPANGAN');
+                  setSidebarOpen(false);
+                }}
+              >
+                <TrendingUp size={13} />
+                <span>Pola &amp; Akuntabilitas</span>
+              </button>
+              <button
+                type="button"
+                className={`sidebar-sub-item ${analyticsSubTab === 'KPI_METRICS' ? 'is-active' : ''}`}
+                onClick={() => {
+                  setAnalyticsSubTab('KPI_METRICS');
+                  setSidebarOpen(false);
+                }}
+              >
+                <BarChart2 size={13} />
+                <span>Metrik &amp; Target KPI</span>
+              </button>
+              <button
+                type="button"
+                className={`sidebar-sub-item ${analyticsSubTab === 'PREVENTIVE_PARTS' ? 'is-active' : ''}`}
+                onClick={() => {
+                  setAnalyticsSubTab('PREVENTIVE_PARTS');
+                  setSidebarOpen(false);
+                }}
+              >
+                <Wrench size={13} />
+                <span>Part Lifetime &amp; PM</span>
+              </button>
+              <button
+                type="button"
+                className={`sidebar-sub-item ${analyticsSubTab === 'AGING_AUDIT' ? 'is-active' : ''}`}
+                onClick={() => {
+                  setAnalyticsSubTab('AGING_AUDIT');
+                  setSidebarOpen(false);
+                }}
+              >
+                <ShieldCheck size={13} />
+                <span>Antrean &amp; Jejak Audit</span>
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'HANDOVER'}
+            title="Laporan Shift & Handover"
+            data-tooltip="Laporan Shift & Handover"
+            className={`sidebar-nav-btn ${activeTab === 'HANDOVER' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('HANDOVER');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <ClipboardList size={18} />
+              <span>Laporan Shift &amp; Handover</span>
+            </div>
+          </button>
+        </nav>
+
+        {/* Sidebar Footer User Card */}
+        <div className="sidebar-footer-profile">
+          <div className="sidebar-user-info" title={`${safeSupervisor.name} (${safeSupervisor.nik}) · Dept: ${safeSupervisor.departments.join(', ')}`}>
+            <div className="sidebar-avatar-circle">
+              {safeSupervisor.name.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="sidebar-user-text">
+              <strong>{safeSupervisor.name}</strong>
+              <small>{safeSupervisor.departments.join(', ')}</small>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-sidebar-logout-icon"
+            onClick={onLogout}
+            title="Keluar dari sesi supervisor"
+            aria-label="Keluar"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="dashboard-main-area">
+        {/* Top Navbar */}
+        <header className="dashboard-topbar spv-topbar">
+          <div className="topbar-left-zone">
+            <div className="topbar-breadcrumb-trail">
+              <span>Beranda</span>
+              <span>/</span>
+              {selectedMachineForAnalysis ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMachineForAnalysis(null)}
+                    style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', font: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Status Operasional Lini &amp; Mesin
+                  </button>
+                  <span>/</span>
+                  <strong>Detail Mesin: {selectedMachineForAnalysis.nama_mesin}</strong>
+                </>
+              ) : (
+                <strong>
+                  {activeTab === 'LINES'
+                    ? 'Status Operasional Lini & Mesin'
+                    : activeTab === 'WORKORDERS'
+                    ? 'Pengawasan & Sign-Off Breakdown'
+                    : activeTab === 'ANALYTICS'
+                    ? 'Pola Breakdown & Akuntabilitas Lapangan'
+                    : 'Laporan Shift & Handover Produksi'}
+                </strong>
+              )}
+            </div>
+          </div>
+
+          <div className="topbar-right-zone spv-topbar-context">
+            <div className="topbar-chip spv-context-chip active-shift">
+              <span className="spv-pulse-dot" />
+              <span className="chip-label">Plant:</span>
+              <strong>Pulogadung Maintenance</strong>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Workspace */}
+        <main className="dashboard-content-scroll spv-main">
+          {/* Hero Section */}
+          {!selectedMachineForAnalysis && activeTab !== 'WORKORDERS' && activeTab !== 'ANALYTICS' && (
+            <section className="spv-hero-section">
+              <div>
+                <h1>
+                  {activeTab === 'LINES'
+                    ? 'Pemantauan Lini Produksi & Status Mesin'
+                    : 'Laporan Kinerja Shift & Serah Terima Lini'}
+                </h1>
+                <p className="spv-hero-subtitle">
+                  {activeTab === 'LINES'
+                    ? 'Pantau kestabilan lini produksi, koordinasikan breakdown dengan teknisi, dan verifikasi status pasca-perbaikan.'
+                    : 'Rekapitulasi operasional shift, penyerahan catatan teknisi, dan evaluasi kepatuhan jadwal.'}
+                </p>
+              </div>
+            </section>
+          )}
+
+        {/* TAB 1: STATUS LINI & MESIN */}
+        {activeTab === 'LINES' && (
+          selectedMachineForAnalysis ? (() => {
+            const targetMachine = selectedMachineForAnalysis;
+            const machineTickets = tickets.filter((t) => t.machine === targetMachine.nama_mesin && t.status !== 'VOID');
+            const unclosedTickets = machineTickets.filter((t) => t.status !== 'CLOSED');
+            const closedTickets = machineTickets.filter((t) => t.status === 'CLOSED');
+            const machineParts = getMachineParts(targetMachine, monitoredParts, tickets,
+              readPartsArray('mc-pending-part-justifications'), readPartsArray('mc-master-parts'));
+            const machinePms = pmSchedules.filter((pm) => pm.machine === targetMachine.nama_mesin || pm.kodeMesin === targetMachine.kode_mesin);
+            const operatingRec = operatingHoursRecords.find((r) => r.namaMesin === targetMachine.nama_mesin || r.kodeMesin === targetMachine.kode_mesin);
+            const ticketCondition = machineTicketStatus(machineTickets);
+            const activeTicket = ticketCondition.ticket;
+            const breakdownCount = machineTickets.length;
+            const rawMtbf = operatingRec && operatingRec.jamOperasiAktual > 0 && breakdownCount > 0 ? (operatingRec.jamOperasiAktual / breakdownCount).toFixed(1) : null;
+            const closedWithDur = closedTickets.filter((t) => t.durasiPerbaikanMenit && t.durasiPerbaikanMenit > 0);
+            const totalDowntimeMin = closedWithDur.reduce((acc, t) => acc + (t.durasiPerbaikanMenit || 0), 0);
+            const rawMttr = closedWithDur.length > 0 ? Math.round(totalDowntimeMin / closedWithDur.length) : null;
+            const availPercent = operatingRec && operatingRec.jamShiftKalender > 0
+              ? Math.min(100, Math.round((operatingRec.jamOperasiAktual / operatingRec.jamShiftKalender) * 100))
+              : 0;
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Header Navigasi Kembali ke Daftar Lini Mesin */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '1rem 1.25rem',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                    boxShadow: '0 2px 8px rgba(10, 30, 21, 0.04)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      type="button"
+                      className="btn-spv-table-action"
+                      style={{ padding: '0.45rem 0.85rem', fontWeight: 600 }}
+                      onClick={() => setSelectedMachineForAnalysis(null)}
+                    >
+                      ← Kembali ke Daftar Mesin
+                    </button>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="spv-code-badge" style={{ background: '#0f172a', color: '#fff' }}>
+                          {targetMachine.kode_mesin}
+                        </span>
+                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+                          {targetMachine.nama_mesin}
+                        </h2>
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            background: ticketCondition.tone === 'breakdown' ? '#fee2e2' : ticketCondition.tone === 'pending' ? '#fef3c7' : '#f1f5f9',
+                            color: ticketCondition.tone === 'breakdown' ? '#b91c1c' : ticketCondition.tone === 'pending' ? '#92400e' : '#475569',
+                          }}
+                        >
+                          {ticketCondition.label}
+                        </span>
+                      </div>
+                      <small style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                        Section: <strong>{targetMachine.kategori}</strong> · Line: <strong>{targetMachine.line || 'Line 1'}</strong> · Area: <strong>{targetMachine.area || 'Produksi'}</strong>
+                      </small>
+                    </div>
+                  </div>
+
+                  {activeTicket && (
+                    <button
+                      type="button"
+                      className="btn-spv-table-action"
+                      style={{ background: '#dc2626', borderColor: '#dc2626', color: '#fff', fontWeight: 700 }}
+                      onClick={() => {
+                        setSelectedTicket(activeTicket);
+                        setVerificationNote('');
+                      }}
+                    >
+                      Review Tiket {activeTicket.ticket}
+                    </button>
+                  )}
+                </div>
+
+                {/* Section Terpadu: Jam Operasi & Metrik Keandalan */}
+                <section className="spv-content-card" style={{ border: '1px solid #e2e8f0' }}>
+                  <div className="spv-toolbar-wrap" style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                        Jam Operasi Aktual &amp; Metrik Keandalan
+                      </h3>
+                      <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                        Pencatatan jam operasi aktual untuk perhitungan MTBF/MTTR presisi dan verifikasi SPV.
+                      </p>
+                    </div>
+                    <div style={{ marginLeft: 'auto' }}>
+                      <button
+                        type="button"
+                        className="btn-spv-table-action secondary"
+                        style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem', fontWeight: 700, borderRadius: '6px' }}
+                        onClick={() => {
+                          if (operatingRec) {
+                            setSelectedOperatingRecord(operatingRec);
+                            setOperatingForm({
+                              jamOperasiAktual: operatingRec.jamOperasiAktual,
+                              jamShiftKalender: operatingRec.jamShiftKalender,
+                              sumberData: operatingRec.sumberData,
+                              penanggungJawab: operatingRec.penanggungJawab,
+                              isComplete: operatingRec.isComplete,
+                              catatanPenjelasan: operatingRec.catatanPenjelasan || '',
+                            });
+                          } else {
+                            setNewOperatingForm({
+                              kodeMesin: targetMachine.kode_mesin,
+                              namaMesin: targetMachine.nama_mesin,
+                              periode: 'Oktober 2026',
+                              jamOperasiAktual: 7.0,
+                              jamShiftKalender: 7.0,
+                              sumberData: 'Logbook Shift Fisik',
+                              penanggungJawab: `${supervisor.name} (SPV Maintenance)`,
+                              isComplete: true,
+                              catatanPenjelasan: '',
+                            });
+                            setIsNewOperatingModalOpen(true);
+                          }
+                        }}
+                      >
+                        {operatingRec ? 'Edit / Verifikasi Jam Operasi' : '+ Input Jam Operasi'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '1.25rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem' }}>
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, letterSpacing: '0.04em' }}>JAM OPERASI AKTUAL</div>
+                          <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', marginTop: '6px', lineHeight: 1.2 }}>
+                            {operatingRec && operatingRec.jamOperasiAktual > 0 ? `${operatingRec.jamOperasiAktual} Jam` : '0 Jam'}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '8px' }}>
+                          Shift Kalender: {operatingRec ? `${operatingRec.jamShiftKalender} Jam` : '—'} ({availPercent}% Avail)
+                        </div>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, letterSpacing: '0.04em' }}>ESTIMASI MTBF</div>
+                          <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', marginTop: '6px', lineHeight: 1.2 }}>
+                            {rawMtbf ? `~ ${rawMtbf} Jam` : '—'}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', marginTop: '8px', fontWeight: 600, color: !operatingRec || operatingRec.jamOperasiAktual === 0 ? '#94a3b8' : !operatingRec.isComplete || unclosedTickets.length > 0 ? '#b45309' : '#059669' }}>
+                          {!operatingRec || operatingRec.jamOperasiAktual === 0
+                            ? 'Belum ada input jam operasi'
+                            : !operatingRec.isComplete
+                            ? 'Belum Final: Data Parsial'
+                            : unclosedTickets.length > 0
+                            ? `Estimasi (${unclosedTickets.length} Tiket Belum Closing)`
+                            : `Nilai Final (${closedTickets.length} Tiket Closed)`}
+                        </div>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, letterSpacing: '0.04em' }}>ESTIMASI MTTR</div>
+                          <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', marginTop: '6px', lineHeight: 1.2 }}>
+                            {rawMttr ? `${rawMttr} mnt` : '—'}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '8px' }}>
+                          Rata-rata durasi ({machineTickets.length} riwayat gangguan)
+                        </div>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, letterSpacing: '0.04em' }}>STATUS KELENGKAPAN</div>
+                          <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', minHeight: '1.75rem' }}>
+                            {operatingRec?.isComplete ? (
+                              <span className="spv-badge-status normal" style={{ fontSize: '0.75rem', padding: '3px 8px' }}>Data Lengkap</span>
+                            ) : (
+                              <span className="spv-badge-status breakdown" style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', fontSize: '0.75rem', padding: '3px 8px' }}>Belum Lengkap</span>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '8px' }}>
+                          {operatingRec?.sumberData ? `Sumber: ${operatingRec.sumberData}` : 'Menunggu verifikasi SPV'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Section 1: Riwayat Breakdown & Status Perbaikan */}
+                <section className="spv-content-card">
+                  <div className="spv-toolbar-wrap" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                      Riwayat &amp; Status Perbaikan Breakdown ({machineTickets.length})
+                    </h3>
+                  </div>
+
+                  {machineTickets.length > 0 ? (
+                    <div className="spv-table-responsive" style={{ marginTop: '0.5rem' }}>
+                      <table className="spv-table">
+                        <thead>
+                          <tr>
+                            <th>NO. TIKET &amp; STATUS</th>
+                            <th>WAKTU &amp; DOWNTIME</th>
+                            <th>MASALAH &amp; TINDAKAN TEKNISI</th>
+                            <th>PELAKSANA</th>
+                            <th className="text-center">AKSI</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {machineTickets.map((t) => (
+                            <tr key={t.ticket} className={isUnfinished(t) ? 'breakdown-row' : ''}>
+                              <td data-label="Tiket & Status">
+                                <div>
+                                  <strong style={{ color: '#0f172a' }}>{t.ticket}</strong>
+                                  <div style={{ marginTop: '2px' }}>
+                                    <span
+                                      className={`spv-badge-status ${
+                                        t.status === 'CLOSED'
+                                          ? 'normal'
+                                          : t.status === 'IN_PROGRESS' || (t.status as string) === 'PENDING'
+                                          ? 'in-progress'
+                                          : 'breakdown'
+                                      }`}
+                                      style={{
+                                        background: t.status === 'CLOSED' ? '#dcfce7' : (t.status as string) === 'PENDING' ? '#ffedd5' : undefined,
+                                        color: t.status === 'CLOSED' ? '#166534' : (t.status as string) === 'PENDING' ? '#c2410c' : undefined,
+                                      }}
+                                    >
+                                      {t.status === 'CLOSED' ? 'Ditutup Operator' : t.status === 'SELESAI_PERBAIKAN' ? 'Menunggu konfirmasi Operator' : t.status === 'IN_PROGRESS' ? 'Dikerjakan' : (t.status as string) === 'PENDING' ? 'Pending' : 'Open'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td data-label="Waktu & Downtime">
+                                <div>{t.waktuMulai || '—'}</div>
+                                {t.durasiPerbaikanMenit ? (
+                                  <small style={{ color: '#64748b' }}>Durasi: {t.durasiPerbaikanMenit} mnt</small>
+                                ) : null}
+                              </td>
+                              <td data-label="Masalah & Tindakan" className="td-block-cell">
+                                <div style={{ color: '#0f172a', fontWeight: 600 }}>{t.keterangan}</div>
+                                {t.action && (
+                                  <div style={{ color: '#0f766e', fontSize: '0.78rem', marginTop: '2px' }}>
+                                    Tindakan: {t.action}
+                                  </div>
+                                )}
+                                {t.partReplaced && (
+                                  <div style={{ color: '#b45309', fontSize: '0.74rem', marginTop: '2px' }}>
+                                    Part Diganti:{' '}
+                                  <strong>
+                                    {typeof t.partReplaced === 'string'
+                                      ? t.partReplaced
+                                      : (t.partReplaced as any)?.name
+                                      ? `${(t.partReplaced as any).name}${(t.partReplaced as any).quantity ? ` (${(t.partReplaced as any).quantity} pcs)` : ''}`
+                                      : '—'}
+                                  </strong>
+                                  </div>
+                                )}
+                              </td>
+                              <td data-label="Pelaksana">
+                                <div>{t.technicianName || '—'}</div>
+                                <small style={{ color: '#64748b' }}>Shift {t.shift || '1'}</small>
+                              </td>
+                              <td data-label="Aksi" className="text-center td-action-cell">
+                                <button
+                                  type="button"
+                                  className="btn-spv-table-action"
+                                  onClick={() => {
+                                    setSelectedTicket(t);
+                                    setVerificationNote(t.supervisorNote || '');
+                                  }}
+                                >
+                                  <span>Review Detail</span>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b' }}>
+                      <p style={{ margin: 0 }}>Tidak ada riwayat breakdown yang tercatat pada mesin ini.</p>
+                    </div>
+                  )}
+                </section>
+
+                {/* Section 2: Monitoring Spare Part & Target Penggantian */}
+                <section className="spv-content-card">
+                  <div className="spv-toolbar-wrap" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                      Monitoring Suku Cadang &amp; Target Lifetime ({machineParts.length})
+                    </h3>
+                  </div>
+
+                  <PartMeterSetup parts={machineParts} actor={`${supervisor.name} (${supervisor.nik})`} />
+                  {machineParts.length > 0 ? (
+                    <div className="spv-table-responsive" style={{ marginTop: '0.5rem' }}>
+                      <table className="spv-table">
+                        <thead>
+                          <tr>
+                            <th>NAMA KOMPONEN &amp; NO. PART</th>
+                            <th>SPESIFIKASI &amp; POSISI</th>
+                            <th>DASAR INTERVAL &amp; TERAKHIR DIGANTI</th>
+                            <th>TARGET PENGGANTIAN</th>
+                            <th>MONITORING PEMAKAIAN</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {machineParts.map((p) => {
+                            const percent = p.intervalTarget && p.intervalTarget > 0
+                              ? Math.round((p.currentUsage / p.intervalTarget) * 100)
+                              : 0;
+                            const isWarning = percent >= lifetimeSettings.warningThreshold;
+                            const isDanger = percent >= lifetimeSettings.replacementLimit;
+
+                            return (
+                              <tr key={p.id || p.part}>
+                                <td data-label="Nama Komponen">
+                                  <strong>{p.part}</strong>
+                                  {p.partNumber && (
+                                    <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{p.partNumber}</div>
+                                  )}
+                                </td>
+                                <td data-label="Spesifikasi & Posisi">
+                                  <div>{p.specification}</div>
+                                  <small style={{ color: '#64748b' }}>{p.position}</small>
