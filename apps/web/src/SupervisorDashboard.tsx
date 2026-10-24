@@ -2998,3 +2998,503 @@ export default function SupervisorDashboard({ supervisor, onLogout }: Supervisor
       storage.setItem('machine-card-open-work', JSON.stringify(nextTickets));
     } catch {}
 
+    const auditEntry: DataCorrectionEntry = {
+      id: `VOID-${Date.now()}`,
+      recordType: 'TIKET_BREAKDOWN',
+      recordId: updated.ticket,
+      recordTitle: `${updated.machine} - ${updated.keterangan.slice(0, 35)}`,
+      fieldChanged: 'status',
+      fieldLabel: 'Status Pembatalan (Void)',
+      beforeValue: ticketToVoid.status,
+      afterValue: 'VOID (DIBATALKAN)',
+      reason,
+      changedBy: `${supervisor.name} (SPV Maintenance)`,
+      changedAt: voidTimestamp,
+      impactedIndicators: ['Kesiapan Lini Mesin', 'Downtime Aktif', 'Kompilasi Shift'],
+    };
+
+    const nextLogs = [auditEntry, ...correctionLogs];
+    setCorrectionLogs(nextLogs);
+    try {
+      storage.setItem('machine-card-correction-logs', JSON.stringify(nextLogs));
+    } catch {}
+
+    setIsVoidModalOpen(false);
+    setTicketToVoid(null);
+  }
+
+  // URS 8.1 Klausul 3 & 4: Koreksi Data Pengukuran & Pembaruan Indikator Otomatis
+  function handleOpenCorrectionModal(ticket: SupervisorWorkTicket) {
+    setTicketToCorrect(ticket);
+    setCorrectionForm({
+      field: 'durasiPerbaikanMenit',
+      fieldLabel: 'Durasi Perbaikan Aktif (Menit)',
+      beforeValue: String(ticket.durasiPerbaikanMenit ?? ''),
+      afterValue: String(ticket.durasiPerbaikanMenit ?? ''),
+      reason: '',
+    });
+    setIsCorrectionModalOpen(true);
+  }
+
+  function handleSaveDataCorrection(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ticketToCorrect) return;
+    const reason = correctionForm.reason.trim();
+    if (!reason) {
+      alert('Alasan koreksi wajib diisi untuk memenuhi kepatuhan audit ALCOA+.');
+      return;
+    }
+
+    if (String(correctionForm.beforeValue).trim() === String(correctionForm.afterValue).trim()) {
+      alert('Nilai sesudah koreksi tidak boleh sama dengan nilai sebelum koreksi.');
+      return;
+    }
+
+    if (correctionForm.field === 'durasiPerbaikanMenit') {
+      const num = Number(correctionForm.afterValue);
+      if (isNaN(num) || num < 0) {
+        alert('Durasi perbaikan harus berupa angka nol atau lebih.');
+        return;
+      }
+    }
+
+    let updatedTicket = { ...ticketToCorrect };
+    let impacted = ['MTTR Gabungan', 'Total Downtime Lini'];
+
+    if (correctionForm.field === 'durasiPerbaikanMenit') {
+      updatedTicket.durasiPerbaikanMenit = Number(correctionForm.afterValue);
+      impacted = ['MTTR Gabungan', 'Total Downtime Lini'];
+    } else if (correctionForm.field === 'waktuTungguPartMenit') {
+      updatedTicket.waktuTungguPartMenit = Number(correctionForm.afterValue);
+      impacted = ['Waktu Tunggu Suku Cadang', 'Total Downtime Lini'];
+    } else if (correctionForm.field === 'waktuMulai') {
+      updatedTicket.waktuMulai = correctionForm.afterValue;
+      impacted = ['MTBF Gabungan', 'Timeline Kerusakan'];
+    } else if (correctionForm.field === 'kategori') {
+      updatedTicket.kategori = correctionForm.afterValue;
+      impacted = ['Bad Actor / Kerusakan Berulang', 'Pareto Masalah Mesin'];
+    }
+
+    const nextTickets = tickets.map((t) => (t.ticket === updatedTicket.ticket ? updatedTicket : t));
+    setTickets(nextTickets);
+    try {
+      storage.setItem('machine-card-open-work', JSON.stringify(nextTickets));
+    } catch {}
+
+    const auditEntry: DataCorrectionEntry = {
+      id: `CORR-${Date.now()}`,
+      recordType: 'TIKET_BREAKDOWN',
+      recordId: updatedTicket.ticket,
+      recordTitle: `${updatedTicket.machine} - ${updatedTicket.keterangan.slice(0, 35)}`,
+      fieldChanged: correctionForm.field,
+      fieldLabel: correctionForm.fieldLabel,
+      beforeValue: String(correctionForm.beforeValue),
+      afterValue: String(correctionForm.afterValue),
+      reason,
+      changedBy: `${supervisor.name} (SPV Maintenance)`,
+      changedAt: `${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`,
+      impactedIndicators: impacted,
+    };
+
+    const nextLogs = [auditEntry, ...correctionLogs];
+    setCorrectionLogs(nextLogs);
+    try {
+      storage.setItem('machine-card-correction-logs', JSON.stringify(nextLogs));
+
+      // Rekam juga ke Log Audit Sistem & Keamanan (mc-system-audit-logs) untuk keterlacakan Admin
+      const rawSystemLogs = storage.getItem('mc-system-audit-logs');
+      const systemLogs = rawSystemLogs ? JSON.parse(rawSystemLogs) : [];
+      const newSysLog = {
+        id: `LOG-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Date.now().toString().slice(-4)}`,
+        timestamp: new Date().toISOString(),
+        actorName: `${supervisor.name} (${supervisor.nik || 'SPV0001'})`,
+        actorRole: 'SUPERVISOR',
+        eventType: 'SYSTEM_RULE',
+        action: 'Koreksi Data Pengukuran Maintenance',
+        target: `${updatedTicket.ticket} (${updatedTicket.machine})`,
+        details: `Koreksi field ${correctionForm.fieldLabel}: "${correctionForm.beforeValue}" menjadi "${correctionForm.afterValue}". Alasan audit: ${reason}`,
+        ipAddress: '192.168.10.52',
+        status: 'SUCCESS',
+      };
+      storage.setItem('mc-system-audit-logs', JSON.stringify([newSysLog, ...systemLogs]));
+    } catch {}
+
+    setIsCorrectionModalOpen(false);
+    setTicketToCorrect(null);
+  }
+
+  // URS 8.1 Klausul 5: Koreksi Laporan Shift Terkirim (Non-Destructive Revision)
+  function handleOpenShiftRevisionModal() {
+    setShiftRevisionForm({
+      reason: '',
+      changesSummary: '',
+    });
+    setIsShiftRevisionModalOpen(true);
+  }
+
+  function handleSaveShiftRevision(e: React.FormEvent) {
+    e.preventDefault();
+    const reason = shiftRevisionForm.reason.trim();
+    if (!reason) return;
+
+    const nextRevNo = shiftRevisions.length;
+    const newRevision: ShiftReportRevision = {
+      revisionNo: nextRevNo,
+      revisionDate: autoGeneratedData.date,
+      revisedBy: `${supervisor.name} (SPV Maintenance)`,
+      reason,
+      changesSummary: shiftRevisionForm.changesSummary.trim() || 'Koreksi rincian tindakan teknisi dan verifikasi sparepart',
+      sentTimestamp: `${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`,
+    };
+
+    const nextRevs = [...shiftRevisions, newRevision];
+    setShiftRevisions(nextRevs);
+    try {
+      storage.setItem('machine-card-shift-revisions', JSON.stringify(nextRevs));
+    } catch {}
+
+    const auditEntry: DataCorrectionEntry = {
+      id: `REV-SHIFT-${Date.now()}`,
+      recordType: 'LAPORAN_SHIFT',
+      recordId: `SHIFT-${selectedShiftWindow.shift}-${autoGeneratedData.date}-REV${nextRevNo}`,
+      recordTitle: `Laporan Shift ${selectedShiftWindow.shift} (${selectedShiftWindow.timeRange})`,
+      fieldChanged: 'revision_version',
+      fieldLabel: `Revisi Laporan Shift (Rev ${nextRevNo})`,
+      beforeValue: `Rev ${nextRevNo - 1}`,
+      afterValue: `Rev ${nextRevNo} (Disetujui)`,
+      reason,
+      changedBy: `${supervisor.name} (SPV Maintenance)`,
+      changedAt: newRevision.sentTimestamp,
+      impactedIndicators: ['Dokumentasi Serah-Terima Shift', 'Integritas Laporan Operasional'],
+    };
+
+    const nextLogs = [auditEntry, ...correctionLogs];
+    setCorrectionLogs(nextLogs);
+    try {
+      storage.setItem('machine-card-correction-logs', JSON.stringify(nextLogs));
+    } catch {}
+
+    setIsShiftRevisionModalOpen(false);
+  }
+
+  // 1. Filtered Tickets untuk Analitik URS 7.1 & URS 8.1
+  const filteredAnalyticsTickets = useMemo(() => {
+    return tickets.filter((t) => {
+      // Catatan yang dibatalkan (VOID) tidak dihitung dalam indikator operasional aktif (URS 8.1)
+      if (t.isVoid || t.status === 'VOID') return false;
+      const matchSec = analyticsSection === 'ALL' || t.section === analyticsSection;
+      return matchSec;
+    });
+  }, [tickets, analyticsSection]);
+
+  // 2. Filtered Operating Hours untuk Analitik URS 7.6
+  const analyticsOperatingHours = useMemo(() => {
+    return operatingHoursRecords.filter((rec) => {
+      if (analyticsSection === 'ALL') return true;
+      const machine = machines.find((m) => m.nama_mesin === rec.namaMesin);
+      return machine ? machine.kategori === analyticsSection : true;
+    });
+  }, [operatingHoursRecords, analyticsSection, machines]);
+
+  const totalOperatingHours = useMemo(() => {
+    return analyticsOperatingHours.reduce((sum, r) => sum + r.jamOperasiAktual, 0);
+  }, [analyticsOperatingHours, machines, analyticsSection]);
+
+  const isOperatingDataAllComplete = useMemo(() => {
+    const scoped = machines.filter((machine) => analyticsSection === 'ALL' || machine.kategori === analyticsSection);
+    return scoped.length > 0 && scoped.every((machine) => analyticsOperatingHours.some((record) => record.isComplete && (record.kodeMesin === machine.kode_mesin || record.namaMesin === machine.nama_mesin)));
+  }, [analyticsOperatingHours, machines, analyticsSection]);
+
+  // 3. KPI Summary (MTTR, MTBF, PM Compliance, Total Downtime) - URS 7.1, 7.4, 7.5, 7.6, 7.7
+  const kpiSummary = useMemo(() => {
+    const closedBreakdowns = filteredAnalyticsTickets.filter((t) => t.status === 'CLOSED');
+    const openBreakdowns = filteredAnalyticsTickets.filter((t) => isUnfinished(t));
+
+    // URS 7.4: Pemisahan Waktu Perbaikan Aktif vs Waktu Tunggu Part
+    const measuredRepairs = closedBreakdowns.map(repairMinutes);
+    const repairDataComplete = measuredRepairs.every((value) => value !== null);
+    const totalRepairMinutes = measuredRepairs.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+    const totalWaitPartMinutes = filteredAnalyticsTickets.reduce((sum, t) => sum + ((t.waktuTungguPartMenit ?? (t as any).durasiTungguMenit ?? 0)), 0);
+    const downtimeValues = closedBreakdowns.map((ticket) => {
+      const start = Date.parse(ticket.waktuMulai || ''); const end = Date.parse(ticket.waktuMesinBeroperasi || '');
+      return Number.isFinite(start) && Number.isFinite(end) && end >= start ? (end - start) / 60000 : null;
+    });
+    const downtimeComplete = downtimeValues.every((value) => value !== null);
+    const totalDowntimeMinutes = downtimeValues.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+    const totalDowntimeHours = totalDowntimeMinutes / 60;
+
+    // URS 7.5: MTTR Gabungan = sum(durasi aktif) / sum(kejadian selesai)
+    // Jika tidak ada kejadian selesai: "Belum dapat dihitung (0 kejadian selesai)"
+    let mttrDisplay = closedBreakdowns.length ? 'N/A — durasi belum lengkap' : 'Belum dapat dihitung (0 kejadian selesai)';
+    let mttrNumeric = 0;
+    if (closedBreakdowns.length > 0 && repairDataComplete) {
+      mttrNumeric = Number((totalRepairMinutes / 60 / closedBreakdowns.length).toFixed(2));
+      mttrDisplay = `${mttrNumeric} Jam`;
+    }
+
+    // URS 7.6: MTBF Gabungan = sum(jam operasi riil) / sum(kejadian breakdown)
+    // Jika tidak ada kegagalan: "${totalOperatingHours} Jam Operasi (Tidak ada kegagalan tercatat)"
+    const totalBreakdownsCount = filteredAnalyticsTickets.length;
+    let mtbfDisplay = `${totalOperatingHours.toFixed(1)} Jam Operasi (Tidak ada kegagalan tercatat)`;
+    let mtbfNumeric = totalOperatingHours;
+    if (totalBreakdownsCount > 0) {
+      mtbfNumeric = Number((totalOperatingHours / totalBreakdownsCount).toFixed(1));
+      mtbfDisplay = `${mtbfNumeric} Jam Operasi`;
+    }
+
+    if (!isOperatingDataAllComplete) mtbfDisplay = 'N/A — cakupan jam operasi belum lengkap';
+
+    // URS 7.7: Ketepatan Pelaksanaan PM
+    const duePms = pmSchedules.filter((p) => {
+      if (analyticsSection === 'ALL') return true;
+      return p.section === analyticsSection;
+    });
+    const compliance = pmCompliance(duePms);
+    const onTimePms = duePms.filter((p) => p.status === 'SELESAI' && p.tanggalSelesaiAktual && p.tanggalSelesaiAktual <= p.tanggalJatuhTempo && p.tanggalJatuhTempo <= plantDate());
+    const pmComplianceNumeric = compliance.percent ?? 0;
+
+    return {
+      totalRepairMinutes,
+      totalWaitPartMinutes,
+      totalDowntimeHours: Number(totalDowntimeHours.toFixed(2)),
+      closedCount: closedBreakdowns.length,
+      openCount: openBreakdowns.length,
+      totalCount: totalBreakdownsCount,
+      mttrDisplay,
+      mttrNumeric,
+      mtbfDisplay,
+      mtbfNumeric,
+      pmComplianceNumeric,
+      duePmsCount: compliance.due,
+      pmHasData: compliance.percent !== null,
+      repairDataComplete,
+      downtimeComplete,
+      onTimePmsCount: onTimePms.length,
+    };
+  }, [filteredAnalyticsTickets, totalOperatingHours, pmSchedules, analyticsSection, isOperatingDataAllComplete]);
+
+  // 4. URS 7.3: Analisis Kerusakan Berulang (Bad Actor / Recurrent Issues)
+  const recurrentIssues = useMemo(() => {
+    const issueMap = new Map<string, { machine: string; category: string; count: number; totalDowntimeMin: number; missingDuration: boolean; tickets: string[] }>();
+    filteredAnalyticsTickets.forEach((t) => {
+      const key = `${t.machine}__${t.kategori || t.keterangan}`;
+      const existing = issueMap.get(key) || {
+        machine: t.machine,
+        category: t.kategori || 'Kerusakan Umum',
+        count: 0,
+        totalDowntimeMin: 0,
+        missingDuration: false,
+        tickets: [],
+      };
+      existing.count += 1;
+      existing.totalDowntimeMin += (ticketDowntime(t) ?? 0);
+      existing.missingDuration = existing.missingDuration || ticketDowntime(t) === null;
+      existing.tickets.push(t.ticket);
+      issueMap.set(key, existing);
+    });
+
+    // Gangguan berulang jika count >= 2
+    return Array.from(issueMap.values())
+      .filter((item) => item.count >= 2)
+      .sort((a, b) => b.count - a.count);
+  }, [filteredAnalyticsTickets]);
+
+  // 5. URS 7.3: Pola Penggantian Suku Cadang (Top Replaced Parts)
+  const topReplacedParts = useMemo(() => {
+    const partMap = new Map<string, { name: string; count: number; machines: Set<string> }>();
+    filteredAnalyticsTickets.forEach((t) => {
+      const partName = typeof t.partReplaced === 'string'
+        ? t.partReplaced
+        : (t.partReplaced as any)?.name;
+      if (partName && typeof partName === 'string' && partName.trim()) {
+        const key = partName.trim().toLowerCase();
+        const existing = partMap.get(key) || { name: partName.trim(), count: 0, machines: new Set<string>() };
+        const quantity = typeof t.partReplaced === 'object' ? Number(t.partReplaced.quantity || 1) : 1;
+        existing.count += Number.isFinite(quantity) && quantity > 0 ? quantity : 0;
+        existing.machines.add(t.machine);
+        partMap.set(key, existing);
+      }
+    });
+    return Array.from(partMap.values()).sort((a, b) => b.count - a.count);
+  }, [filteredAnalyticsTickets]);
+
+  const lifetimeSettings = JSON.parse(storage.getItem('machine-card-lifetime-rules') || '{"warningThreshold":80,"replacementLimit":100}') as { warningThreshold: number; replacementLimit: number };
+  // 6. URS 7.2: Monitoring Prioritas Lifetime Komponen
+  const lifetimeAlerts = useMemo(() => {
+    return machines.flatMap((machine) => getMachineParts(machine, monitoredParts, tickets, readPartsArray('mc-pending-part-justifications'), readPartsArray('mc-master-parts')))
+      .map((p) => {
+        const progress = p.intervalTarget > 0 ? (p.currentUsage / p.intervalTarget) * 100 : 0;
+        const isOverdue = progress >= lifetimeSettings.replacementLimit;
+        const isNearTarget = progress >= lifetimeSettings.warningThreshold && progress < lifetimeSettings.replacementLimit;
+        let statusPriority: 'CRITICAL_OVERDUE' | 'WARNING_NEAR' | 'NORMAL' | 'INCOMPLETE' = 'NORMAL';
+        if (!p.isDataComplete) {
+          statusPriority = 'INCOMPLETE';
+        } else if (isOverdue) {
+          statusPriority = 'CRITICAL_OVERDUE';
+        } else if (isNearTarget) {
+          statusPriority = 'WARNING_NEAR';
+        }
+        return {
+          ...p,
+          progress: Number(progress.toFixed(1)),
+          statusPriority,
+        };
+      })
+      .sort((a, b) => {
+        const score = (item: typeof a) => {
+          if (item.statusPriority === 'CRITICAL_OVERDUE') return 4;
+          if (item.statusPriority === 'WARNING_NEAR') return 3;
+          if (item.statusPriority === 'INCOMPLETE') return 2;
+          return 1;
+        };
+        return score(b) - score(a);
+      });
+  }, [monitoredParts, machines, tickets, lifetimeSettings.warningThreshold, lifetimeSettings.replacementLimit, clock]);
+
+  // 7. URS 7.8: Monitoring Pekerjaan Terbuka & Aging Matrix
+  const openWorkAging = useMemo(() => {
+    const now = Date.now();
+    const openTickets = filteredAnalyticsTickets.filter((t) => isUnfinished(t));
+    return openTickets
+      .map((t) => {
+        const openTime = t.originalOpenedAt
+          ? new Date(t.originalOpenedAt).getTime()
+          : t.waktuMulai
+          ? new Date(t.waktuMulai).getTime()
+          : now;
+        const diffHours = Math.max(0, (now - openTime) / (1000 * 60 * 60));
+        let ageCategory: 'CRITICAL' | 'WARNING' | 'NORMAL' = 'NORMAL';
+        if (diffHours >= 24) {
+          ageCategory = 'CRITICAL';
+        } else if (diffHours >= 8) {
+          ageCategory = 'WARNING';
+        }
+        return {
+          ...t,
+          diffHours: Number(diffHours.toFixed(1)),
+          ageCategory,
+        };
+      })
+      .sort((a, b) => b.diffHours - a.diffHours);
+  }, [filteredAnalyticsTickets]);
+
+  return (
+    <div className={`dashboard-app-container spv-portal-root ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      {/* Mobile Scrim */}
+      {sidebarOpen && (
+        <div
+          className="sidebar-scrim-overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Tutup menu navigasi"
+        />
+      )}
+
+      {/* Industrial Sidebar Navigation */}
+      <aside className={`dashboard-sidebar ${sidebarOpen ? 'is-open' : ''} ${sidebarCollapsed ? 'is-collapsed' : ''}`}>
+        <div className="sidebar-brand-header">
+          <div className="sidebar-brand-logo" title="BINTANG TOEDJOE · Machine Card Portal Supervisor">
+            <span className="brand-badge-box" aria-label="Logo Bintang Toedjoe">
+              <img
+                src="/assets/bintang-toedjoe-mark.webp"
+                alt="Logo Bintang Toedjoe"
+                className="brand-logo-mark"
+              />
+            </span>
+            <div className="brand-text-block">
+              <strong>BINTANG TOEDJOE</strong>
+              <small>Machine Card · Portal Pengawasan Supervisor</small>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-sidebar-collapse-desktop"
+            onClick={toggleSidebarCollapse}
+            title={sidebarCollapsed ? 'Perluas Sidebar (Tampilkan Teks)' : 'Ciutkan Sidebar (Hanya Ikon)'}
+            aria-label={sidebarCollapsed ? 'Perluas Sidebar' : 'Ciutkan Sidebar'}
+          >
+            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+          <button
+            type="button"
+            className="btn-sidebar-close"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Tutup sidebar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="sidebar-role-indicator" title="SUPERVISOR · Ranah Maintenance">
+          <span className="role-pill-tag role-supervisor">
+            <span className="pulse-green-dot" />
+            <span className="role-pill-text">SUPERVISOR</span>
+          </span>
+          <span className="sidebar-plant-label">Ranah Maintenance</span>
+        </div>
+
+        <nav className="sidebar-navigation-menu" role="tablist" aria-label="Menu Modul Supervisor">
+          <div className="sidebar-nav-heading">NAVIGASI MODUL</div>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'LINES'}
+            title={`Status Lini & Mesin (${machines.length})`}
+            data-tooltip={`Status Lini & Mesin (${machines.length})`}
+            className={`sidebar-nav-btn ${activeTab === 'LINES' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('LINES');
+              setSelectedMachineForAnalysis(null);
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <Activity size={18} />
+              <span>Status Lini &amp; Mesin</span>
+            </div>
+            {activeBreakdownMachines.size > 0 && (
+              <span className="sidebar-nav-counter alert">{activeBreakdownMachines.size}</span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'WORKORDERS'}
+            title={`Verifikasi Breakdown (${tickets.length})`}
+            data-tooltip={`Verifikasi Breakdown (${tickets.length})`}
+            className={`sidebar-nav-btn ${activeTab === 'WORKORDERS' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('WORKORDERS');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <ShieldCheck size={18} />
+              <span>Verifikasi Breakdown</span>
+            </div>
+            {tickets.filter((t) => t.status === 'CLOSED' && !t.supervisorVerified).length > 0 && (
+              <span className="sidebar-nav-counter alert">
+                {tickets.filter((t) => t.status === 'CLOSED' && !t.supervisorVerified).length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'ANALYTICS'}
+            title="Pola Breakdown, Monitoring & KPI Maintenance"
+            data-tooltip="Pola Breakdown, Monitoring & KPI Maintenance"
+            className={`sidebar-nav-btn ${activeTab === 'ANALYTICS' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('ANALYTICS');
+              setAnalyticsSubTab('POLA_LAPANGAN');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <BarChart2 size={18} />
+              <span>Pola Breakdown, Monitoring &amp; KPI Maintenance</span>
+            </div>
+            {recurrentIssues.length > 0 && (
