@@ -148,3 +148,148 @@ func validateDocument(a Actor, key string, before, after json.RawMessage) error 
 			}
 			if a.Role != "ADMIN" && (status != "OPEN" || text(v, "reporter") != a.NIK) {
 				return ErrForbidden
+			}
+			if a.Role != "ADMIN" && changedOutside(nil, v, []string{"ticket", "machine", "id_mesin", "section", "reporter", "reporterName", "shift", "keterangan", "kategori", "woType", "kodeProduk", "noBatch", "noWr", "waktuMulai", "tagType", "createdAt", "status"}) {
+				return ErrForbidden
+			}
+			if strings.TrimSpace(text(v, "machine")) == "" || len(strings.TrimSpace(text(v, "keterangan"))) < 5 {
+				return ErrConflict
+			}
+			continue
+		}
+		if prior == "VOID" && status != "VOID" {
+			return ErrConflict
+		}
+		if prior == "CLOSED" && status != "CLOSED" && !(status == "VOID" && (a.Role == "SUPERVISOR" || a.Role == "ADMIN")) {
+			return ErrConflict
+		}
+		switch a.Role {
+		case "OPERATOR":
+			if prior != "SELESAI_PERBAIKAN" || status != "CLOSED" || text(v, "penutupNik") != a.NIK {
+				return ErrForbidden
+			}
+			if changedOutside(p, v, []string{"status", "waktuMesinBeroperasi", "penutupNik", "penutupName", "shiftPenutup", "catatanClosing", "durasiJam", "closedAt"}) {
+				return ErrForbidden
+			}
+			resume, err := time.Parse(time.RFC3339, text(v, "waktuMesinBeroperasi"))
+			if err != nil || resume.After(time.Now()) {
+				return ErrConflict
+			}
+			end, err := time.Parse(time.RFC3339, text(p, "waktuSelesai"))
+			if err == nil && resume.Before(end) {
+				return ErrConflict
+			}
+		case "TEKNISI":
+			if prior == "CLOSED" || status == "CLOSED" || status == "VOID" {
+				return ErrForbidden
+			}
+			owner := text(p, "technicianNik")
+			if owner != "" && owner != a.NIK {
+				return ErrConflict
+			}
+			if text(v, "technicianNik") != a.NIK {
+				return ErrForbidden
+			}
+			if prior == "OPEN" && status != "IN_PROGRESS" {
+				return ErrConflict
+			}
+			if prior != status && domain.ValidateTicketTransition(prior, status, "TEKNISI") != nil {
+				return ErrConflict
+			}
+			if status == "SELESAI_PERBAIKAN" && strings.TrimSpace(text(v, "action")) == "" {
+				return ErrConflict
+			}
+			if changedOutside(p, v, []string{"status", "action", "technician", "technicianName", "technicianNik", "originalOpenedAt", "waktuMulai", "waktuMulaiTeknisi", "waktuSelesai", "durasiJam", "durasiTungguMenit", "durasiPerbaikanMenit", "waktuTungguPartMenit", "statusHistory", "partReplaced", "followup", "alasanPenundaan", "waktuMulaiTunggu", "kondisiTerakhir", "rencanaTindakLanjut", "riwayatHandover"}) {
+				return ErrForbidden
+			}
+		case "SUPERVISOR":
+			for _, field := range []string{"durasiPerbaikanMenit", "waktuTungguPartMenit"} {
+				if raw, exists := v[field]; exists && string(raw) != "null" {
+					var value float64
+					if json.Unmarshal(raw, &value) != nil || value < 0 {
+						return ErrConflict
+					}
+				}
+			}
+			if status != prior && status != "VOID" {
+				return ErrForbidden
+			}
+			if status == "VOID" && strings.TrimSpace(text(v, "voidReason")) == "" {
+				return ErrConflict
+			}
+			if changedOutside(p, v, []string{"status", "isVoid", "voidReason", "voidBy", "voidAt", "durasiPerbaikanMenit", "waktuTungguPartMenit", "waktuMulai", "kategori", "supervisorVerified", "supervisorNote", "verifiedAt", "changeReason"}) {
+				return ErrForbidden
+			}
+		}
+	}
+	// Records are immutable history: cancellation changes status; never remove rows.
+	for id := range previous {
+		if !seen[id] {
+			return ErrConflict
+		}
+	}
+	return nil
+}
+func text(v map[string]json.RawMessage, key string) string {
+	var s string
+	_ = json.Unmarshal(v[key], &s)
+	return s
+}
+func changedOutside(a, b map[string]json.RawMessage, allowed []string) bool {
+	permits := map[string]bool{}
+	for _, k := range allowed {
+		permits[k] = true
+	}
+	for k, v := range a {
+		if !permits[k] && !bytes.Equal(v, b[k]) {
+			return true
+		}
+	}
+	for k, v := range b {
+		if !permits[k] && !bytes.Equal(v, a[k]) {
+			return true
+		}
+	}
+	return false
+}
+func validatePM(a Actor, p, v map[string]json.RawMessage, exists bool) error {
+	if a.Role == "TEKNISI" {
+		if !exists {
+			return ErrForbidden
+		}
+		prior := text(p, "status")
+		status := text(v, "status")
+		owner := text(p, "pelaksanaNik")
+		if owner != "" && owner != a.NIK {
+			return ErrConflict
+		}
+		if status != "DALAM_PENGERJAAN" && status != "SELESAI" {
+			return ErrForbidden
+		}
+		if status == "SELESAI" && prior != "DALAM_PENGERJAAN" {
+			return ErrConflict
+		}
+		if prior == "SELESAI" {
+			return ErrConflict
+		}
+		loc, _ := time.LoadLocation("Asia/Jakarta")
+		if text(v, "tanggalJatuhTempo") > time.Now().In(loc).Format("2006-01-02") {
+			return ErrConflict
+		}
+		if text(v, "pelaksanaNik") != a.NIK {
+			return ErrForbidden
+		}
+		if changedOutside(p, v, []string{"status", "tanggalSelesaiAktual", "pelaksanaNik", "pelaksanaNama", "hasilTemuan"}) {
+			return ErrForbidden
+		}
+	} else if exists && text(p, "status") == "SELESAI" {
+		return ErrConflict
+	}
+	if text(v, "machine") == "" || strings.TrimSpace(text(v, "kegiatan")) == "" {
+		return ErrConflict
+	}
+	if _, err := time.Parse("2006-01-02", text(v, "tanggalJatuhTempo")); err != nil {
+		return ErrConflict
+	}
+	return nil
+}
