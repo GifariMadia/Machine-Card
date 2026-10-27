@@ -233,3 +233,239 @@ func (r *PostgresRepo) Session(ctx context.Context, token string) (Actor, error)
 		if json.Unmarshal(raw, &users) == nil {
 			for _, u := range users {
 				var nik string
+				_ = json.Unmarshal(u["nik"], &nik)
+				if nik == a.NIK {
+					_ = json.Unmarshal(u["shifts"], &a.Shifts)
+					_ = json.Unmarshal(u["departments"], &a.Departments)
+					_ = json.Unmarshal(u["machines"], &a.Machines)
+				}
+			}
+		}
+	}
+	return a, nil
+}
+func (r *PostgresRepo) Touch(ctx context.Context, token string) error {
+	_, err := r.pool.Exec(ctx, "UPDATE mc_sessions SET expires_at=CURRENT_TIMESTAMP+interval '30 minutes' WHERE token_hash=$1 AND expires_at>CURRENT_TIMESTAMP", tokenHash(token))
+	return err
+}
+
+func (r *PostgresRepo) Logout(ctx context.Context, token string) error {
+	_, err := r.pool.Exec(ctx, "DELETE FROM mc_sessions WHERE token_hash=$1", tokenHash(token))
+	return err
+}
+
+func (r *PostgresRepo) Documents(ctx context.Context, a Actor) (map[string]Document, error) {
+	out := map[string]Document{}
+	rows, err := r.pool.Query(ctx, "SELECT key,value,version FROM mc_documents")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var key string
+		var d Document
+		if err := rows.Scan(&key, &d.Value, &d.Version); err != nil {
+			return nil, err
+		}
+		out[key] = d
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if a.Role == "ADMIN" || a.Role == "SUPERVISOR" {
+		var raw []byte
+		if err := r.pool.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(e),'[]'::jsonb) FROM (SELECT key,CASE WHEN status='SENDING' AND updated_at<CURRENT_TIMESTAMP-interval '2 minutes' THEN 'UNKNOWN' ELSE status END AS status,updated_at FROM mc_dispatches ORDER BY updated_at DESC LIMIT 1000)e`).Scan(&raw); err != nil {
+			return nil, err
+		}
+		out["machine-card-report-deliveries"] = Document{Value: raw, Version: 0}
+	}
+	return out, nil
+}
+
+func (r *PostgresRepo) Commit(ctx context.Context, a Actor, key string, changes []Change) (map[string]Document, error) {
+	if key == "" || len(changes) == 0 || len(changes) > 40 {
+		return nil, ErrConflict
+	}
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	// All replicas serialize the commit reservation and document versions in one database transaction.
+	if _, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(71026001)"); err != nil {
+		return nil, err
+	}
+	payload, _ := json.Marshal(changes)
+	hash := tokenHash(string(payload))
+	var previousActor, previousHash string
+	var response []byte
+	err = tx.QueryRow(ctx, "SELECT actor_nik,payload_hash,response FROM mc_commits WHERE request_key=$1", key).Scan(&previousActor, &previousHash, &response)
+	if err == nil {
+		if previousActor != a.NIK || previousHash != hash {
+			return nil, ErrConflict
+		}
+		var result map[string]Document
+		err = json.Unmarshal(response, &result)
+		return result, err
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	generatedPasswords := map[string]string{}
+	allowGeneratedPasswords := false
+	for _, change := range changes {
+		if change.Key == "machine-card-import-ledger" && change.Version == 0 && a.Role == "ADMIN" {
+			allowGeneratedPasswords = true
+		}
+	}
+	result := map[string]Document{}
+	auditChanges := []map[string]any{}
+	seen := map[string]bool{}
+	for _, change := range changes {
+		if seen[change.Key] || !json.Valid(change.Value) {
+			return nil, ErrConflict
+		}
+		seen[change.Key] = true
+		var old Document
+		err = tx.QueryRow(ctx, "SELECT value,version FROM mc_documents WHERE key=$1 FOR UPDATE", change.Key).Scan(&old.Value, &old.Version)
+		if errors.Is(err, pgx.ErrNoRows) {
+			old.Value = json.RawMessage(`[]`)
+			old.Version = 0
+		} else if err != nil {
+			return nil, err
+		}
+		if change.Key == "machine-card-import-ledger" && old.Version > 0 {
+			return nil, ErrConflict
+		}
+		if change.Version != old.Version {
+			return nil, ErrConflict
+		}
+		if err = validateDocument(a, change.Key, old.Value, change.Value); err != nil {
+			return nil, err
+		}
+		if err := validateReferences(ctx, tx, a, change.Key, old.Value, change.Value); err != nil {
+			return nil, err
+		}
+		change.Value = canonicalDocument(a, change.Key, old.Value, change.Value)
+		if change.Key == "machine-card-managed-users" {
+			cleaned, err := syncUsers(ctx, tx, change.Value, allowGeneratedPasswords, generatedPasswords)
+			if err != nil {
+				return nil, err
+			}
+			change.Value = cleaned
+		}
+		version := old.Version + 1
+		if _, err = tx.Exec(ctx, "INSERT INTO mc_documents(key,value,version) VALUES($1,$2,$3) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,version=EXCLUDED.version", change.Key, change.Value, version); err != nil {
+			return nil, err
+		}
+		result[change.Key] = Document{Value: change.Value, Version: version}
+		auditChanges = append(auditChanges, map[string]any{"key": change.Key, "change": auditDelta(old, result[change.Key])})
+	}
+	// Audit includes both versions. Plaintext passwords are redacted before persistence.
+	audit := map[string]any{}
+	for k, d := range result {
+		audit[k] = d
+	}
+	auditBytes, _ := json.Marshal(auditChanges)
+	if _, err = tx.Exec(ctx, "INSERT INTO mc_events(actor_nik,actor_role,request_key,changes) VALUES($1,$2,$3,$4)", a.NIK, a.Role, key, auditBytes); err != nil {
+		return nil, err
+	}
+	encoded, _ := json.Marshal(result)
+	if _, err = tx.Exec(ctx, "INSERT INTO mc_commits(request_key,actor_nik,payload_hash,response) VALUES($1,$2,$3,$4)", key, a.NIK, hash, encoded); err != nil {
+		return nil, err
+	}
+	if len(generatedPasswords) > 0 {
+		base, err := os.UserConfigDir()
+		if err != nil {
+			return nil, err
+		}
+		dir := filepath.Join(base, "MachineCard", "private")
+		if err = os.MkdirAll(dir, 0700); err != nil {
+			return nil, err
+		}
+		raw, _ := json.MarshalIndent(generatedPasswords, "", "  ")
+		if err = os.WriteFile(filepath.Join(dir, "imported-accounts-"+time.Now().Format("20060102-150405.000000000")+".json"), raw, 0600); err != nil {
+			return nil, err
+		}
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func syncUsers(ctx context.Context, tx pgx.Tx, raw json.RawMessage, allowGenerated bool, generated map[string]string) (json.RawMessage, error) {
+	var users []map[string]any
+	if json.Unmarshal(raw, &users) != nil {
+		return nil, ErrConflict
+	}
+	activeAdmins := 0
+	usernames := []string{}
+	seen := map[string]bool{}
+	for _, u := range users {
+		nik, _ := u["nik"].(string)
+		name, _ := u["name"].(string)
+		role, _ := u["role"].(string)
+		password, _ := u["password"].(string)
+		active, ok := u["active"].(bool)
+		if !ok {
+			active = true
+		}
+		if nik == "" || name == "" || !strings.Contains("|ADMIN|SUPERVISOR|TEKNISI|OPERATOR|", "|"+role+"|") {
+			return nil, ErrConflict
+		}
+		if seen[nik] {
+			return nil, ErrConflict
+		}
+		seen[nik] = true
+		usernames = append(usernames, nik)
+		if active && role == "ADMIN" {
+			activeAdmins++
+		}
+		var exists bool
+		if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pengguna WHERE username=$1)", nik).Scan(&exists); err != nil {
+			return nil, err
+		}
+		if !exists && len(password) < 12 {
+			if !allowGenerated {
+				return nil, fmt.Errorf("new user requires password of at least 12 characters")
+			}
+			raw := make([]byte, 18)
+			if _, err := rand.Read(raw); err != nil {
+				return nil, err
+			}
+			password = hex.EncodeToString(raw)
+			generated[nik] = password
+		}
+		if password != "" {
+			if len(password) < 12 {
+				return nil, ErrConflict
+			}
+			hash, err := HashOperatorPassword(nik, password)
+			if err != nil {
+				return nil, err
+			}
+			if _, err = tx.Exec(ctx, "INSERT INTO pengguna(username,nama,peran,aktif,password_hash) VALUES($1,$2,$3,$4,$5) ON CONFLICT(username) DO UPDATE SET nama=EXCLUDED.nama,peran=EXCLUDED.peran,aktif=EXCLUDED.aktif,password_hash=EXCLUDED.password_hash", nik, name, role, active, hash); err != nil {
+				return nil, err
+			}
+		} else {
+			if _, err := tx.Exec(ctx, "UPDATE pengguna SET nama=$2,peran=$3,aktif=$4 WHERE username=$1", nik, name, role, active); err != nil {
+				return nil, err
+			}
+		}
+		if password != "" {
+			if _, err := tx.Exec(ctx, "DELETE FROM mc_sessions WHERE username=$1", nik); err != nil {
+				return nil, err
+			}
+		}
+		delete(u, "password")
+		delete(u, "password_hash")
+	}
+	if activeAdmins == 0 {
+		return nil, ErrConflict
+	}
+	if _, err := tx.Exec(ctx, "UPDATE pengguna SET aktif=false WHERE NOT(username=ANY($1::text[]))", usernames); err != nil {
+		return nil, err
+	}
+	return json.Marshal(users)
+}
