@@ -5798,3 +5798,603 @@ export default function SupervisorDashboard({ supervisor, onLogout }: Supervisor
                     title="Tetapkan atau sesuaikan target KPI Maintenance"
                   >
                     <Sliders size={14} />
+                    <span>Tetapkan Target KPI (SPV)</span>
+                  </button>
+                </div>
+
+                {/* Banner Penjelasan Agregasi Gabungan & Validitas Hasil */}
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.65rem 1rem', marginBottom: '1rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <Info size={16} color="var(--color-icon-neutral, #64748b)" style={{ flexShrink: 0 }} />
+                  <div style={{ fontSize: '0.78rem', color: '#166534', lineHeight: 1.4 }}>
+                    <strong>Standar Perhitungan &amp; Agregasi Gabungan:</strong> Nilai gabungan dihitung dari total pembilang dibagi total penyebut aktual (∑/∑).
+                  </div>
+                </div>
+
+                {/* 4 Card KPI Utama: MTTR, MTBF, PM Compliance, Total Downtime */}
+                <div className="spv-analytics-grid">
+                  {/* Card 1: MTTR Gabungan */}
+                  {(() => {
+                    const kpiRec = kpiTargets.find((t) => t.indicator === 'MTTR');
+                    const mttrTarget = kpiRec?.targetValue || 1.5;
+                    const isTargetMet = kpiSummary.repairDataComplete && kpiSummary.closedCount > 0 && kpiSummary.mttrNumeric <= mttrTarget;
+
+                    return (
+                      <div className="spv-analytics-card">
+                        <div className="spv-card-top-row">
+                          <span className="spv-kpi-code">MTTR</span>
+                          <span
+                            className="spv-target-badge"
+                            style={{
+                              background: (kpiSummary.closedCount === 0 || !kpiSummary.repairDataComplete) ? '#f1f5f9' : isTargetMet ? '#dcfce7' : '#fee2e2',
+                              color: (kpiSummary.closedCount === 0 || !kpiSummary.repairDataComplete) ? '#64748b' : isTargetMet ? '#166534' : '#991b1b',
+                            }}
+                          >
+                            {(kpiSummary.closedCount === 0 || !kpiSummary.repairDataComplete) ? 'Data N/A' : isTargetMet ? '✓ Capai Target' : '⚠️ Melebihi Target'}
+                          </span>
+                        </div>
+
+                        <div className="spv-kpi-main-val">
+                          {kpiSummary.mttrDisplay}
+                        </div>
+                        <div className="spv-kpi-title">Mean Time to Repair (MTTR Gabungan)</div>
+
+                        <div className="spv-kpi-sub-row">
+                          <span>Target: ≤ {mttrTarget} Jam</span>
+                          <button
+                            type="button"
+                            className="btn-kpi-quick-edit"
+                            onClick={() => handleOpenKpiModal(kpiRec)}
+                            title="Edit Target MTTR"
+                          >
+                            Ubah Target
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Card 2: MTBF Gabungan */}
+                  {(() => {
+                    const kpiRec = kpiTargets.find((t) => t.indicator === 'MTBF');
+                    const mtbfTarget = kpiRec?.targetValue || 50;
+                    const isTargetMet = kpiSummary.mtbfNumeric >= mtbfTarget;
+
+                    return (
+                      <div className="spv-analytics-card">
+                        <div className="spv-card-top-row">
+                          <span className="spv-kpi-code">MTBF</span>
+                          <span
+                            className="spv-target-badge"
+                            style={{
+                              background: !isOperatingDataAllComplete ? '#fef3c7' : isTargetMet ? '#dcfce7' : '#fee2e2',
+                              color: !isOperatingDataAllComplete ? '#b45309' : isTargetMet ? '#166534' : '#991b1b',
+                            }}
+                          >
+                            {!isOperatingDataAllComplete
+                              ? 'Data Jam Parsial'
+                              : isTargetMet
+                              ? '✓ Capai Target'
+                              : '⚠️ Kurang dari Target'}
+                          </span>
+                        </div>
+
+                        <div className="spv-kpi-main-val">
+                          {kpiSummary.mtbfDisplay}
+                        </div>
+                        <div className="spv-kpi-title">Mean Time Between Failures (MTBF)</div>
+
+                        <div className="spv-kpi-sub-row">
+                          <span>Target: ≥ {mtbfTarget} Jam</span>
+                          <button
+                            type="button"
+                            className="btn-kpi-quick-edit"
+                            onClick={() => handleOpenKpiModal(kpiRec)}
+                            title="Edit Target MTBF"
+                          >
+                            Ubah Target
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Card 3: Ketepatan Pelaksanaan PM */}
+                  {(() => {
+                    const kpiRec = kpiTargets.find((t) => t.indicator === 'PM_ON_TIME');
+                    const pmTarget = kpiRec?.targetValue || 90;
+                    const isTargetMet = kpiSummary.pmComplianceNumeric >= pmTarget;
+
+                    return (
+                      <div className="spv-analytics-card">
+                        <div className="spv-card-top-row">
+                          <span className="spv-kpi-code">PM RATE</span>
+                          <span
+                            className="spv-target-badge"
+                            style={{
+                              background: isTargetMet ? '#dcfce7' : '#fee2e2',
+                              color: isTargetMet ? '#166534' : '#991b1b',
+                            }}
+                          >
+                            {!kpiSummary.pmHasData ? 'Belum ada jadwal dinilai' : isTargetMet ? '✓ Capai Target' : '⚠️ Di Bawah Target'}
+                          </span>
+                        </div>
+
+                        <div className="spv-kpi-main-val">
+                          {kpiSummary.pmHasData ? `${kpiSummary.pmComplianceNumeric}%` : 'N/A'}
+                        </div>
+                        <div className="spv-kpi-title">Ketepatan Pelaksanaan PM (PM Compliance)</div>
+
+                        <div className="spv-kpi-sub-row">
+                          <span>Target: ≥ {pmTarget}%</span>
+                          <button
+                            type="button"
+                            className="btn-kpi-quick-edit"
+                            onClick={() => handleOpenKpiModal(kpiRec)}
+                            title="Edit Target PM Compliance"
+                          >
+                            Ubah Target
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Card 4: Total Downtime Lini & Pemisahan Waktu Tunggu Part */}
+                  {(() => {
+                    const kpiRec = kpiTargets.find((t) => t.indicator === 'MAX_DOWNTIME');
+                    const totalDowntimeHours = kpiSummary.totalDowntimeHours;
+                    const downtimeTarget = kpiRec?.targetValue || 15;
+                    const isTargetMet = totalDowntimeHours <= downtimeTarget;
+
+                    return (
+                      <div className="spv-analytics-card">
+                        <div className="spv-card-top-row">
+                          <span className="spv-kpi-code">DOWNTIME</span>
+                          <span
+                            className="spv-target-badge"
+                            style={{
+                              background: isTargetMet ? '#dcfce7' : '#fee2e2',
+                              color: isTargetMet ? '#166534' : '#991b1b',
+                            }}
+                          >
+                            {!kpiSummary.downtimeComplete ? 'Data belum lengkap' : isTargetMet ? '✓ Terkendali' : '⚠️ Melebihi Batas'}
+                          </span>
+                        </div>
+
+                        <div className="spv-kpi-main-val">
+                          {kpiSummary.downtimeComplete ? `${totalDowntimeHours} Jam` : 'N/A — waktu operasi belum lengkap'}
+                        </div>
+                        <div className="spv-kpi-title">Total Downtime Lini Mesin</div>
+
+                        <div className="spv-kpi-sub-row">
+                          <span>Target: ≤ {downtimeTarget} Jam</span>
+                          <button
+                            type="button"
+                            className="btn-kpi-quick-edit"
+                            onClick={() => handleOpenKpiModal(kpiRec)}
+                            title="Edit Target Downtime"
+                          >
+                            Ubah Target
+                          </button>
+                        </div>
+
+                        <div className="spv-kpi-formula">
+                          <strong>Pemisahan Waktu:</strong> Waktu Perbaikan Aktif: <strong>{(kpiSummary.totalRepairMinutes / 60).toFixed(1)} Jam</strong> · Waktu Tunggu Komponen/Dukungan: <strong>{(kpiSummary.totalWaitPartMinutes / 60).toFixed(1)} Jam</strong>.
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Riwayat Perubahan & Penyesuaian Target KPI SPV */}
+                <div className="spv-analytics-section" style={{ marginBottom: 0 }}>
+                  <div className="spv-analytics-sec-title">
+                    <h3>
+                      <History size={18} color="var(--color-icon-neutral, #64748b)" />
+                      Riwayat Perubahan &amp; Penyesuaian Target KPI SPV
+                    </h3>
+                  </div>
+
+                  <div className="spv-table-responsive" style={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <table className="spv-table">
+                      <thead>
+                        <tr>
+                          <th>Indikator KPI</th>
+                          <th>Target Lama</th>
+                          <th>Target Baru</th>
+                          <th>Alasan Penyesuaian Target</th>
+                          <th>Ditetapkan Oleh</th>
+                          <th>Waktu Penetapan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {kpiHistory.map((hist) => (
+                          <tr key={hist.id}>
+                            <td>
+                              <strong>{hist.indicator}</strong>
+                            </td>
+                            <td style={{ color: '#64748b' }}>
+                              {hist.previousValue} {hist.unit}
+                            </td>
+                            <td style={{ fontWeight: 800, color: '#065f46' }}>
+                              {hist.direction === 'LESS_THAN_OR_EQUAL' ? '≤' : '≥'} {hist.newValue} {hist.unit}
+                            </td>
+                            <td style={{ fontSize: '0.78rem', color: '#1e293b' }}>{hist.reason}</td>
+                            <td style={{ fontSize: '0.78rem', color: '#047857', fontWeight: 600 }}>{hist.changedBy}</td>
+                            <td style={{ fontSize: '0.74rem', color: '#64748b' }}>{hist.changedAt}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-VIEW 3: MONITORING LIFETIME KOMPONEN & KEPATUHAN PM */}
+            {analyticsSubTab === 'PREVENTIVE_PARTS' && (
+              <div style={{ marginBottom: 0 }}>
+                {/* Monitoring Lifetime Komponen */}
+                <div className="spv-analytics-section" style={{ margin: 0, marginBottom: '1.25rem' }}>
+                  <div className="spv-analytics-sec-title">
+                    <h3>
+                      <Clock3 size={18} color="var(--color-icon-neutral, #64748b)" />
+                      Monitoring Lifetime Komponen &amp; Prioritas Penggantian
+                    </h3>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <span className="spv-aging-badge critical">Melewati Target (≥ {lifetimeSettings.replacementLimit}%)</span>
+                      <span className="spv-aging-badge warning">Mendekati Batas (≥ {lifetimeSettings.warningThreshold}%)</span>
+                    </div>
+                  </div>
+                  <p style={{ margin: '0 0 0.85rem', fontSize: '0.8rem', color: '#64748b' }}>
+                    Batas pengingat otomatis aktif pada pemakaian ≥ 80% dari target interval (kalender atau jam operasi) guna persiapan pengadaan sparepart sebelum mesin mengalami downtime.
+                  </p>
+
+                  <div className="spv-table-responsive" style={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <table className="spv-table">
+                      <thead>
+                        <tr>
+                          <th>Mesin &amp; Posisi</th>
+                          <th>Nama Komponen / No Part</th>
+                          <th>Dasar Target Interval</th>
+                          <th>Pemakaian Saat Ini</th>
+                          <th>Rasio Progres (%)</th>
+                          <th>Prioritas &amp; Status Penggantian</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lifetimeAlerts.map((part) => {
+                          return (
+                            <tr key={part.id || `${part.machine}-${part.part}`}>
+                              <td>
+                                <strong>{part.machine}</strong>
+                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{part.position}</div>
+                              </td>
+                              <td>
+                                <strong>{part.part}</strong>
+                                <div style={{ fontSize: '0.74rem', color: '#475569', fontFamily: 'monospace' }}>
+                                  {part.partNumber || '—'} · {part.specification}
+                                </div>
+                              </td>
+                              <td>
+                                <span style={{ fontSize: '0.76rem', fontWeight: 600 }}>
+                                  {part.intervalBasis === 'KALENDER' ? 'Waktu Kalender' : 'Jam Operasi Aktual'}
+                                </span>
+                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                                  Target: {part.intervalTarget} {part.unit}
+                                </div>
+                              </td>
+                              <td style={{ fontWeight: 700 }}>
+                                {part.isDataComplete ? `${part.currentUsage} ${part.unit}` : '—'}
+                              </td>
+                              <td>
+                                {part.isDataComplete ? (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ width: '80px', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                      <div
+                                        style={{
+                                          width: `${Math.min(100, part.progress)}%`,
+                                          height: '100%',
+                                          background: part.progress >= 100 ? '#e11d48' : part.progress >= 80 ? '#d97706' : '#059669',
+                                        }}
+                                      />
+                                    </div>
+                                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: part.progress >= 100 ? '#e11d48' : part.progress >= 80 ? '#d97706' : '#059669' }}>
+                                      {part.progress}%
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>N/A</span>
+                                )}
+                              </td>
+                              <td>
+                                {part.statusPriority === 'CRITICAL_OVERDUE' ? (
+                                  <span className="spv-aging-badge critical">
+                                    <AlertTriangle size={12} />
+                                    Kritis: Melewati Target
+                                  </span>
+                                ) : part.statusPriority === 'WARNING_NEAR' ? (
+                                  <span className="spv-aging-badge warning">
+                                    <Clock3 size={12} />
+                                    Pengingat: Mendekati Batas (≥ {lifetimeSettings.warningThreshold}%)
+                                  </span>
+                                ) : part.statusPriority === 'INCOMPLETE' ? (
+                                  <span className="spv-badge-status breakdown" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fcd34d', fontSize: '0.72rem' }}>
+                                    <AlertTriangle size={11} />
+                                    Data Dasar Belum Lengkap
+                                  </span>
+                                ) : (
+                                  <span className="spv-aging-badge normal">
+                                    <CheckCircle2 size={12} />
+                                    Normal / Aman
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Kepatuhan Jadwal Preventive Maintenance & Riwayat Reschedule */}
+                <div className="spv-analytics-section" style={{ margin: 0 }}>
+                  <div className="spv-analytics-sec-title">
+                    <h3>
+                      <CheckSquare size={18} color="var(--color-icon-neutral, #64748b)" />
+                      Kepatuhan Jadwal Preventive Maintenance &amp; Riwayat Reschedule
+                    </h3>
+                  </div>
+                  <p style={{ margin: '0 0 0.85rem', fontSize: '0.8rem', color: '#64748b' }}>
+                    Pemantauan PM tepat waktu, PM terlambat, serta jejak audit jadwal yang mengalami penjadwalan ulang (reschedule) beserta alasan dan otorisatornya.
+                  </p>
+
+                <SupervisorPMPlanner schedules={pmSchedules} machines={machines} actor={`${supervisor.name} (${supervisor.nik})`}
+                  onSave={(item) => {
+                    const stored = storage.getItem('machine-card-pm-schedules');
+                    const latest: PreventiveMaintenanceItem[] = stored === null ? pmSchedules : readPartsArray('machine-card-pm-schedules');
+                    const current = latest.find((pm) => pm.id === item.id);
+                    if (current?.status === 'SELESAI' || current?.tanggalSelesaiAktual) throw new Error('PM sudah selesai');
+                    const next = current ? latest.map((pm) => pm.id === item.id ? { ...current, ...item } : pm) : [item, ...latest];
+                    storage.setItem('machine-card-pm-schedules', JSON.stringify(next));
+                    setPmSchedules(next);
+                    window.dispatchEvent(new Event('mc-pm-updated'));
+                  }} />
+                  <div className="spv-table-responsive" style={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <table className="spv-table">
+                      <thead>
+                        <tr>
+                          <th>Nomor PM / Mesin</th>
+                          <th>Kegiatan PM</th>
+                          <th>Tanggal Jatuh Tempo</th>
+                          <th>Penyelesaian Aktual</th>
+                          <th>Status On-Time</th>
+                          <th>Catatan Reschedule</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pmSchedules.map((pm) => (
+                          <tr key={pm.id}>
+                            <td>
+                              <strong>{pm.nomorPm}</strong>
+                              <div style={{ fontSize: '0.75rem', color: '#047857' }}>{pm.machine} ({pm.section})</div>
+                            </td>
+                            <td style={{ fontSize: '0.8rem', color: '#1e293b' }}>{pm.kegiatan}</td>
+                            <td style={{ fontWeight: 600, color: '#475569' }}>{pm.tanggalJatuhTempo}</td>
+                            <td style={{ fontSize: '0.8rem', color: pm.tanggalSelesaiAktual ? '#059669' : '#64748b' }}>
+                              {pm.tanggalSelesaiAktual || '—'}
+                            </td>
+                            <td>
+                              {pm.status === 'SELESAI' && pm.tanggalSelesaiAktual && pm.tanggalSelesaiAktual <= pm.tanggalJatuhTempo ? (
+                                <span className="spv-badge-status normal">
+                                  <CheckCircle2 size={12} />
+                                  Selesai Tepat Waktu
+                                </span>
+                              ) : (pm.status === 'TERLAMBAT' || (pm.status === 'SELESAI' && pm.tanggalSelesaiAktual && pm.tanggalSelesaiAktual > pm.tanggalJatuhTempo)) ? (
+                                <span className="spv-badge-status breakdown">
+                                  <AlertTriangle size={12} />
+                                  Terlambat (Overdue)
+                                </span>
+                              ) : pm.status === 'DIRESCHEDULE' ? (
+                                <span className="spv-badge-status pending" style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                                  Direschedule
+                                </span>
+                              ) : (
+                                <span className="spv-badge-status normal" style={{ background: '#f1f5f9', color: '#475569' }}>
+                                  {pm.status === 'DALAM_PENGERJAAN' ? 'Dalam Pengerjaan' : pm.status === 'SELESAI' ? 'Selesai (Tanggal belum terverifikasi)' : 'Terjadwal'}
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                              {pm.alasanReschedule ? (
+                                <div style={{ color: '#1e40af' }}>
+                                  <strong>Alasan:</strong> {pm.alasanReschedule}
+                                  {pm.tanggalSebelumReschedule && ` (Jadwal asal: ${pm.tanggalSebelumReschedule})`}
+                                </div>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-VIEW 4: MONITORING PEKERJAAN TERBUKA & JEJAK AUDIT */}
+            {analyticsSubTab === 'AGING_AUDIT' && (
+              <div style={{ marginBottom: 0 }}>
+                <ServerAuditPanel />
+                {/* Monitoring Pekerjaan Terbuka & Matriks Aging Tiket */}
+                <div className="spv-analytics-section" style={{ margin: 0, marginBottom: '1.25rem' }}>
+                  <div className="spv-analytics-sec-title">
+                    <h3>
+                      <History size={18} color="var(--color-icon-neutral, #64748b)" />
+                      Monitoring Pekerjaan Terbuka &amp; Matriks Aging Tiket
+                    </h3>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <span className="spv-aging-badge critical">&gt; 24 Jam: Kritis</span>
+                      <span className="spv-aging-badge warning">8 - 24 Jam: Sedang</span>
+                      <span className="spv-aging-badge normal">&lt; 8 Jam: Baru</span>
+                    </div>
+                  </div>
+                  <p style={{ margin: '0 0 0.85rem', fontSize: '0.8rem', color: '#64748b' }}>
+                    Perhitungan umur pekerjaan (ticket aging) dihitung dari pembukaan awal tiket oleh operator dan dipertahankan lintas shift tanpa tereset.
+                  </p>
+
+                  <div className="spv-table-responsive" style={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <table className="spv-table">
+                      <thead>
+                        <tr>
+                          <th>No Tiket / Mesin</th>
+                          <th>Kategori &amp; Gejala Kendala</th>
+                          <th>Status Tiket</th>
+                          <th>Waktu Pembukaan Awal</th>
+                          <th>Umur Tiket (Aging)</th>
+                          <th>Prioritas Penanganan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {openWorkAging.length > 0 ? (
+                          openWorkAging.map((ticket) => (
+                            <tr key={ticket.ticket}>
+                              <td>
+                                <strong>{ticket.ticket}</strong>
+                                <div style={{ fontSize: '0.75rem', color: '#047857' }}>{ticket.machine} ({ticket.section})</div>
+                              </td>
+                              <td>
+                                <div style={{ fontWeight: 600, color: '#1e293b' }}>{ticket.kategori || 'Kerusakan Mekis'}</div>
+                                <small style={{ color: '#64748b' }}>{ticket.keterangan}</small>
+                                {ticket.alasanTungguPart && (
+                                  <div style={{ color: '#b45309', fontSize: '0.74rem', marginTop: '2px', fontStyle: 'italic' }}>
+                                    Alasan Tunggu: {ticket.alasanTungguPart}
+                                  </div>
+                                )}
+                              </td>
+                              <td>
+                                <span className={`spv-badge-status ${ticket.status === 'OPEN' ? 'breakdown' : 'pending'}`}>
+                                  {ticket.status}
+                                </span>
+                              </td>
+                              <td style={{ fontSize: '0.75rem', color: '#475569' }}>
+                                {ticket.originalOpenedAt ? new Date(ticket.originalOpenedAt).toLocaleString('id-ID') : '—'}
+                              </td>
+                              <td>
+                                <strong style={{ color: ticket.ageCategory === 'CRITICAL' ? '#e11d48' : ticket.ageCategory === 'WARNING' ? '#d97706' : '#0284c7' }}>
+                                  {ticket.diffHours} Jam
+                                </strong>
+                              </td>
+                              <td>
+                                {ticket.ageCategory === 'CRITICAL' ? (
+                                  <span className="spv-aging-badge critical">
+                                    <AlertTriangle size={12} />
+                                    Prioritas Kritis (&gt; 24 Jam)
+                                  </span>
+                                ) : ticket.ageCategory === 'WARNING' ? (
+                                  <span className="spv-aging-badge warning">
+                                    <Clock3 size={12} />
+                                    Perhatian Sedang (8-24 Jam)
+                                  </span>
+                                ) : (
+                                  <span className="spv-aging-badge normal">
+                                    <CheckCircle2 size={12} />
+                                    Normal / Baru Dilaporkan
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: 'center', padding: '1rem', color: '#059669', fontStyle: 'italic' }}>
+                              Tidak ada pekerjaan terbuka (seluruh tiket berstatus CLOSED).
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Review & Jejak Audit Koreksi Data Pengukuran Maintenance */}
+                <div className="spv-analytics-section" style={{ margin: 0 }}>
+                  <div className="spv-analytics-sec-title">
+                    <h3>
+                      <ShieldCheck size={18} color="var(--color-icon-neutral, #64748b)" />
+                      Review &amp; Jejak Audit Koreksi Data Pengukuran Maintenance
+                    </h3>
+                    <span className="spv-badge-status verified" style={{ fontSize: '0.74rem' }}>
+                      Audit Trail
+                    </span>
+                  </div>
+                  <p style={{ margin: '0 0 0.85rem', fontSize: '0.8rem', color: '#64748b' }}>
+                    Setiap perbaikan waktu kerusakan, durasi perbaikan aktif, waktu tunggu part, jam operasi mesin, atau klasifikasi insiden dicatat secara komparatif (before vs after). Pembaruan kalkulasi indikator yang terdampak (MTTR, MTBF, Downtime) dilakukan otomatis secara reaktif.
+                  </p>
+
+                  <div className="spv-table-responsive" style={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <table className="spv-table">
+                      <thead>
+                        <tr>
+                          <th>WAKTU &amp; ID AUDIT</th>
+                          <th>CATATAN / ENTITAS</th>
+                          <th>PARAMETER DIKOREKSI</th>
+                          <th>NILAI SEBELUM</th>
+                          <th>NILAI SESUDAH</th>
+                          <th>INDIKATOR TERDAMPAK</th>
+                          <th>ALASAN KOREKSI (AUDIT)</th>
+                          <th>OTORISATOR</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {correctionLogs.map((log) => (
+                          <tr key={log.id}>
+                            <td>
+                              <div style={{ fontWeight: 700, fontSize: '0.76rem', color: '#0f172a' }}>{log.changedAt}</div>
+                              <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>{log.id}</span>
+                            </td>
+                            <td>
+                              <span className="spv-code-badge">{log.recordId}</span>
+                              <div style={{ fontSize: '0.74rem', color: '#334155', marginTop: '2px' }}>{log.recordTitle}</div>
+                            </td>
+                            <td>
+                              <strong style={{ color: '#0284c7', fontSize: '0.78rem' }}>{log.fieldLabel}</strong>
+                            </td>
+                            <td style={{ color: '#991b1b', textDecoration: 'line-through', fontSize: '0.78rem' }}>
+                              {log.beforeValue}
+                            </td>
+                            <td style={{ color: '#059669', fontWeight: 800, fontSize: '0.8rem' }}>
+                              {log.afterValue}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                                {log.impactedIndicators.map((ind, i) => (
+                                  <span key={i} style={{ fontSize: '0.68rem', background: '#eff6ff', color: '#1e40af', padding: '1px 6px', borderRadius: '4px', border: '1px solid #bfdbfe' }}>
+                                    {ind}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td style={{ fontSize: '0.76rem', color: '#1e293b', maxWidth: '240px' }}>
+                              {log.reason}
+                            </td>
+                            <td style={{ fontSize: '0.76rem', color: '#047857', fontWeight: 600 }}>
+                              {log.changedBy}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* TAB 4: PEMANTAUAN LAPORAN SHIFT OTOMATIS */}
+        {activeTab === 'HANDOVER' && (
+          <section className="spv-content-card spv-handover-page">
