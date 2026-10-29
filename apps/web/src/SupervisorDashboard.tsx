@@ -3998,3 +3998,603 @@ export default function SupervisorDashboard({ supervisor, onLogout }: Supervisor
                                 <td data-label="Spesifikasi & Posisi">
                                   <div>{p.specification}</div>
                                   <small style={{ color: '#64748b' }}>{p.position}</small>
+                                </td>
+                                <td data-label="Dasar Interval">
+                                  <span
+                                    style={{
+                                      fontSize: '0.72rem',
+                                      fontWeight: 700,
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      background: p.intervalBasis === 'JAM_OPERASI' ? '#e0f2fe' : '#f1f5f9',
+                                      color: p.intervalBasis === 'JAM_OPERASI' ? '#0369a1' : '#475569',
+                                    }}
+                                  >
+                                    {p.intervalBasis === 'JAM_OPERASI' ? 'Jam Operasi' : 'Kalender'}
+                                  </span>
+                                  <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '3px' }}>
+                                    Diganti: {p.replacedAt || 'Belum Terdata'}
+                                  </div>
+                                </td>
+                                <td data-label="Target Penggantian">
+                                  <strong style={{ color: '#047857' }}>{p.intervalTarget} {p.unit}</strong>
+                                </td>
+                                <td data-label="Monitoring Pemakaian" className="td-block-cell">
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#64748b', marginBottom: '2px' }}>
+                                    <span>{p.isDataComplete ? `${p.currentUsage} dari ${p.intervalTarget} ${p.unit}` : p.incompleteReason || 'Data belum lengkap'}</span>
+                                    <strong style={{ color: isDanger ? '#e11d48' : isWarning ? '#b45309' : '#059669' }}>
+                                      {p.isDataComplete ? `${percent}%` : 'N/A'}
+                                    </strong>
+                                  </div>
+                                  <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <div
+                                      style={{
+                                        width: `${p.isDataComplete ? Math.min(100, percent) : 0}%`,
+                                        height: '100%',
+                                        background: isDanger ? '#e11d48' : isWarning ? '#f59e0b' : '#10b981',
+                                        borderRadius: '4px',
+                                      }}
+                                    />
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b' }}>
+                      <p style={{ margin: 0 }}>Belum ada data komponen master spare part untuk mesin ini.</p>
+                    </div>
+                  )}
+                </section>
+
+                {/* Section 3: Jadwal Preventive Maintenance (PM) */}
+                <section className="spv-content-card">
+                  <div className="spv-toolbar-wrap" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                      Jadwal Preventive Maintenance Terkait ({machinePms.length})
+                    </h3>
+                  </div>
+
+                  {machinePms.length > 0 ? (
+                    <div className="spv-table-responsive" style={{ marginTop: '0.5rem' }}>
+                      <table className="spv-table">
+                        <thead>
+                          <tr>
+                            <th>NOMOR PM</th>
+                            <th>PERIODE</th>
+                            <th>KEGIATAN MAINTENANCE</th>
+                            <th>JATUH TEMPO</th>
+                            <th>STATUS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {machinePms.map((pm) => (
+                            <tr key={pm.id}>
+                              <td data-label="Nomor PM"><strong>{pm.nomorPm}</strong></td>
+                              <td data-label="Periode">{pm.periode}</td>
+                              <td data-label="Kegiatan">{pm.kegiatan}</td>
+                              <td data-label="Jatuh Tempo">{pm.tanggalJatuhTempo}</td>
+                              <td data-label="Status">
+                                <span
+                                  className={`spv-badge-status ${pm.status === 'SELESAI' ? 'normal' : 'breakdown'}`}
+                                  style={{
+                                    background: pm.status === 'SELESAI' ? '#dcfce7' : '#fef3c7',
+                                    color: pm.status === 'SELESAI' ? '#166534' : '#92400e',
+                                  }}
+                                >
+                                  {pm.status === 'SELESAI' ? 'Selesai' : 'Terjadwal'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b' }}>
+                      <p style={{ margin: 0 }}>Tidak ada jadwal PM mendatang untuk mesin ini.</p>
+                    </div>
+                  )}
+                </section>
+              </div>
+            );
+          })() : (
+          <section className="spv-content-card">
+            <div>
+              <div className="spv-toolbar-wrap">
+                  <div className="spv-search-box">
+                    <Search size={18} />
+                    <input
+                      type="text"
+                      value={lineSearch}
+                      onChange={(e) => {
+                        setLineSearch(e.target.value);
+                        setLinePage(1);
+                      }}
+                      placeholder="Cari kode atau nama mesin..."
+                      aria-label="Cari mesin produksi"
+                    />
+                  </div>
+
+                  <div className="spv-filter-pills">
+                    <span className="spv-filter-label">Section:</span>
+                    {['ALL', 'Filling', 'Packaging', 'Mixing'].map((sec) => (
+                      <button
+                        key={sec}
+                        type="button"
+                        className={`spv-pill-btn ${lineSection === sec ? 'active' : ''}`}
+                        onClick={() => {
+                          setLineSection(sec);
+                          setLinePage(1);
+                        }}
+                      >
+                        {sec === 'ALL' ? 'Semua Section' : sec}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="spv-table-responsive">
+                  <table className="spv-table">
+                    <thead>
+                      <tr>
+                        <th>KODE MESIN</th>
+                        <th>NAMA MESIN</th>
+                        <th>SECTION / LINI</th>
+                        <th>STATUS TIKET MESIN</th>
+                        <th>MTBF</th>
+                        <th>MTTR</th>
+                        <th>AVAILABILITY</th>
+                        <th className="text-center">AKSI</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedMachines.map((m) => {
+                        const rec = operatingHoursRecords.find((r) => r.namaMesin === m.nama_mesin || r.kodeMesin === m.kode_mesin);
+                        const machineTickets = tickets.filter((t) => t.machine === m.nama_mesin && t.status !== 'VOID');
+                        const ticketCondition = machineTicketStatus(machineTickets);
+                        const currentTicket = ticketCondition.ticket;
+                        const breakdownCount = machineTickets.length;
+                        const rawMtbf = rec && rec.jamOperasiAktual > 0 && breakdownCount > 0 ? (rec.jamOperasiAktual / breakdownCount).toFixed(1) : null;
+                        const closedWithDur = machineTickets.filter((t) => t.status === 'CLOSED' && t.durasiPerbaikanMenit && t.durasiPerbaikanMenit > 0);
+                        const totalDowntimeMin = closedWithDur.reduce((acc, t) => acc + (t.durasiPerbaikanMenit || 0), 0);
+                        const rawMttr = closedWithDur.length > 0 ? Math.round(totalDowntimeMin / closedWithDur.length) : null;
+                        const availPercent =
+                          rec && rec.jamShiftKalender > 0 && rec.jamOperasiAktual > 0
+                            ? Math.min(100, Math.round((rec.jamOperasiAktual / rec.jamShiftKalender) * 100))
+                            : null;
+
+                        return (
+                          <tr key={m.kode_mesin}>
+                            <td data-label="Kode Mesin">
+                              <span className="spv-code-badge">{m.kode_mesin}</span>
+                            </td>
+                            <td data-label="Nama Mesin">
+                              <strong>{m.nama_mesin}</strong>
+                            </td>
+                            <td data-label="Section / Lini">
+                              <span style={{ fontWeight: 600, color: '#475569' }}>{m.kategori}</span>
+                            </td>
+                            <td data-label="Status Tiket Mesin">
+                              {currentTicket ? (
+                                <button type="button" className={`spv-badge-status ${ticketCondition.tone}`}
+                                  onClick={() => { setSelectedTicket(currentTicket); setVerificationNote(''); }}
+                                  aria-label={`${ticketCondition.tone === 'breakdown' ? 'Lihat Breakdown' : 'Review konfirmasi Operator'} ${currentTicket.ticket}`}>
+                                  {ticketCondition.label}
+                                </button>
+                              ) : <span className="spv-badge-status" style={{ background: '#f1f5f9', color: '#475569' }}>{ticketCondition.label}</span>}
+                            </td>
+                            <td data-label="MTBF">
+                              {rawMtbf ? (
+                                <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>
+                                  ~ {rawMtbf} Jam
+                                </span>
+                              ) : (
+                                <span style={{ color: '#94a3b8' }}>—</span>
+                              )}
+                            </td>
+                            <td data-label="MTTR">
+                              {rawMttr ? (
+                                <span style={{ fontWeight: 600, color: '#334155', fontSize: '0.88rem' }}>
+                                  {rawMttr} mnt
+                                </span>
+                              ) : (
+                                <span style={{ color: '#94a3b8' }}>—</span>
+                              )}
+                            </td>
+                            <td data-label="Availability">
+                              {availPercent !== null ? (
+                                <span style={{ color: '#059669', fontWeight: 700, fontSize: '0.88rem' }}>
+                                  {availPercent}%
+                                </span>
+                              ) : (
+                                <span style={{ color: '#94a3b8' }}>—</span>
+                              )}
+                            </td>
+                            <td data-label="Aksi" className="text-center td-action-cell">
+                              <button
+                                type="button"
+                                className="btn-spv-table-action"
+                                style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', fontWeight: 600 }}
+                                onClick={() => setSelectedMachineForAnalysis(m)}
+                                title={`Buka Detail & Logbook Mesin ${m.nama_mesin}`}
+                              >
+                                Detail Mesin
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Footer untuk Tabel Lini Mesin */}
+                <footer className="table-pagination-footer">
+                  <span className="pagination-info">
+                    Menampilkan {paginatedMachines.length ? (linePage - 1) * linePerPage + 1 : 0}–
+                    {Math.min(linePage * linePerPage, filteredMachines.length)} dari {filteredMachines.length} mesin
+                  </span>
+                  <div className="pagination-ctrls">
+                    <button
+                      type="button"
+                      disabled={linePage === 1}
+                      onClick={() => setLinePage((p) => Math.max(1, p - 1))}
+                      aria-label="Halaman sebelumnya"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span className="page-current">
+                      {linePage} / {totalLinePages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={linePage >= totalLinePages}
+                      onClick={() => setLinePage((p) => Math.min(totalLinePages, p + 1))}
+                      aria-label="Halaman berikutnya"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </footer>
+              </div>
+
+          </section>
+        ))}
+
+        {/* TAB 2: PENGAWASAN & VERIFIKASI BREAKDOWN */}
+        {activeTab === 'WORKORDERS' && isWeeklyReviewPageActive && (
+          <section className="spv-content-card" style={{ padding: '1.5rem' }}>
+            {/* Header Halaman Khusus Evaluasi Mingguan */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsWeeklyReviewPageActive(false)}
+                    style={{
+                      background: '#f1f5f9',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '0.78rem',
+                      color: '#475569',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <ChevronLeft size={14} />
+                    <span>Kembali ke Tabel Tiket</span>
+                  </button>
+                  <span className="role-pill-tag role-supervisor" style={{ fontSize: '0.68rem', padding: '2px 8px' }}>
+                    MODE EVALUASI MINGGUAN
+                  </span>
+                </div>
+                <h2 style={{ fontSize: '1.25rem', color: '#064e3b', margin: '0.4rem 0 0.15rem', fontWeight: 800 }}>
+                  Executive Breakdown Trend &amp; Weekly Quality Review
+                </h2>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
+                  Rangkuman komprehensif, analisis akar masalah (root cause), dan penetapan arahan tindak lanjut maintenance sepekan.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <select
+                  value={weeklyReviewPeriod}
+                  onChange={(e) => setWeeklyReviewPeriod(e.target.value)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    color: '#334155',
+                    background: '#ffffff',
+                  }}
+                >
+                  <option value="PEKAN_INI">Pekan Berjalan (20–26 Okt 2026)</option>
+                  <option value="PEKAN_LALU">Pekan Lalu (13–19 Okt 2026)</option>
+                  <option value="BULAN_INI">Konsolidasi Bulan Oktober</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleBatchReviewAllWeek}
+                  style={{
+                    background: '#059669',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '7px 16px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 4px rgba(5, 150, 105, 0.2)',
+                  }}
+                >
+                  <CheckCircle2 size={16} />
+                  <span>Sahkan Review Seluruh Tiket Sepekan</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 4 Kartu KPI Eksekutif Mingguan */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                gap: '1rem',
+                marginBottom: '1.5rem',
+              }}
+            >
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+                <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Total Insiden Breakdown</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', margin: '4px 0' }}>
+                  {weeklyAnalyticsData.totalCount} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#64748b' }}>Kejadian</span>
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>
+                  ✓ {weeklyAnalyticsData.completedCount} selesai diperbaiki ({weeklyAnalyticsData.openCount} masih dikerjakan)
+                </div>
+              </div>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+                <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Akumulasi Downtime Lini</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#b91c1c', margin: '4px 0' }}>
+                  {weeklyAnalyticsData.totalDowntimeHoursFormatted} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#64748b' }}>Jam</span>
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#475569' }}>
+                  Rata-rata penanganan: ~{weeklyAnalyticsData.avgRepairMin} menit / tiket
+                </div>
+              </div>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+                <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Status Review Supervisor</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#047857', margin: '4px 0' }}>
+                  {weeklyAnalyticsData.reviewedCount} / {weeklyAnalyticsData.totalCount}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: weeklyAnalyticsData.unreviewedCount > 0 ? '#b45309' : '#047857', fontWeight: 600 }}>
+                  {weeklyAnalyticsData.unreviewedCount > 0 ? `⚠️ ${weeklyAnalyticsData.unreviewedCount} tiket menunggu catatan SPV` : '✓ Seluruh tiket sepekan telah ditinjau'}
+                </div>
+              </div>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+                <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Mesin Paling Kritis (Top Impact)</div>
+                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#9a3412', margin: '4px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {weeklyAnalyticsData.topMachines[0]?.name || 'N/A'}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                  {weeklyAnalyticsData.topMachines[0]?.count || 0}x insiden · Sec. {weeklyAnalyticsData.topMachines[0]?.section || 'Filling'}
+                </div>
+              </div>
+            </div>
+
+            {/* Grid 2 Kolom: Analisis Tren Mesin & Distribusi Kategori Kerusakan */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+              {/* Kolom Kiri: Breakdown per Mesin & Section */}
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                  <strong style={{ fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <BarChart2 size={16} color="var(--color-icon-neutral, #64748b)" />
+                    Frekuensi &amp; Downtime per Unit Mesin
+                  </strong>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Paling Berdampak</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {weeklyAnalyticsData.topMachines.slice(0, 5).map((m, idx) => {
+                    const pct = Math.min(100, Math.round((m.count / (weeklyAnalyticsData.totalCount || 1)) * 100));
+                    return (
+                      <div key={m.name} style={{ background: '#f8fafc', borderRadius: '6px', padding: '8px 10px', border: '1px solid #f1f5f9' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, color: '#1e293b', marginBottom: '4px' }}>
+                          <span>#{idx + 1} {m.name} <small style={{ fontWeight: 400, color: '#64748b' }}>({m.section})</small></span>
+                          <span style={{ color: '#b91c1c' }}>{m.count}x kejadian · ~{(m.downtime / 60).toFixed(1)} Jam</span>
+                        </div>
+                        <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: idx === 0 ? '#ef4444' : '#10b981', borderRadius: '3px' }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Kolom Kanan: Distribusi Akar Masalah (Kategori Kerusakan) */}
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                  <strong style={{ fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Target size={16} color="var(--color-icon-neutral, #64748b)" />
+                    Pola Gejala &amp; Kategori Kerusakan Dominan
+                  </strong>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Pareto Akar Masalah</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {weeklyAnalyticsData.topCategories.map((c) => (
+                    <div key={c.category} style={{ background: '#f8fafc', borderRadius: '6px', padding: '8px 10px', border: '1px solid #f1f5f9' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#1e293b', fontWeight: 600, marginBottom: '4px' }}>
+                        <span>{c.category}</span>
+                        <span style={{ fontWeight: 700, color: '#0369a1' }}>{c.count} insiden ({c.percentage}%)</span>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ width: `${c.percentage}%`, height: '100%', background: '#0284c7', borderRadius: '3px' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Form Catatan Evaluasi Menyeluruh & Tindak Lanjut PM Akhir Pekan */}
+            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '1.25rem', marginBottom: '1.5rem' }}>
+              <strong style={{ fontSize: '0.92rem', color: '#064e3b', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
+                <FileText size={18} color="var(--color-icon-neutral, #64748b)" />
+                Catatan Evaluasi Mingguan &amp; Arahan Supervisor Maintenance
+              </strong>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label htmlFor="weekly-overall-note" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                    Ringkasan Evaluasi / Arahan Teknik:
+                  </label>
+                  <textarea
+                    id="weekly-overall-note"
+                    rows={4}
+                    value={weeklyOverallNote}
+                    onChange={(e) => setWeeklyOverallNote(e.target.value)}
+                    placeholder="Contoh: Tren insiden pekan ini terkonsentrasi pada unit sealing vertikal (SIG 5 & Ilapak 1). Dilakukan pengetatan checklist harian teknisi dan kalibrasi suhu heating bar..."
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.82rem',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                    }}
+                  />
+                  <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={handleBatchReviewAllWeek}
+                      style={{
+                        background: '#047857',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '6px 14px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Simpan Catatan &amp; Tandai Review Sepekan
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                    Daftar Tindak Lanjut PM / Pengadaan Part Akhir Pekan:
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '140px', overflowY: 'auto', marginBottom: '8px' }}>
+                    {weeklyFollowUpList.map((item) => (
+                      <div key={item.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <strong>{item.machine}:</strong> {item.action}
+                          <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Target: {item.targetDate}</div>
+                        </div>
+                        <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: '4px', background: item.priority === 'HIGH' ? '#fef2f2' : '#f0fdf4', color: item.priority === 'HIGH' ? '#b91c1c' : '#166534', fontWeight: 700 }}>
+                          {item.priority}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input
+                      type="text"
+                      placeholder="Tambah instruksi tindak lanjut PM..."
+                      value={weeklyFollowUpAction}
+                      onChange={(e) => setWeeklyFollowUpAction(e.target.value)}
+                      style={{ flex: 1, padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.78rem' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!weeklyFollowUpAction.trim()) return;
+                        setWeeklyFollowUpList((prev) => [
+                          ...prev,
+                          {
+                            id: `ACT-${Date.now()}`,
+                            machine: weeklySelectedActionMachine || weeklyAnalyticsData.topMachines[0]?.name || 'SIG 5',
+                            action: weeklyFollowUpAction.trim(),
+                            priority: 'HIGH',
+                            targetDate: 'Akhir Pekan',
+                          },
+                        ]);
+                        setWeeklyFollowUpAction('');
+                      }}
+                      style={{ background: '#334155', color: '#fff', border: 'none', borderRadius: '4px', padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      + Tambah
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Rangkuman Seluruh Tiket Breakdown Sepekan */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>
+                  Log Tiket Breakdown Terkait Periode Ini ({weeklyAnalyticsData.activeValidTickets.length} Tiket)
+                </strong>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  Menampilkan riwayat rekaman perbaikan lapangan
+                </span>
+              </div>
+
+              <div className="spv-table-responsive">
+                <table className="spv-table" style={{ fontSize: '0.78rem' }}>
+                  <thead>
+                    <tr>
+                      <th>NO. TIKET</th>
+                      <th>MESIN &amp; SECTION</th>
+                      <th>KERUSAKAN</th>
+                      <th>TINDAKAN TEKNISI</th>
+                      <th>DURASI</th>
+                      <th>STATUS REVIEW</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {weeklyAnalyticsData.activeValidTickets.map((t) => (
+                      <tr key={t.ticket}>
+                        <td>
+                          <span className="spv-code-badge">{t.ticket}</span>
+                        </td>
+                        <td>
+                          <strong>{t.machine}</strong>
+                          <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Sec. {t.section}</div>
+                        </td>
+                        <td style={{ maxWidth: '200px' }}>
+                          <div>{t.keterangan}</div>
+                          {t.kategori && <small style={{ color: '#0284c7' }}>{t.kategori}</small>}
+                        </td>
+                        <td style={{ maxWidth: '200px' }}>
+                          <div>{t.action || 'Selesai perbaikan standar'}</div>
+                          <small style={{ color: '#047857', fontWeight: 600 }}>Teknisi: {t.technicianName || 'Tim Maintenance'}</small>
+                        </td>
+                        <td>
+                          <span style={{ fontWeight: 700, color: '#334155' }}>{repairMinutes(t) === null ? 'N/A' : `${repairMinutes(t)} mnt`}</span>
+                        </td>
+                        <td>
+                          {t.supervisorVerified ? (
+                            <span className="spv-badge-status verified" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>
+                              ✓ Sudah Direview
