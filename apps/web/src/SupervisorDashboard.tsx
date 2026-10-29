@@ -5198,3 +5198,603 @@ export default function SupervisorDashboard({ supervisor, onLogout }: Supervisor
                             {asIs.woType}
                           </span>
                         </td>
+                        {/* 15. KATEGORI */}
+                        <td data-label="Kategori" title={asIs.kategori}>
+                          <span className="as-is-pill-cat">
+                            {asIs.kategori}
+                          </span>
+                        </td>
+                        {/* STATUS & AKSI SPV */}
+                        <td data-label="Status & Aksi SPV" className="text-center td-action-cell">
+                          <div className="spv-actions-group" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            {/* Tombol Verifikasi Cepat (Quick Sign-Off) untuk tiket CLOSED yang belum diverifikasi */}
+                            {t.status === 'CLOSED' && !t.supervisorVerified && (
+                              <button
+                                type="button"
+                                className="btn-spv-table-action primary"
+                                onClick={() => handleQuickVerifyTicket(t.ticket)}
+                                title="Verifikasi langsung tiket breakdown ini"
+                                style={{ padding: '3px 7px', fontSize: '0.7rem', gap: '3px' }}
+                              >
+                                <Check size={11} />
+                                <span>Verif</span>
+                              </button>
+                            )}
+
+                            {/* Status Badge */}
+                            {t.supervisorVerified && (
+                              <span className="spv-badge-status verified" style={{ fontSize: '0.66rem', padding: '1px 5px' }}>
+                                <CheckCircle2 size={10} />
+                                Verified
+                              </span>
+                            )}
+                            {t.status === 'OPEN' && (
+                              <span className="spv-badge-status breakdown" style={{ fontSize: '0.66rem', padding: '1px 5px' }}>
+                                <Clock3 size={10} />
+                                Open
+                              </span>
+                            )}
+                            {t.status === 'IN_PROGRESS' && (
+                              <span
+                                className="spv-badge-status"
+                                style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', fontSize: '0.66rem', padding: '1px 5px' }}
+                              >
+                                <Wrench size={10} />
+                                Proses
+                              </span>
+                            )}
+                            {t.status === 'VOID' && (
+                              <span
+                                className="spv-badge-status"
+                                style={{ background: '#f1f5f9', color: '#64748b', textDecoration: 'line-through', border: '1px solid #cbd5e1', fontSize: '0.66rem', padding: '1px 5px' }}
+                              >
+                                <X size={10} />
+                                Dibatalkan (Void)
+                              </span>
+                            )}
+
+                            {/* Dropdown Aksi & Opsi Tiket */}
+                            <button
+                              type="button"
+                              className="btn-spv-table-action"
+                              style={{
+                                background: isActionDropdownOpen ? '#ecfdf5' : '#ffffff',
+                                borderColor: isActionDropdownOpen ? '#059669' : '#cbd5e1',
+                                color: '#064e3b',
+                                fontWeight: 700,
+                                padding: '4px 7px',
+                                borderRadius: '6px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                              onClick={() => setOpenActionDropdownId(isActionDropdownOpen ? null : t.ticket)}
+                              title="Aksi & Opsi Tiket"
+                              aria-label="Aksi & Opsi Tiket"
+                              aria-haspopup="menu"
+                              aria-expanded={isActionDropdownOpen}
+                            >
+                              <span>Aksi</span>
+                              <ChevronDown size={11} style={{ transform: isActionDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }} />
+                            </button>
+
+                            {isActionDropdownOpen && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  right: 0,
+                                  top: '115%',
+                                  zIndex: 50,
+                                  background: '#ffffff',
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
+                                  minWidth: '160px',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '2px',
+                                  textAlign: 'left',
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  className="btn-spv-table-action primary"
+                                  style={{ width: '100%', justifyContent: 'flex-start', border: 'none', padding: '6px 10px', borderRadius: '4px' }}
+                                  onClick={() => {
+                                    setSelectedTicket(t);
+                                    setVerificationNote(t.supervisorNote || '');
+                                    setOpenActionDropdownId(null);
+                                  }}
+                                  title="Review Tiket & Komparasi Waktu 2 Sisi"
+                                >
+                                  <FileText size={12} />
+                                  <span>Review Tiket</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className="btn-spv-table-action warning"
+                                  style={{ width: '100%', justifyContent: 'flex-start', border: 'none', padding: '6px 10px', borderRadius: '4px' }}
+                                  onClick={() => {
+                                    setOpenActionDropdownId(null);
+                                    handleOpenCorrectionModal(t);
+                                  }}
+                                  title="Koreksi Data Pengukuran Maintenance"
+                                >
+                                  <SlidersHorizontal size={12} />
+                                  <span>Koreksi Data</span>
+                                </button>
+
+                                {t.status !== 'VOID' && (
+                                  <button
+                                    type="button"
+                                    className="btn-spv-table-action danger"
+                                    style={{ width: '100%', justifyContent: 'flex-start', border: 'none', padding: '6px 10px', borderRadius: '4px' }}
+                                    onClick={() => {
+                                      setOpenActionDropdownId(null);
+                                      handleOpenVoidModal(t);
+                                    }}
+                                    title="Batalkan Catatan (Void)"
+                                  >
+                                    <X size={12} />
+                                    <span>Batalkan (Void)</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Footer untuk Tabel Verifikasi Breakdown */}
+            <footer className="table-pagination-footer">
+              <span className="pagination-info">
+                Menampilkan {paginatedTickets.length ? (ticketPage - 1) * ticketPerPage + 1 : 0}–
+                {Math.min(ticketPage * ticketPerPage, filteredTickets.length)} dari {filteredTickets.length} tiket
+              </span>
+              <div className="pagination-ctrls">
+                <button
+                  type="button"
+                  disabled={ticketPage === 1}
+                  onClick={() => setTicketPage((p) => Math.max(1, p - 1))}
+                  aria-label="Halaman tiket sebelumnya"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="pagination-page-status">
+                  {ticketPage} / {totalTicketPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={ticketPage >= totalTicketPages}
+                  onClick={() => setTicketPage((p) => Math.min(totalTicketPages, p + 1))}
+                  aria-label="Halaman tiket berikutnya"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </footer>
+          </section>
+        )}
+
+        {/* TAB 3: POLA BREAKDOWN & AKUNTABILITAS LAPANGAN */}
+        {activeTab === 'ANALYTICS' && (
+          <section className="spv-content-card spv-analytics-container">
+
+            {/* SUB-VIEW 1: POLA BREAKDOWN & AKUNTABILITAS LAPANGAN */}
+            {analyticsSubTab === 'POLA_LAPANGAN' && (
+              <div style={{ marginBottom: 0 }}>
+                {/* 4 PILAR UTAMA DENGAN VISUALISASI DIAGRAM POPULER */}
+                <div
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '10px',
+                    padding: '1.1rem 1.25rem',
+                    marginBottom: '1.25rem',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.9rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.6rem', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <TrendingUp size={18} color="var(--color-icon-neutral, #64748b)" />
+                      <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>
+                        Ringkasan Pola Breakdown &amp; Akuntabilitas Lapangan
+                      </strong>
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      Data riil {tickets.filter((t) => t.status !== 'VOID').length} tiket aktif shift berjalan
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                      gap: '0.9rem',
+                      marginBottom: '0.9rem',
+                    }}
+                  >
+                    {/* 1. TOP BREAKDOWN (MESIN) - DIAGRAM BATANG PARETO */}
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.85rem', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.55rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <AlertTriangle size={15} color="#d97706" />
+                          <strong style={{ fontSize: '0.78rem', color: '#334155', textTransform: 'uppercase' }}>
+                            1. Top Breakdown (Mesin)
+                          </strong>
+                        </div>
+                        <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>Ranking Pareto</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, justifyContent: 'space-around' }}>
+                        {patternInsights.topMachines.map((m, idx) => {
+                          const maxCount = Math.max(...patternInsights.topMachines.map((x) => x.count), 1);
+                          const barWidth = Math.round((m.count / maxCount) * 100);
+                          const colors = [
+                            { border: '#fecaca', bg: '#fef2f2', bar: 'linear-gradient(90deg, #ef4444, #f87171)', badge: '#991b1b', text: '#b91c1c' },
+                            { border: '#fed7aa', bg: '#fff7ed', bar: 'linear-gradient(90deg, #f97316, #fb923c)', badge: '#c2410c', text: '#ea580c' },
+                            { border: '#e2e8f0', bg: '#ffffff', bar: 'linear-gradient(90deg, #3b82f6, #60a5fa)', badge: '#1d4ed8', text: '#2563eb' },
+                          ];
+                          const theme = colors[idx] || colors[2];
+                          return (
+                            <div key={m.machine} style={{ padding: '6px 8px', background: theme.bg, borderRadius: '6px', border: `1px solid ${theme.border}` }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '1px 5px', borderRadius: '4px', background: theme.badge, color: '#ffffff' }}>#{idx + 1}</span>
+                                  <strong style={{ color: idx === 0 ? '#991b1b' : '#0f172a', fontSize: '0.78rem' }}>{m.machine}</strong>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <span style={{ fontWeight: 800, color: theme.text, fontSize: '0.8rem' }}>{m.count}x</span>
+                                  <span style={{ fontSize: '0.68rem', color: '#64748b', marginLeft: '4px' }}>({m.totalDowntime} Jam)</span>
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ flex: 1, height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                                  <div style={{ width: `${barWidth}%`, height: '100%', background: theme.bar, borderRadius: '3px', transition: 'width 0.4s ease' }} />
+                                </div>
+                                <span style={{ fontSize: '0.65rem', color: '#64748b', whiteSpace: 'nowrap' }}>{m.topCat}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 2. KLASIFIKASI POLA KERUSAKAN - DIAGRAM DONAT / LINGKARAN */}
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.85rem', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.55rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Layers size={15} color="var(--color-icon-neutral, #64748b)" />
+                          <strong style={{ fontSize: '0.78rem', color: '#334155', textTransform: 'uppercase' }}>
+                            2. Klasifikasi Pola Masalah
+                          </strong>
+                        </div>
+                        <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>Diagram Proporsi</span>
+                      </div>
+                      {(() => {
+                        const palette = ['#0284c7', '#10b981', '#f59e0b', '#8b5cf6'];
+                        const totalCatSum = patternInsights.topCategories.reduce((s, c) => s + c.count, 0) || 1;
+                        const C = 201.06; // 2 * PI * 32
+                        let acc = 0;
+                        return (
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: 1 }}>
+                            <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
+                              <svg viewBox="0 0 100 100" width="84" height="84" style={{ transform: 'rotate(-90deg)' }}>
+                                <circle cx="50" cy="50" r="32" fill="none" stroke="#f1f5f9" strokeWidth="12" />
+                                {patternInsights.topCategories.map((c, i) => {
+                                  const seg = (c.count / totalCatSum) * C;
+                                  const offset = acc;
+                                  acc += seg;
+                                  return (
+                                    <circle
+                                      key={c.kategori}
+                                      cx="50"
+                                      cy="50"
+                                      r="32"
+                                      fill="none"
+                                      stroke={palette[i % palette.length]}
+                                      strokeWidth="12"
+                                      strokeDasharray={`${Math.max(0, seg - 1.5)} ${C}`}
+                                      strokeDashoffset={-offset}
+                                    />
+                                  );
+                                })}
+                              </svg>
+                              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                                <strong style={{ fontSize: '0.85rem', color: '#0f172a', lineHeight: 1 }}>{tickets.filter((t) => t.status !== 'VOID').length}</strong>
+                                <small style={{ fontSize: '0.58rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Tiket</small>
+                              </div>
+                            </div>
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {patternInsights.topCategories.map((c, i) => (
+                                <div key={c.kategori} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.73rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
+                                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: palette[i % palette.length], flexShrink: 0 }} />
+                                    <span style={{ color: '#334155', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.kategori}>
+                                      {c.kategori}
+                                    </span>
+                                  </div>
+                                  <strong style={{ color: palette[i % palette.length], marginLeft: '4px', whiteSpace: 'nowrap' }}>
+                                    {c.count}x ({c.percent}%)
+                                  </strong>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* 3. AKUNTABILITAS & INTEGRITAS DATA - PENGUKUR GAUGE / RADIAL */}
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.85rem', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.55rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <ShieldCheck size={15} color="var(--color-icon-neutral, #64748b)" />
+                          <strong style={{ fontSize: '0.78rem', color: '#334155', textTransform: 'uppercase' }}>
+                            3. Akuntabilitas &amp; Integritas Data
+                          </strong>
+                        </div>
+                        <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>Health Dial</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, justifyContent: 'space-around', fontSize: '0.75rem' }}>
+                        {/* Gauge 1: WR Compliance */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 6px', background: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
+                            <svg viewBox="0 0 40 40" width="36" height="36" style={{ transform: 'rotate(-90deg)' }}>
+                              <circle cx="20" cy="20" r="16" fill="none" stroke="#e2e8f0" strokeWidth="4" />
+                              <circle
+                                cx="20"
+                                cy="20"
+                                r="16"
+                                fill="none"
+                                stroke={patternInsights.wrCompliancePercent >= 70 ? '#10b981' : '#f59e0b'}
+                                strokeWidth="4"
+                                strokeDasharray={`${(patternInsights.wrCompliancePercent / 100) * 100.5} 100.5`}
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                            <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: '#0f172a' }}>
+                              {patternInsights.wrCompliancePercent}%
+                            </span>
+                          </div>
+                          <div style={{ flex: 1, overflow: 'hidden' }}>
+                            <div style={{ color: '#475569', fontWeight: 600, fontSize: '0.72rem' }}>Kepatuhan Nomor WR:</div>
+                            <strong style={{ color: patternInsights.wrCompliancePercent >= 70 ? '#059669' : '#d97706', fontSize: '0.75rem' }}>
+                              {patternInsights.wrCompliancePercent}% ({patternInsights.withWrCount}/{patternInsights.withWrCount + patternInsights.missingWrCount})
+                            </strong>
+                          </div>
+                        </div>
+
+                        {/* Gauge 2: Respon Lag */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 6px', background: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Clock3 size={18} color="var(--color-icon-neutral, #64748b)" />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ color: '#475569', fontWeight: 600, fontSize: '0.72rem' }}>Rata-rata Respon Teknisi:</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <strong style={{ color: '#0284c7', fontSize: '0.76rem' }}>~{patternInsights.avgResponseLagMin} Menit</strong>
+                              <span style={{ fontSize: '0.62rem', background: '#dcfce7', color: '#166534', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>&lt; 15m (Baik)</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Gauge 3: SPV Sign-off */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 6px', background: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
+                            <svg viewBox="0 0 40 40" width="36" height="36" style={{ transform: 'rotate(-90deg)' }}>
+                              <circle cx="20" cy="20" r="16" fill="none" stroke="#e2e8f0" strokeWidth="4" />
+                              <circle
+                                cx="20"
+                                cy="20"
+                                r="16"
+                                fill="none"
+                                stroke="#059669"
+                                strokeWidth="4"
+                                strokeDasharray={`${(patternInsights.spvVerifiedPercent / 100) * 100.5} 100.5`}
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                            <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: '#0f172a' }}>
+                              {patternInsights.spvVerifiedPercent}%
+                            </span>
+                          </div>
+                          <div style={{ flex: 1, overflow: 'hidden' }}>
+                            <div style={{ color: '#475569', fontWeight: 600, fontSize: '0.72rem' }}>Progres Sign-Off SPV:</div>
+                            <strong style={{ color: '#059669', fontSize: '0.75rem' }}>
+                              {patternInsights.spvVerifiedPercent}% ({patternInsights.verifiedCount} diverifikasi)
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* VISUAL PITA: DISTRIBUSI BREAKDOWN LINTAS SHIFT OPERASIONAL */}
+                  {(() => {
+                    const s1 = patternInsights.shiftDistribution['1'] || 0;
+                    const s2 = patternInsights.shiftDistribution['2'] || 0;
+                    const s3 = patternInsights.shiftDistribution['3'] || 0;
+                    const totalShift = s1 + s2 + s3 || 1;
+                    const p1 = Math.round((s1 / totalShift) * 100);
+                    const p2 = Math.round((s2 / totalShift) * 100);
+                    const p3 = Math.round((s3 / totalShift) * 100);
+                    return (
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.85rem', marginBottom: '0.85rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontSize: '0.72rem', flexWrap: 'wrap', gap: '4px' }}>
+                          <span style={{ fontWeight: 700, color: '#475569' }}>Pola Sebaran Breakdown per Shift:</span>
+                          <span style={{ color: '#64748b' }}>Shift 1 (Pagi): {s1} ({p1}%) · Shift 2 (Sore): {s2} ({p2}%) · Shift 3 (Malam): {s3} ({p3}%)</span>
+                        </div>
+                        <div style={{ height: '7px', display: 'flex', borderRadius: '4px', overflow: 'hidden', background: '#e2e8f0' }}>
+                          <div style={{ width: `${p1}%`, background: '#f59e0b' }} title={`Shift 1: ${s1} tiket (${p1}%)`} />
+                          <div style={{ width: `${p2}%`, background: '#0284c7' }} title={`Shift 2: ${s2} tiket (${p2}%)`} />
+                          <div style={{ width: `${p3}%`, background: '#8b5cf6' }} title={`Shift 3: ${s3} tiket (${p3}%)`} />
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 4. REKOMENDASI PRAKTIS LAPANGAN */}
+                  <div
+                    style={{
+                      background: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: '8px',
+                      padding: '0.75rem 1rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.4rem' }}>
+                      <CheckCircle2 size={15} color="#15803d" />
+                      <strong style={{ fontSize: '0.78rem', color: '#166534', textTransform: 'uppercase' }}>
+                        4. Rekomendasi Tindakan Lapangan
+                      </strong>
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.78rem', color: '#14532d', lineHeight: 1.5 }}>
+                      {patternInsights.recommendations.map((rec, i) => (
+                        <li key={i}>{rec}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* URS 7.3 Analisis Kerusakan Berulang (Bad Actor) & Pola Penggantian Part */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.25rem' }}>
+                  {/* Kerusakan Berulang (Bad Actor) */}
+                  <div className="spv-analytics-section" style={{ margin: 0 }}>
+                    <div className="spv-analytics-sec-title">
+                      <h3>
+                        <AlertTriangle size={18} color="#e11d48" />
+                        Identifikasi Kerusakan Berulang (Bad Actor / Recurrent Issues)
+                      </h3>
+                      <span className="spv-badge-status breakdown" style={{ fontSize: '0.72rem' }}>
+                        Kriteria: Frekuensi ≥ 2 Kejadian
+                      </span>
+                    </div>
+
+                    <div className="spv-table-responsive" style={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                      <table className="spv-table">
+                        <thead>
+                          <tr>
+                            <th>Mesin &amp; Kategori Kendala</th>
+                            <th>Frekuensi</th>
+                            <th>Total Downtime</th>
+                            <th>Status Tindak Lanjut</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recurrentIssues.length > 0 ? (
+                            recurrentIssues.map((issue, idx) => (
+                              <tr key={idx}>
+                                <td>
+                                  <strong>{issue.machine}</strong>
+                                  <div style={{ fontSize: '0.74rem', color: '#0284c7' }}>{issue.category}</div>
+                                </td>
+                                <td>
+                                  <span className="spv-badge-status breakdown">
+                                    <AlertTriangle size={12} />
+                                    {issue.count}x Kejadian
+                                  </span>
+                                </td>
+                                <td>
+                                  <strong style={{ color: '#0f172a' }}>{issue.missingDuration ? 'N/A — data belum lengkap' : `${(issue.totalDowntimeMin / 60).toFixed(1)} Jam`}</strong>
+                                </td>
+                                <td>
+                                  <span className="spv-badge-status breakdown" style={{ fontSize: '0.72rem' }}>
+                                    Prioritas Root Cause
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={4} style={{ textAlign: 'center', padding: '1rem', color: '#059669', fontStyle: 'italic' }}>
+                                Tidak ada kerusakan berulang terdeteksi pada periode ini.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Pola Penggantian Part / Komponen */}
+                  <div className="spv-analytics-section" style={{ margin: 0 }}>
+                    <div className="spv-analytics-sec-title">
+                      <h3>
+                        <PackageSearch size={18} color="var(--color-icon-neutral, #64748b)" />
+                        Pola Penggantian Suku Cadang Terbanyak
+                      </h3>
+                    </div>
+
+                    <div className="spv-table-responsive" style={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                      <table className="spv-table">
+                        <thead>
+                          <tr>
+                            <th>Nama Komponen / Spare Part</th>
+                            <th>Mesin Terkait</th>
+                            <th>Jumlah Diganti</th>
+                            <th>Tindakan Rekomendasi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {topReplacedParts.length > 0 ? (
+                            topReplacedParts.map((p, idx) => (
+                              <tr key={idx}>
+                                <td>
+                                  <strong style={{ color: '#0f172a' }}>{p.name}</strong>
+                                </td>
+                                <td style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                                  {Array.from(p.machines).join(', ')}
+                                </td>
+                                <td>
+                                  <strong style={{ color: '#059669', fontSize: '0.9rem' }}>{p.count} Unit</strong>
+                                </td>
+                                <td>
+                                  <span className="spv-badge-status normal" style={{ fontSize: '0.72rem' }}>
+                                    Fast Moving Part
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={4} style={{ textAlign: 'center', padding: '1rem', color: '#64748b', fontStyle: 'italic' }}>
+                                Belum ada riwayat penggantian komponen tercatat pada periode ini.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-VIEW 2: METRIK & TARGET KPI MAINTENANCE */}
+            {analyticsSubTab === 'KPI_METRICS' && (
+              <div style={{ marginBottom: 0 }}>
+                {/* Header & Tombol Tetapkan Target KPI */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1rem', color: '#064e3b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <BarChart2 size={18} color="var(--color-icon-neutral, #64748b)" />
+                      Monitoring &amp; Pengukuran Kinerja Maintenance
+                    </h3>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                      Standar agregasi gabungan dan evaluasi target KPI maintenance plant.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="spv-btn-kpi-edit"
+                    onClick={() => handleOpenKpiModal()}
+                    title="Tetapkan atau sesuaikan target KPI Maintenance"
+                  >
+                    <Sliders size={14} />
