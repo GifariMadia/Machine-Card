@@ -4598,3 +4598,603 @@ export default function SupervisorDashboard({ supervisor, onLogout }: Supervisor
                           {t.supervisorVerified ? (
                             <span className="spv-badge-status verified" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>
                               ✓ Sudah Direview
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '0.7rem', color: '#d97706', fontWeight: 700 }}>
+                              Belum Direview
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* TAB 2: VERIFIKASI BREAKDOWN MESIN (FORMAT AS-IS PABRIK 15 KOLOM) */}
+        {activeTab === 'WORKORDERS' && !isWeeklyReviewPageActive && (
+          <section className="spv-content-card">
+            {/* Header Bersih Tabel Verifikasi Breakdown */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.85rem',
+                paddingBottom: '0.9rem',
+                borderBottom: '1px solid #e2e8f0',
+                marginBottom: '1rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldCheck size={20} color="var(--color-icon-neutral, #64748b)" />
+                <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  Verifikasi Breakdown Mesin
+                </h2>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <span className="topbar-chip" style={{ fontSize: '0.74rem', background: '#f8fafc', borderColor: '#e2e8f0', color: '#334155' }}>
+                    Total: <strong>{filteredTickets.length}</strong>
+                  </span>
+                  <span className="topbar-chip" style={{ fontSize: '0.74rem', background: '#fef3c7', borderColor: '#fde68a', color: '#92400e' }}>
+                    Perlu Verifikasi: <strong>{tickets.filter((t) => t.status === 'CLOSED' && !t.supervisorVerified).length}</strong>
+                  </span>
+                  <span className="topbar-chip" style={{ fontSize: '0.74rem', background: '#eff6ff', borderColor: '#bfdbfe', color: '#1e40af' }}>
+                    Downtime: <strong>{kpiSummary.downtimeComplete ? `${totalDowntimeHours} Jam` : 'N/A — waktu operasi belum lengkap'}</strong>
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleExportBreakdownCsv}
+                  className="btn-spv-table-action secondary"
+                  style={{
+                    background: '#047857',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                  title="Unduh seluruh data yang tersaring dalam format file CSV"
+                >
+                  <Download size={14} />
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Toolbar Filter & Pencarian */}
+            <div className="spv-toolbar-wrap" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {/* Baris 1: Pencarian Leluasa + Kontrol Tampilan (Fit/Scroll) & Filter Void */}
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="spv-search-box" style={{ flex: '1 1 360px', maxWidth: '580px', height: '40px' }}>
+                  <Search size={18} />
+                  <input
+                    type="text"
+                    value={ticketSearch}
+                    onChange={(e) => {
+                      setTicketSearch(e.target.value);
+                      setTicketPage(1);
+                    }}
+                    placeholder="Cari No. WR, mesin, operator, kode produk, batch, kategori..."
+                    aria-label="Cari tiket breakdown"
+                  />
+                  {ticketSearch && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTicketSearch('');
+                        setTicketPage(1);
+                      }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        padding: '2px 4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                      title="Bersihkan pencarian"
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  {/* Segmented Control Mode Tampilan */}
+                  <div style={{ display: 'inline-flex', alignItems: 'center', background: '#f1f5f9', padding: '3px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                    <button
+                      type="button"
+                      className={`spv-pill-btn ${breakdownViewMode === 'FIT' ? 'active' : ''}`}
+                      onClick={() => {
+                        setBreakdownViewMode('FIT');
+                        if (tableScrollRef.current) tableScrollRef.current.scrollLeft = 0;
+                      }}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        border: 'none',
+                        borderRadius: '6px',
+                        background: breakdownViewMode === 'FIT' ? '#ffffff' : 'transparent',
+                        color: breakdownViewMode === 'FIT' ? '#047857' : '#64748b',
+                        boxShadow: breakdownViewMode === 'FIT' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                        cursor: 'pointer',
+                      }}
+                      title="Mode Fit: Seluruh 15 kolom muat pas dalam lebar kontainer layar tanpa scroll horizontal"
+                    >
+                      Fit Layar
+                    </button>
+                    <button
+                      type="button"
+                      className={`spv-pill-btn ${breakdownViewMode === 'SCROLL' ? 'active' : ''}`}
+                      onClick={() => setBreakdownViewMode('SCROLL')}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        border: 'none',
+                        borderRadius: '6px',
+                        background: breakdownViewMode === 'SCROLL' ? '#ffffff' : 'transparent',
+                        color: breakdownViewMode === 'SCROLL' ? '#047857' : '#64748b',
+                        boxShadow: breakdownViewMode === 'SCROLL' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                        cursor: 'pointer',
+                      }}
+                      title="Mode Scroll: Kolom lebih leluasa dengan scroll horizontal & kolom Mesin beku (freeze)"
+                    >
+                      Scroll Lebar
+                    </button>
+                  </div>
+
+                  {/* URS 8.1 Klausul 6: Toggle Perlindungan Riwayat Catatan Dibatalkan */}
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      color: showVoidTickets ? '#0f172a' : '#64748b',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      aria-label="Tampilkan Catatan Dibatalkan (Void)"
+                      checked={showVoidTickets}
+                      onChange={(e) => setShowVoidTickets(e.target.checked)}
+                      style={{ width: '15px', height: '15px', accentColor: '#059669', cursor: 'pointer' }}
+                    />
+                    <span>Catatan Batal (Void)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Baris 2: Panel Filter Terstruktur & Terorganisir */}
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '12px 18px',
+                  alignItems: 'center',
+                }}
+              >
+                {/* Status Pengerjaan Tiket */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Status:
+                  </span>
+                  <div style={{ display: 'inline-flex', gap: '4px', flexWrap: 'wrap' }}>
+                    {(['ALL', 'OPEN', 'IN_PROGRESS', 'CLOSED'] as const).map((st) => {
+                      const count = st === 'ALL'
+                        ? tickets.length
+                        : tickets.filter((t) => t.status === st).length;
+                      const label = st === 'ALL' ? 'Semua' : st === 'OPEN' ? 'Open' : st === 'IN_PROGRESS' ? 'Dikerjakan' : 'Selesai';
+                      const isActive = ticketStatusFilter === st;
+                      return (
+                        <button
+                          key={st}
+                          type="button"
+                          className={`spv-pill-btn ${isActive ? 'active' : ''}`}
+                          onClick={() => {
+                            setTicketStatusFilter(st);
+                            setTicketPage(1);
+                          }}
+                          style={{
+                            padding: '3px 9px',
+                            fontSize: '0.74rem',
+                            borderRadius: '6px',
+                          }}
+                        >
+                          {label} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ width: '1px', height: '20px', background: '#cbd5e1' }} />
+
+                {/* Status Verifikasi SPV */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Verifikasi:
+                  </span>
+                  <div style={{ display: 'inline-flex', gap: '4px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className={`spv-pill-btn ${ticketReviewFilter === 'UNREVIEWED' ? 'active' : ''}`}
+                      style={{
+                        padding: '3px 9px',
+                        fontSize: '0.74rem',
+                        borderRadius: '6px',
+                        ...(ticketReviewFilter === 'UNREVIEWED'
+                          ? { background: '#fef3c7', color: '#92400e', borderColor: '#fde68a', fontWeight: 700 }
+                          : {}),
+                      }}
+                      onClick={() => {
+                        setTicketReviewFilter(ticketReviewFilter === 'UNREVIEWED' ? 'ALL' : 'UNREVIEWED');
+                        setTicketPage(1);
+                      }}
+                    >
+                      Belum Diverifikasi ({tickets.filter((t) => t.status === 'CLOSED' && !t.supervisorVerified).length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`spv-pill-btn ${ticketReviewFilter === 'REVIEWED' ? 'active' : ''}`}
+                      style={{
+                        padding: '3px 9px',
+                        fontSize: '0.74rem',
+                        borderRadius: '6px',
+                        ...(ticketReviewFilter === 'REVIEWED'
+                          ? { background: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0', fontWeight: 700 }
+                          : {}),
+                      }}
+                      onClick={() => {
+                        setTicketReviewFilter(ticketReviewFilter === 'REVIEWED' ? 'ALL' : 'REVIEWED');
+                        setTicketPage(1);
+                      }}
+                    >
+                      Sudah Diverifikasi ({tickets.filter((t) => t.supervisorVerified).length})
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ width: '1px', height: '20px', background: '#cbd5e1' }} />
+
+                {/* Filter Shift */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Shift:
+                  </span>
+                  <div style={{ display: 'inline-flex', gap: '3px' }}>
+                    {(['ALL', '1', '2', '3'] as const).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className={`spv-pill-btn ${ticketShiftFilter === s ? 'active' : ''}`}
+                        onClick={() => {
+                          setTicketShiftFilter(s);
+                          setTicketPage(1);
+                        }}
+                        style={{ padding: '3px 8px', fontSize: '0.73rem', borderRadius: '6px' }}
+                      >
+                        {s === 'ALL' ? 'Semua' : `Shift ${s}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ width: '1px', height: '20px', background: '#cbd5e1' }} />
+
+                {/* Filter Section */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Sec:
+                  </span>
+                  <div style={{ display: 'inline-flex', gap: '3px' }}>
+                    {(['ALL', 'Filling', 'Packaging', 'Compounding'] as const).map((sec) => (
+                      <button
+                        key={sec}
+                        type="button"
+                        className={`spv-pill-btn ${ticketSectionFilter === sec ? 'active' : ''}`}
+                        onClick={() => {
+                          setTicketSectionFilter(sec);
+                          setTicketPage(1);
+                        }}
+                        style={{ padding: '3px 8px', fontSize: '0.73rem', borderRadius: '6px' }}
+                      >
+                        {sec === 'ALL' ? 'Semua' : sec}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ width: '1px', height: '20px', background: '#cbd5e1' }} />
+
+                {/* Filter WO Type */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Type:
+                  </span>
+                  <div style={{ display: 'inline-flex', gap: '3px' }}>
+                    {(['ALL', 'Batch', 'Non Batch'] as const).map((wt) => (
+                      <button
+                        key={wt}
+                        type="button"
+                        className={`spv-pill-btn ${ticketWoTypeFilter === wt ? 'active' : ''}`}
+                        onClick={() => {
+                          setTicketWoTypeFilter(wt);
+                          setTicketPage(1);
+                        }}
+                        style={{ padding: '3px 8px', fontSize: '0.73rem', borderRadius: '6px' }}
+                      >
+                        {wt === 'ALL' ? 'Semua' : wt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Batch Selection Action Bar Mengambang (Floating Action Bar) */}
+            {selectedTicketIds.size > 0 && (
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)',
+                  color: '#ffffff',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1.25rem',
+                  margin: '0.75rem 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  boxShadow: '0 4px 12px rgba(6, 78, 59, 0.25)',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <CheckSquare size={18} color="var(--color-icon-neutral, #64748b)" />
+                  <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>
+                    {selectedTicketIds.size} tiket terpilih untuk verifikasi massal
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTicketIds(new Set())}
+                    style={{
+                      background: 'rgba(255,255,255,0.15)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255,255,255,0.25)',
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Batal Pilih
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBatchModalOpen(true)}
+                    style={{
+                      background: '#10b981',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    <ClipboardList size={14} />
+                    <span>Verifikasi Serentak Terpilih</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TABEL 15 KOLOM AS-IS SPREADSHEET PABRIK */}
+            <div
+              ref={tableScrollRef}
+              className={`spv-as-is-wrapper ${breakdownViewMode === 'FIT' ? 'mode-fit' : 'mode-scroll'}`}
+              style={{ marginTop: '0.75rem' }}
+            >
+              <table className={`spv-as-is-table ${breakdownViewMode === 'FIT' ? 'is-fit-container' : 'is-scroll-wide'}`}>
+                <thead>
+                  <tr>
+                    <th
+                      className={breakdownViewMode === 'SCROLL' ? 'sticky-col-check' : ''}
+                      style={{ width: '28px', textAlign: 'center' }}
+                    >
+                      <input
+                        type="checkbox"
+                        aria-label="Pilih semua tiket di halaman ini"
+                        checked={paginatedTickets.length > 0 && paginatedTickets.every((t) => selectedTicketIds.has(t.ticket))}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTicketIds((prev) => {
+                              const next = new Set(prev);
+                              paginatedTickets.forEach((t) => next.add(t.ticket));
+                              return next;
+                            });
+                          } else {
+                            setSelectedTicketIds((prev) => {
+                              const next = new Set(prev);
+                              paginatedTickets.forEach((t) => next.delete(t.ticket));
+                              return next;
+                            });
+                          }
+                        }}
+                        style={{ cursor: 'pointer', width: '14px', height: '14px' }}
+                      />
+                    </th>
+                    <th title="Tanggal Kejadian Breakdown">TGL</th>
+                    <th title="Bulan Kejadian">BLN</th>
+                    <th style={{ textAlign: 'center' }} title="Shift Kerja Operasional (1, 2, atau 3)">SHF</th>
+                    <th
+                      className={breakdownViewMode === 'SCROLL' ? 'sticky-col-machine' : ''}
+                      title="Nama / Kode Mesin"
+                    >
+                      MESIN
+                    </th>
+                    <th title="Section Pabrik (Filling / Packaging / Compounding)">SEC</th>
+                    <th title="Deskripsi Kerusakan / Problem Mesin">KETERANGAN</th>
+                    <th title="Nama Operator Pelapor">OPR</th>
+                    <th style={{ textAlign: 'center' }} title="Kode Produk">PROD</th>
+                    <th style={{ textAlign: 'center' }} title="Nomor Batch Produksi">BATCH</th>
+                    <th title="Waktu mesin berhenti/breakdown (Sisi Operator Produksi)">START</th>
+                    <th title="Waktu konfirmasi mesin running kembali (Sisi Operator Produksi)">END</th>
+                    <th title="Total durasi downtime dari sisi operator dalam jam">DURASI</th>
+                    <th title="Nomor Work Request">NO. WR</th>
+                    <th title="Tipe Work Order (Batch / Non Batch)">TYPE</th>
+                    <th title="Kategori Komponen / Masalah Breakdown">KATEGORI</th>
+                    <th className="text-center" style={{ minWidth: '105px' }} title="Status & Aksi Supervisor">AKSI SPV</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedTickets.map((t) => {
+                    const asIs = getTicketAsIsRow(t);
+                    const isSelected = selectedTicketIds.has(t.ticket);
+                    const isActionDropdownOpen = openActionDropdownId === t.ticket;
+
+                    return (
+                      <tr
+                        key={t.ticket}
+                        style={{
+                          opacity: t.status === 'VOID' ? 0.6 : 1,
+                          background: isSelected ? '#f0fdf4' : undefined,
+                        }}
+                      >
+                        <td
+                          className={breakdownViewMode === 'SCROLL' ? 'sticky-col-check' : ''}
+                          style={{ textAlign: 'center' }}
+                        >
+                          <input
+                            type="checkbox"
+                            aria-label={`Pilih tiket ${t.ticket}`}
+                            checked={isSelected}
+                            onChange={() => toggleSelectTicket(t.ticket)}
+                            style={{ cursor: 'pointer', width: '14px', height: '14px' }}
+                          />
+                        </td>
+                        {/* 1. TANGGAL */}
+                        <td data-label="Tanggal" style={{ fontWeight: 600 }}>
+                          {asIs.tanggal}
+                        </td>
+                        {/* 2. BULAN */}
+                        <td data-label="Bulan" style={{ color: '#64748b' }}>
+                          {asIs.bulan}
+                        </td>
+                        {/* 3. SHIFT */}
+                        <td data-label="Shift" style={{ textAlign: 'center' }}>
+                          <span className="as-is-pill-shift">
+                            {asIs.shift}
+                          </span>
+                        </td>
+                        {/* 4. MESIN */}
+                        <td
+                          data-label="Mesin"
+                          className={breakdownViewMode === 'SCROLL' ? 'sticky-col-machine' : ''}
+                        >
+                          <strong style={{ color: '#0f172a' }}>{asIs.mesin}</strong>
+                        </td>
+                        {/* 5. SECTION */}
+                        <td data-label="Section">
+                          <span style={{ color: '#475569', fontSize: '11px', fontWeight: 600 }}>{asIs.section}</span>
+                        </td>
+                        {/* 6. KETERANGAN */}
+                        <td
+                          data-label="Keterangan"
+                          title={asIs.keterangan}
+                          style={{ maxWidth: breakdownViewMode === 'FIT' ? '220px' : '340px' }}
+                        >
+                          <div
+                            className={breakdownViewMode === 'FIT' ? 'as-is-cell-truncate' : ''}
+                            style={{ lineHeight: 1.35, color: '#1e293b' }}
+                          >
+                            {asIs.keterangan}
+                          </div>
+                          {t.status === 'VOID' && t.voidReason && (
+                            <div style={{ color: '#991b1b', fontSize: '10px', marginTop: '2px', fontStyle: 'italic' }}>
+                              Alasan Batal: {t.voidReason} ({t.voidBy})
+                            </div>
+                          )}
+                        </td>
+                        {/* 7. OPERATOR */}
+                        <td data-label="Operator">
+                          <span style={{ fontWeight: 600 }}>{asIs.operator}</span>
+                        </td>
+                        {/* 8. KODE PRODUK */}
+                        <td data-label="Kode Produk" style={{ textAlign: 'center' }}>
+                          {asIs.kodeProduk !== '—' && asIs.kodeProduk ? (
+                            <span className="as-is-pill-prod">
+                              {asIs.kodeProduk}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#94a3b8' }}>—</span>
+                          )}
+                        </td>
+                        {/* 9. NO BATCH */}
+                        <td data-label="No Batch" style={{ textAlign: 'center' }}>
+                          {asIs.noBatch !== '—' && asIs.noBatch ? (
+                            <span className="as-is-badge-code">
+                              {asIs.noBatch}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#94a3b8' }}>—</span>
+                          )}
+                        </td>
+                        {/* 10. START (Sisi Operator) */}
+                        <td data-label="Start (Opr)" style={{ fontWeight: 700, color: '#0f172a' }}>
+                          {asIs.start}
+                        </td>
+                        {/* 11. END (Sisi Operator - Konfirmasi Running) */}
+                        <td data-label="End (Opr)" style={{ fontWeight: 700, color: asIs.end === '—' ? '#94a3b8' : '#059669' }}>
+                          {asIs.end}
+                        </td>
+                        {/* 12. DURASI (Sisi Operator - Jam) */}
+                        <td data-label="Durasi" style={{ fontWeight: 700, color: asIs.durasi > 2 ? '#b91c1c' : '#334155' }}>
+                          {asIs.durasi} Jam
+                        </td>
+                        {/* 13. NO. WR */}
+                        <td data-label="No. WR">
+                          {asIs.noWr !== '~' && asIs.noWr ? (
+                            <span className="as-is-badge-code">{asIs.noWr}</span>
+                          ) : (
+                            <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>~</span>
+                          )}
+                        </td>
+                        {/* 14. WO TYPE */}
+                        <td data-label="WO Type">
+                          <span className={`as-is-pill-type ${asIs.woType === 'Batch' ? 'batch' : 'non-batch'}`}>
+                            {asIs.woType}
+                          </span>
+                        </td>
