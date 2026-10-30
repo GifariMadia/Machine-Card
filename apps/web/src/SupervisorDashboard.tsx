@@ -7498,3 +7498,503 @@ export default function SupervisorDashboard({ supervisor, onLogout }: Supervisor
                 </div>
 
                 {/* 2. Jam Operasi Aktual & Stepper Buttons */}
+                <div className="spv-form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Jam Operasi Aktual Mesin (Jam Riil Berputar) *</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    required
+                    style={{ fontSize: '1.05rem', fontWeight: 700 }}
+                    value={operatingForm.jamOperasiAktual}
+                    onChange={(e) => setOperatingForm({ ...operatingForm, jamOperasiAktual: parseFloat(e.target.value) || 0 })}
+                  />
+                  <small style={{ color: '#64748b', display: 'block', marginTop: '3px' }}>
+                    Jam operasi riil berputar, terpisah dari jam shift kalender.
+                  </small>
+
+                  {/* Stepper buttons */}
+                  <div className="friendly-stepper-wrap" style={{ marginTop: '6px' }}>
+                    <button
+                      type="button"
+                      className="btn-friendly-stepper"
+                      onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: Math.max(0, +(operatingForm.jamOperasiAktual - 5).toFixed(1)) })}
+                      title="Kurang 5 Jam"
+                    >
+                      -5h
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-friendly-stepper"
+                      onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: Math.max(0, +(operatingForm.jamOperasiAktual - 1).toFixed(1)) })}
+                      title="Kurang 1 Jam"
+                    >
+                      -1h
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-friendly-stepper"
+                      onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: Math.max(0, +(operatingForm.jamOperasiAktual - 0.5).toFixed(1)) })}
+                      title="Kurang 30 Menit"
+                    >
+                      -0.5h
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-friendly-stepper"
+                      onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: +(operatingForm.jamOperasiAktual + 0.5).toFixed(1) })}
+                      title="Tambah 30 Menit"
+                    >
+                      +0.5h
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-friendly-stepper"
+                      onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: +(operatingForm.jamOperasiAktual + 1).toFixed(1) })}
+                      title="Tambah 1 Jam"
+                    >
+                      +1h
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-friendly-stepper"
+                      onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: +(operatingForm.jamOperasiAktual + 5).toFixed(1) })}
+                      title="Tambah 5 Jam"
+                    >
+                      +5h
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-friendly-stepper"
+                      style={{ marginLeft: 'auto', background: '#ecfdf5', color: '#047857', borderColor: '#a7f3d0' }}
+                      onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: operatingForm.jamShiftKalender })}
+                      title="Samakan dengan Jam Shift"
+                    >
+                      = Shift Penuh
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Live Calculated Preview Card */}
+                {(() => {
+                  const calcAvail = operatingForm.jamShiftKalender > 0
+                    ? ((operatingForm.jamOperasiAktual / operatingForm.jamShiftKalender) * 100).toFixed(1)
+                    : '0';
+                  const calcDowntime = (operatingForm.jamShiftKalender - operatingForm.jamOperasiAktual).toFixed(1);
+                  const machineTickets = tickets.filter((t) => t.machine === selectedOperatingRecord.namaMesin);
+                  const breakdownCount = machineTickets.length;
+                  const calcMtbf = (operatingForm.jamOperasiAktual / breakdownCount).toFixed(1);
+                  const isOvertime = operatingForm.jamOperasiAktual > operatingForm.jamShiftKalender;
+
+                  return (
+                    <div className={`friendly-live-preview ${isOvertime ? 'warning' : ''}`}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <strong style={{ fontSize: '0.85rem', color: isOvertime ? '#92400e' : '#166534' }}>
+                          {isOvertime ? '⚠️ Perhatian: Waktu Operasi Melebihi Shift' : 'Hasil kalkulasi otomatis:'}
+                        </strong>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: isOvertime ? '#b45309' : '#047857' }}>
+                          {isOvertime ? 'Overtime Terdeteksi' : 'Normal Shift'}
+                        </span>
+                      </div>
+                      <div className="friendly-preview-grid">
+                        <div className="friendly-preview-item">
+                          <div className="friendly-preview-lbl">Availability</div>
+                          <div className="friendly-preview-val" style={{ color: Number(calcAvail) >= 80 ? '#047857' : '#d97706' }}>
+                            {calcAvail}%
+                          </div>
+                        </div>
+                        <div className="friendly-preview-item">
+                          <div className="friendly-preview-lbl">Idle / Downtime</div>
+                          <div className="friendly-preview-val" style={{ color: Number(calcDowntime) > 0 ? '#b91c1c' : '#047857' }}>
+                            {calcDowntime} Jam
+                          </div>
+                        </div>
+                        <div className="friendly-preview-item">
+                          <div className="friendly-preview-lbl">Estimasi MTBF</div>
+                          <div className="friendly-preview-val" style={{ color: '#0284c7' }}>
+                            {calcMtbf} Jam
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 3b. Status Tiket Breakdown & Operator Closing (Audit URS 3.6 & 7.6) */}
+                {(() => {
+                  const machineTickets = tickets.filter((t) => t.machine === selectedOperatingRecord.namaMesin && t.status !== 'VOID');
+                  const unclosedTickets = machineTickets.filter((t) => t.status !== 'CLOSED');
+                  const closedTickets = machineTickets.filter((t) => t.status === 'CLOSED');
+
+                  return (
+                    <div style={{ marginBottom: '1rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.85rem 1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>
+                          Status Tiket Breakdown &amp; Operator Closing:
+                        </strong>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: unclosedTickets.length > 0 ? '#b45309' : '#047857' }}>
+                          {unclosedTickets.length > 0 ? `${unclosedTickets.length} Tiket Belum Closing` : 'Semua Tiket Closed'}
+                        </span>
+                      </div>
+
+                      {unclosedTickets.length > 0 ? (
+                        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '8px 10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#92400e', fontSize: '0.78rem', fontWeight: 700 }}>
+                            <AlertTriangle size={14} />
+                            <span>Perhatian: Ada {unclosedTickets.length} tiket breakdown belum di-closing oleh operator!</span>
+                          </div>
+                          <p style={{ margin: '4px 0 8px', fontSize: '0.73rem', color: '#78350f', lineHeight: 1.4 }}>
+                            Nilai MTBF berstatus <strong>estimasi sementara</strong> sampai seluruh tiket berikut diselesaikan &amp; ditutup (closed) oleh operator:
+                          </p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            {unclosedTickets.map((t) => (
+                              <div
+                                key={t.ticket}
+                                style={{
+                                  background: '#ffffff',
+                                  border: '1px solid #fed7aa',
+                                  borderRadius: '5px',
+                                  padding: '5px 8px',
+                                  fontSize: '0.74rem',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                }}
+                              >
+                                <div>
+                                  <strong style={{ color: '#0284c7' }}>{t.ticket}</strong>
+                                  <span style={{ color: '#475569', marginLeft: '6px' }}>{t.keterangan}</span>
+                                  {t.reporterName && (
+                                    <small style={{ color: '#94a3b8', display: 'block' }}>Pelapor: {t.reporterName}</small>
+                                  )}
+                                </div>
+                                <span
+                                  style={{
+                                    fontSize: '0.68rem',
+                                    fontWeight: 700,
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    whiteSpace: 'nowrap',
+                                    background: t.status === 'OPEN' ? '#ffe4e6' : '#e0f2fe',
+                                    color: t.status === 'OPEN' ? '#be123c' : '#0369a1',
+                                  }}
+                                >
+                                  {t.status === 'OPEN' ? 'Open (Menunggu)' : 'Sedang Dikerjakan'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '8px 10px', color: '#065f46', fontSize: '0.78rem' }}>
+                          ✓ Seluruh tiket breakdown ({closedTickets.length} tiket) pada mesin ini telah di-closing oleh operator. Nilai MTBF valid dan siap difinalkan.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* 4. Sumber Pencatatan Data & Quick Pills */}
+                <div className="spv-form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Sumber Pencatatan Data *</label>
+                  <input
+                    type="text"
+                    required
+                    value={operatingForm.sumberData}
+                    onChange={(e) => setOperatingForm({ ...operatingForm, sumberData: e.target.value })}
+                    placeholder="Contoh: Logbook Shift Fisik / Counter Mesin"
+                  />
+                  <div style={{ marginTop: '5px' }}>
+                    <small style={{ color: '#64748b', display: 'block', marginBottom: '3px' }}>Pilih Cepat Sumber Data:</small>
+                    <div className="friendly-preset-group">
+                      {[
+                        '📋 Logbook Shift Fisik',
+                        '🔢 Counter Running Mesin',
+                        '📝 Rekap Harian Produksi',
+                        '🔧 Verifikasi Fisik SPV',
+                      ].map((src) => (
+                        <button
+                          key={src.replace(/^[📋🔢📝🔧]\s*/u, '')}
+                          type="button"
+                          className={`btn-friendly-preset ${operatingForm.sumberData === src ? 'active' : ''}`}
+                          onClick={() => setOperatingForm({ ...operatingForm, sumberData: src })}
+                        >
+                          {src.replace(/^[📋🔢📝🔧]\s*/u, '')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Petugas Penanggung Jawab */}
+                <div className="spv-form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Petugas / Penanggung Jawab Input *</label>
+                  <input
+                    type="text"
+                    required
+                    value={operatingForm.penanggungJawab}
+                    onChange={(e) => setOperatingForm({ ...operatingForm, penanggungJawab: e.target.value })}
+                  />
+                </div>
+
+                {/* 6. Status Kelengkapan Checkbox */}
+                <div className="spv-form-group" style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={operatingForm.isComplete}
+                      onChange={(e) => setOperatingForm({ ...operatingForm, isComplete: e.target.checked })}
+                      style={{ width: '18px', height: '18px' }}
+                    />
+                    <strong style={{ color: '#0a1e15' }}>Tandai Data Lengkap &amp; Final (Valid untuk Basis MTBF Resmi)</strong>
+                  </label>
+                </div>
+
+                {/* 7. Catatan Penjelasan */}
+                <div className="spv-form-group">
+                  <label>Catatan Penjelasan (Opsional bila ada kondisi khusus)</label>
+                  <textarea
+                    rows={2}
+                    value={operatingForm.catatanPenjelasan}
+                    onChange={(e) => setOperatingForm({ ...operatingForm, catatanPenjelasan: e.target.value })}
+                    placeholder="Catatan verifikasi logbook manual..."
+                  />
+                </div>
+              </div>
+
+              <footer className="spv-drawer-footer" style={{ margin: 'auto -1.5rem -1.5rem', display: 'flex', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="btn-spv-secondary"
+                  onClick={() => setSelectedOperatingRecord(null)}
+                >
+                  Batal
+                </button>
+                <button type="submit" className="btn-spv-primary">
+                  <Save size={16} />
+                  <span>Simpan Verifikasi Operasi</span>
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL INPUT RECORD BARU OLEH SPV */}
+      {isNewOperatingModalOpen && (
+        <div
+          className="spv-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="spv-new-operating-title"
+        >
+          <button
+            className="spv-drawer-overlay"
+            aria-label="Tutup form input jam operasi"
+            onClick={() => setIsNewOperatingModalOpen(false)}
+          />
+
+          <aside className="spv-drawer-panel" style={{ maxWidth: '540px' }}>
+            <header className="spv-drawer-top">
+              <div>
+                <h2 id="spv-new-operating-title">Input Jam Operasi Aktual Baru</h2>
+                <p>Tambah data waktu operasional riil mesin</p>
+              </div>
+              <button
+                className="btn-spv-close-drawer"
+                onClick={() => setIsNewOperatingModalOpen(false)}
+                aria-label="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleCreateOperatingHours} className="spv-drawer-body">
+              <div className="spv-card-block">
+                <div className="spv-card-block-title">
+                  <Activity size={16} />
+                  Mesin, Periode &amp; Durasi
+                </div>
+
+                <div className="spv-form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Pilih Mesin *</label>
+                  <select
+                    value={newOperatingForm.kodeMesin}
+                    onChange={(e) => {
+                      const found = machines.find((m) => m.kode_mesin === e.target.value);
+                      setNewOperatingForm({
+                        ...newOperatingForm,
+                        kodeMesin: e.target.value,
+                        namaMesin: found ? found.nama_mesin : newOperatingForm.namaMesin,
+                      });
+                    }}
+                  >
+                    {machines.map((m) => (
+                      <option key={m.kode_mesin} value={m.kode_mesin}>
+                        {m.kode_mesin} - {m.nama_mesin} ({m.kategori})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="spv-form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Periode Waktu *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Oktober 2026 atau Shift 1 (24 Okt 2026)"
+                    value={newOperatingForm.periode}
+                    onChange={(e) => setNewOperatingForm({ ...newOperatingForm, periode: e.target.value })}
+                  />
+                </div>
+
+                <div className="spv-form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Jam Shift Kalender (Jam) *</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    required
+                    value={newOperatingForm.jamShiftKalender}
+                    onChange={(e) => setNewOperatingForm({ ...newOperatingForm, jamShiftKalender: parseFloat(e.target.value) || 0 })}
+                  />
+                  <div style={{ marginTop: '5px' }}>
+                    <small style={{ color: '#64748b', display: 'block', marginBottom: '3px' }}>Preset Jam Shift:</small>
+                    <div className="friendly-preset-group">
+                      {[
+                        { label: '7h (1 Shift)', val: 7 },
+                        { label: '14h (2 Shift)', val: 14 },
+                        { label: '21h (3 Shift)', val: 21 },
+                        { label: '176h (1 Bulan)', val: 176 },
+                      ].map((p) => (
+                        <button
+                          key={p.label}
+                          type="button"
+                          className={`btn-friendly-preset ${newOperatingForm.jamShiftKalender === p.val ? 'active' : ''}`}
+                          onClick={() => setNewOperatingForm({ ...newOperatingForm, jamShiftKalender: p.val })}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="spv-form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Jam Operasi Aktual (Jam) *</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    required
+                    style={{ fontSize: '1.05rem', fontWeight: 700 }}
+                    value={newOperatingForm.jamOperasiAktual}
+                    onChange={(e) => setNewOperatingForm({ ...newOperatingForm, jamOperasiAktual: parseFloat(e.target.value) || 0 })}
+                  />
+
+                  <div className="friendly-stepper-wrap" style={{ marginTop: '6px' }}>
+                    <button
+                      type="button"
+                      className="btn-friendly-stepper"
+                      onClick={() => setNewOperatingForm({ ...newOperatingForm, jamOperasiAktual: Math.max(0, +(newOperatingForm.jamOperasiAktual - 1).toFixed(1)) })}
+                    >
+                      -1h
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-friendly-stepper"
+                      onClick={() => setNewOperatingForm({ ...newOperatingForm, jamOperasiAktual: Math.max(0, +(newOperatingForm.jamOperasiAktual - 0.5).toFixed(1)) })}
+                    >
+                      -0.5h
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-friendly-stepper"
+                      onClick={() => setNewOperatingForm({ ...newOperatingForm, jamOperasiAktual: +(newOperatingForm.jamOperasiAktual + 0.5).toFixed(1) })}
+                    >
+                      +0.5h
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-friendly-stepper"
+                      onClick={() => setNewOperatingForm({ ...newOperatingForm, jamOperasiAktual: +(newOperatingForm.jamOperasiAktual + 1).toFixed(1) })}
+                    >
+                      +1h
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-friendly-stepper"
+                      style={{ marginLeft: 'auto', background: '#ecfdf5', color: '#047857', borderColor: '#a7f3d0' }}
+                      onClick={() => setNewOperatingForm({ ...newOperatingForm, jamOperasiAktual: newOperatingForm.jamShiftKalender })}
+                    >
+                      = Shift Penuh
+                    </button>
+                  </div>
+                </div>
+
+                <div className="spv-form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Sumber Pencatatan *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newOperatingForm.sumberData}
+                    onChange={(e) => setNewOperatingForm({ ...newOperatingForm, sumberData: e.target.value })}
+                  />
+                  <div style={{ marginTop: '5px' }}>
+                    <div className="friendly-preset-group">
+                      {[
+                        '📋 Logbook Shift Fisik',
+                        '🔢 Counter Running Mesin',
+                        '📝 Rekap Harian Produksi',
+                        '🔧 Verifikasi Fisik SPV',
+                      ].map((src) => (
+                        <button
+                          key={src.replace(/^[📋🔢📝🔧]\s*/u, '')}
+                          type="button"
+                          className={`btn-friendly-preset ${newOperatingForm.sumberData === src ? 'active' : ''}`}
+                          onClick={() => setNewOperatingForm({ ...newOperatingForm, sumberData: src })}
+                        >
+                          {src.replace(/^[📋🔢📝🔧]\s*/u, '')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="spv-form-group" style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={newOperatingForm.isComplete}
+                      onChange={(e) => setNewOperatingForm({ ...newOperatingForm, isComplete: e.target.checked })}
+                      style={{ width: '18px', height: '18px' }}
+                    />
+                    <strong style={{ color: '#0a1e15' }}>Tandai Data Lengkap &amp; Final</strong>
+                  </label>
+                </div>
+              </div>
+
+              <footer className="spv-drawer-footer" style={{ margin: 'auto -1.5rem -1.5rem', display: 'flex', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="btn-spv-secondary"
+                  onClick={() => setIsNewOperatingModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button type="submit" className="btn-spv-primary">
+                  <Save size={16} />
+                  <span>Simpan Data Baru</span>
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* URS 7.1 Klausul 6: MODAL PENETAPAN & PENYESUAIAN TARGET KPI OLEH SPV */}
+      {isKpiModalOpen && selectedKpiForEdit && (
+        <div className="spv-modal-overlay" role="dialog" aria-modal="true">
+          <div className="spv-modal-content">
+            <header className="spv-modal-header">
