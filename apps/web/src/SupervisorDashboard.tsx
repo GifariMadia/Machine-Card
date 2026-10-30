@@ -6998,3 +6998,503 @@ export default function SupervisorDashboard({ supervisor, onLogout }: Supervisor
               <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: 1.5, background: '#f8fafc', padding: '0.6rem 0.85rem', borderRadius: '6px', border: '1px dashed #cbd5e1' }}>
                 <strong>Audit Kepatuhan Pelaporan:</strong> Sistem memisahkan secara objektif penyebab keterlambatan laporan shift antara kelalaian individu personel vs force majeure gangguan teknis (server/jaringan down), serta mendokumentasikan durasi keterlambatan aktual dalam riwayat serah-terima.
               </div>
+            </details>
+
+            </>}
+            {!isTestEnv && <details className="spv-handover-details"><summary>Riwayat pengiriman server</summary>
+              <p>Pengiriman otomatis berjalan setelah akhir shift, semua petugas melapor, dan webhook server dikonfigurasi. UNKNOWN memerlukan pemeriksaan untuk menghindari kirim ganda.</p>
+              {(JSON.parse(storage.getItem('machine-card-report-deliveries') || '[]') as Array<{ key: string; status: string; updated_at: string }>).filter((item) => item.key.includes(reportDate) && item.key.includes(`:${selectedShift}`)).map((item) => <p key={item.key}>{item.status} · {new Date(item.updated_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</p>)}
+            </details>}
+            {/* DISCORD AUTOMATION & SIMULATION SECTION */}
+            <div className="spv-discord-card">
+              <div className="spv-discord-header">
+                <div className="spv-discord-header-left">
+                  <div className="spv-discord-icon-badge">
+                    <Send size={20} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '1rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      Kirim laporan ke Discord
+                      <span style={{ fontSize: '0.72rem', background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                        Alternatif Notifikasi
+                      </span>
+                    </strong>
+                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                      Bagikan laporan ke channel koordinasi maintenance.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn-discord-sim"
+                    onClick={() => handleSendDiscordReport(true)}
+                    disabled={discordSending}
+                    title="Uji simulasi pengiriman tanpa webhook Discord nyata"
+                  >
+                    <Sparkles size={16} />
+                    <span>{discordSending ? 'Memproses...' : 'Uji Simulasi (Mock)'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-discord-send"
+                    onClick={() => handleSendDiscordReport(false)}
+                    disabled={discordSending}
+                  >
+                    <Send size={16} />
+                    <span>{discordSending ? 'Mengirim...' : 'Kirim Laporan Discord'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <details className="spv-discord-controls spv-handover-details">
+                <summary>Pengaturan koneksi Discord</summary>
+                <div className="spv-discord-input-row">
+                  <input
+                    type="url"
+                    className="spv-discord-input"
+                    aria-label="Discord Webhook URL"
+                    placeholder="Masukkan Discord Webhook URL (Opsional: biarkan kosong untuk Mode Simulasi)"
+                    value={discordWebhookUrl}
+                    onChange={(e) => setDiscordWebhookUrl(e.target.value)}
+                  />
+                </div>
+                <small style={{ color: '#64748b', fontSize: '0.78rem' }}>
+                  * Tips: Jika URL dikosongkan atau diisi URL contoh/mock, sistem otomatis menjalankan pengujian simulasi dan memvisualisasikan Discord Embed di bawah.
+                </small>
+              </details>
+
+              {discordError && (
+                <div
+                  style={{
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#991b1b',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '6px',
+                    fontSize: '0.85rem',
+                    marginBottom: '1rem',
+                  }}
+                  role="alert"
+                >
+                  {discordError}
+                </div>
+              )}
+
+              {discordResult && (
+                <div style={{ marginTop: '1.25rem' }}>
+                  <div
+                    style={{
+                      background: discordResult.simulated ? '#eff6ff' : '#ecfdf5',
+                      border: `1px solid ${discordResult.simulated ? '#bfdbfe' : '#a7f3d0'}`,
+                      color: discordResult.simulated ? '#1e40af' : '#065f46',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.75rem',
+                      fontSize: '0.86rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                      <CheckCircle2 size={18} />
+                      <span>{discordResult.message}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowRawJson(!showRawJson)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      <Code size={14} />
+                      <span>{showRawJson ? 'Tutup Payload JSON' : 'Lihat Payload JSON'}</span>
+                    </button>
+                  </div>
+
+                  {showRawJson && (
+                    <pre
+                      style={{
+                        background: '#0f172a',
+                        color: '#38bdf8',
+                        padding: '1rem',
+                        borderRadius: '6px',
+                        fontSize: '0.76rem',
+                        overflowX: 'auto',
+                        maxHeight: '250px',
+                        marginBottom: '1rem',
+                      }}
+                    >
+                      {JSON.stringify(discordResult.payload, null, 2)}
+                    </pre>
+                  )}
+
+                  {/* Render simulated Discord Embed */}
+                  {discordResult.payload?.embeds?.[0] && (
+                    <details className="spv-handover-details">
+                      <summary>Pratinjau pesan Discord</summary>
+                    <div className="spv-discord-preview-container">
+                      <div className="spv-discord-msg-header">
+                        <div className="spv-discord-avatar">
+                          <Bot size={22} />
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <strong style={{ color: '#f2f3f5', fontSize: '0.95rem' }}>
+                              {discordResult.payload.username || 'B7 Machine Card Bot'}
+                            </strong>
+                            <span className="spv-discord-bot-badge">BOT</span>
+                            <span style={{ color: '#949ba4', fontSize: '0.72rem' }}>
+                              Hari ini pukul{' '}
+                              {new Intl.DateTimeFormat('id-ID', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                timeZone: 'Asia/Jakarta',
+                              }).format(new Date())}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '0.75rem', color: '#949ba4' }}>
+                            Notifikasi Integrasi Plant Pulogadung (Webhook Channel)
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Embed box */}
+                      <div
+                        className="spv-discord-embed-card"
+                        style={{
+                          borderLeft: `4px solid ${
+                            discordResult.payload.embeds[0].color === 0xe11d48 ? '#e11d48' : '#059669'
+                          }`,
+                        }}
+                      >
+                        <h4 className="spv-discord-embed-title">
+                          {discordResult.payload.embeds[0].title}
+                        </h4>
+                        <p className="spv-discord-embed-desc">
+                          {discordResult.payload.embeds[0].description}
+                        </p>
+
+                        <div className="spv-discord-embed-fields">
+                          {discordResult.payload.embeds[0].fields?.map((f: any, idx: number) => (
+                            <div
+                              key={idx}
+                              className={`spv-discord-embed-field ${f.inline === false ? 'full-width' : ''}`}
+                            >
+                              <span className="spv-discord-field-name">{f.name}</span>
+                              <div className="spv-discord-field-value">{f.value}</div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {discordResult.payload.embeds[0].footer && (
+                          <div className="spv-discord-embed-footer">
+                            {discordResult.payload.embeds[0].footer.text}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    </details>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+      </main>
+
+      {/* DRAWER REVIEW & SIGN-OFF BREAKDOWN */}
+      {selectedTicket && (
+        <div
+          className="spv-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="spv-review-title"
+        >
+          <button
+            className="spv-drawer-overlay"
+            aria-label="Tutup panel"
+            onClick={() => setSelectedTicket(null)}
+          />
+
+          <aside className="spv-drawer-panel">
+            <header className="spv-drawer-top">
+              <div>
+                <span className="spv-code-badge" style={{ background: '#047857', color: '#fff' }}>
+                  {selectedTicket.ticket}
+                </span>
+                <h2 id="spv-review-title">{selectedTicket.machine}</h2>
+                <p>
+                  Section: {selectedTicket.section} · Pelapor:{' '}
+                  {selectedTicket.reporterName || selectedTicket.reporter || 'Operator'}
+                </p>
+              </div>
+              <button
+                className="btn-spv-close-drawer"
+                onClick={() => setSelectedTicket(null)}
+                aria-label="Tutup panel"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <div className="spv-drawer-body">
+              {/* Laporan Kerusakan */}
+              <div className="spv-card-block">
+                <div className="spv-card-block-title">
+                  <FileText size={16} />
+                  Konteks Pelaporan Operator
+                </div>
+                <div className="spv-kv-grid">
+                  <div className="spv-kv-item">
+                    <dt>Operator Pelapor</dt>
+                    <dd>{selectedTicket.reporterName || selectedTicket.reporter || 'Operator'}</dd>
+                  </div>
+                  <div className="spv-kv-item">
+                    <dt>Shift Pelapor</dt>
+                    <dd>Shift {selectedTicket.shift || '1'}</dd>
+                  </div>
+                  {selectedTicket.kodeProduk && (
+                    <div className="spv-kv-item">
+                      <dt>Produk / Batch</dt>
+                      <dd>
+                        {selectedTicket.kodeProduk} / {selectedTicket.noBatch || '—'}
+                      </dd>
+                    </div>
+                  )}
+                  {selectedTicket.kategori && (
+                    <div className="spv-kv-item">
+                      <dt>Kategori Breakdown</dt>
+                      <dd>{selectedTicket.kategori}</dd>
+                    </div>
+                  )}
+                </div>
+                <div style={{ marginTop: '0.75rem', background: '#fef2f2', padding: '0.65rem 0.85rem', borderRadius: '4px' }}>
+                  <strong style={{ fontSize: '0.78rem', color: '#b91c1c' }}>Deskripsi Kerusakan:</strong>
+                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.88rem', color: '#7f1d1d' }}>{selectedTicket.keterangan}</p>
+                </div>
+              </div>
+
+              {/* Komparasi Waktu 2 Sisi (Operator vs Teknisi) */}
+              {(() => {
+                const asIs = getTicketAsIsRow(selectedTicket);
+                return (
+                  <div className="spv-card-block" style={{ border: '1px solid #bbf7d0', background: '#f0fdf4' }}>
+                    <div className="spv-card-block-title" style={{ color: '#166534' }}>
+                      <Clock size={16} />
+                      Komparasi Waktu 2 Sisi (Operator vs Teknisi)
+                    </div>
+                    <p style={{ margin: '0 0 0.75rem', fontSize: '0.78rem', color: '#15803d' }}>
+                      Perbandingan waktu berhentinya mesin di sisi operator produksi vs durasi penanganan riil oleh teknisi maintenance.
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                      {/* Sisi Operator */}
+                      <div style={{ background: '#ffffff', borderRadius: '8px', padding: '0.75rem', border: '1px solid #dcfce7' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                          <strong style={{ fontSize: '0.78rem', color: '#166534', textTransform: 'uppercase' }}>Sisi Operator (Produksi)</strong>
+                          <span style={{ fontSize: '0.68rem', background: '#dcfce7', color: '#166534', fontWeight: 700, padding: '1px 5px', borderRadius: '4px' }}>Tabel As-Is</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.8rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#64748b' }}>Mesin Mati (Start):</span>
+                            <strong>{asIs.start}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#64748b' }}>Mesin Running (End):</span>
+                            <strong style={{ color: asIs.end === '—' ? '#94a3b8' : '#059669' }}>{asIs.end}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #e2e8f0', paddingTop: '4px', marginTop: '2px' }}>
+                            <span style={{ color: '#1e293b', fontWeight: 700 }}>Total Downtime:</span>
+                            <strong style={{ color: '#b91c1c' }}>{asIs.durasi} Jam</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sisi Teknisi */}
+                      <div style={{ background: '#ffffff', borderRadius: '8px', padding: '0.75rem', border: '1px solid #dbeafe' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                          <strong style={{ fontSize: '0.78rem', color: '#1e40af', textTransform: 'uppercase' }}>Sisi Teknisi (Maintenance)</strong>
+                          <span style={{ fontSize: '0.68rem', background: '#dbeafe', color: '#1e40af', fontWeight: 700, padding: '1px 5px', borderRadius: '4px' }}>Log Penanganan</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.8rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#64748b' }}>Mulai Tindakan:</span>
+                            <strong>{asIs.techStart}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#64748b' }}>Selesai Tindakan:</span>
+                            <strong>{asIs.techEnd}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #e2e8f0', paddingTop: '4px', marginTop: '2px' }}>
+                            <span style={{ color: '#1e293b', fontWeight: 700 }}>Durasi Kerja Teknisi:</span>
+                            <strong style={{ color: '#0284c7' }}>{asIs.techDurasi} Jam</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Tindakan Teknisi */}
+              <div className="spv-card-block">
+                <div className="spv-card-block-title">
+                  <Wrench size={16} />
+                  Tindakan Penanganan Teknisi Maintenance
+                </div>
+                <div className="spv-kv-grid">
+                  <div className="spv-kv-item">
+                    <dt>Teknisi Penanggung Jawab</dt>
+                    <dd>{selectedTicket.technicianName || 'Belum ditugaskan'}</dd>
+                  </div>
+                  <div className="spv-kv-item">
+                    <dt>Status Pekerjaan</dt>
+                    <dd>{selectedTicket.status}</dd>
+                  </div>
+                </div>
+                <div style={{ marginTop: '0.75rem' }}>
+                  <dt style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                    Rincian Perbaikan yang Dilakukan:
+                  </dt>
+                  <dd style={{ margin: '0.25rem 0 0', fontSize: '0.88rem', color: '#0f172a', fontWeight: 600 }}>
+                    {selectedTicket.action || 'Teknisi belum mencatat tindakan perbaikan'}
+                  </dd>
+                </div>
+              </div>
+
+              {/* Form Evaluasi & Catatan Supervisor */}
+              <div className="spv-card-block">
+                <div className="spv-card-block-title">
+                  <ShieldCheck size={16} />
+                  Evaluasi &amp; Catatan Pengawasan Supervisor
+                </div>
+
+                {selectedTicket.supervisorVerified ? (
+                  <div style={{ background: '#ecfdf5', padding: '0.75rem', borderRadius: '4px', border: '1px solid #a7f3d0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#065f46', fontWeight: 700 }}>
+                      <CheckCircle2 size={16} />
+                      <span>Telah Ditinjau oleh Supervisor</span>
+                    </div>
+                    <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: '#064e3b' }}>
+                      Catatan Evaluasi: {selectedTicket.supervisorNote}
+                    </p>
+                    <small style={{ color: '#047857' }}>Waktu Review: {selectedTicket.verifiedAt}</small>
+                  </div>
+                ) : (
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
+                      Catatan Evaluasi / Rekomendasi Tindak Lanjut SPV:
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={verificationNote}
+                      onChange={(e) => setVerificationNote(e.target.value)}
+                      placeholder="Contoh: Evaluasi insiden mingguan: Telah dikoordinasikan penggantian part preventif saat jadwal PM akhir pekan..."
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {!selectedTicket.supervisorVerified && (
+              <footer className="spv-drawer-footer">
+                <button
+                  type="button"
+                  className="btn-spv-verify-big"
+                  onClick={handleSignOffTicket}
+                >
+                  <Check size={18} />
+                  <span>Simpan Catatan Evaluasi SPV</span>
+                </button>
+              </footer>
+            )}
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL INPUT / VERIFIKASI JAM OPERASI MESIN (URS 3.6 - FRIENDLY MANUAL INPUT) */}
+      {selectedOperatingRecord && (
+        <div
+          className="spv-drawer-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="spv-operating-title"
+        >
+          <button
+            className="spv-drawer-overlay"
+            aria-label="Tutup form verifikasi jam operasi"
+            onClick={() => setSelectedOperatingRecord(null)}
+          />
+
+          <aside className="spv-drawer-panel" style={{ maxWidth: '540px' }}>
+            <header className="spv-drawer-top">
+              <div>
+                <span className="spv-code-badge" style={{ background: '#0284c7', color: '#fff' }}>
+                  {selectedOperatingRecord.kodeMesin}
+                </span>
+                <h2 id="spv-operating-title">{selectedOperatingRecord.namaMesin}</h2>
+                <p>Input &amp; Verifikasi Jam Operasi Aktual · Periode {selectedOperatingRecord.periode}</p>
+              </div>
+              <button
+                className="btn-spv-close-drawer"
+                onClick={() => setSelectedOperatingRecord(null)}
+                aria-label="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleSaveOperatingHours} className="spv-drawer-body">
+              <div className="spv-card-block">
+                <div className="spv-card-block-title">
+                  <Activity size={16} />
+                  Kalkulasi Cepat Jam Shift &amp; Jam Operasi
+                </div>
+
+                {/* 1. Jam Shift Kalender & Quick Presets */}
+                <div className="spv-form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Jam Shift Kalender (Total Waktu Shift Terjadwal) *</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    required
+                    value={operatingForm.jamShiftKalender}
+                    onChange={(e) => setOperatingForm({ ...operatingForm, jamShiftKalender: parseFloat(e.target.value) || 0 })}
+                  />
+                  <div style={{ marginTop: '5px' }}>
+                    <small style={{ color: '#64748b', display: 'block', marginBottom: '3px' }}>Preset Jam Shift:</small>
+                    <div className="friendly-preset-group">
+                      {[
+                        { label: '7h (1 Shift)', val: 7 },
+                        { label: '14h (2 Shift)', val: 14 },
+                        { label: '21h (3 Shift)', val: 21 },
+                        { label: '176h (1 Bulan)', val: 176 },
+                      ].map((p) => (
+                        <button
+                          key={p.label}
+                          type="button"
+                          className={`btn-friendly-preset ${operatingForm.jamShiftKalender === p.val ? 'active' : ''}`}
+                          onClick={() => setOperatingForm({ ...operatingForm, jamShiftKalender: p.val })}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Jam Operasi Aktual & Stepper Buttons */}
