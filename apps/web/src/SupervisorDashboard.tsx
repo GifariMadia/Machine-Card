@@ -7998,3 +7998,609 @@ export default function SupervisorDashboard({ supervisor, onLogout }: Supervisor
         <div className="spv-modal-overlay" role="dialog" aria-modal="true">
           <div className="spv-modal-content">
             <header className="spv-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Target size={20} color="var(--color-icon-neutral, #64748b)" />
+                <h3>Penetapan &amp; Penyesuaian Target KPI Maintenance</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsKpiModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                aria-label="Tutup Modal Target KPI"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleSaveKpiTarget}>
+              <div className="spv-modal-body">
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.8rem', color: '#166534' }}>
+                  <strong>Kewenangan SPV Maintenance:</strong> Anda sedang memperbarui acuan target KPI resmi. Riwayat nilai lama, tanggal berlakunya, dan alasan penyesuaian akan diarsipkan permanen untuk audit kepatuhan.
+                </div>
+
+                <div className="spv-form-group">
+                  <label htmlFor="kpi-indicator-select">Indikator KPI *</label>
+                  <select
+                    id="kpi-indicator-select"
+                    value={selectedKpiForEdit.id}
+                    onChange={(e) => {
+                      const found = kpiTargets.find((k) => k.id === e.target.value);
+                      if (found) {
+                        setSelectedKpiForEdit(found);
+                        setKpiEditForm({
+                          targetValue: found.targetValue,
+                          unit: found.unit,
+                          direction: found.direction,
+                          scope: found.scope,
+                          effectivePeriod: found.effectivePeriod,
+                          reason: '',
+                        });
+                      }
+                    }}
+                  >
+                    {kpiTargets.map((k) => (
+                      <option key={k.id} value={k.id}>
+                        {k.label} ({k.unit})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="spv-form-group">
+                    <label htmlFor="kpi-target-value-input">Nilai Target Baru *</label>
+                    <input
+                      id="kpi-target-value-input"
+                      type="number"
+                      step="0.1"
+                      required
+                      value={kpiEditForm.targetValue}
+                      onChange={(e) => setKpiEditForm({ ...kpiEditForm, targetValue: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <div className="spv-form-group">
+                    <label htmlFor="kpi-direction-select">Arah Pencapaian Target *</label>
+                    <select
+                      id="kpi-direction-select"
+                      value={kpiEditForm.direction}
+                      onChange={(e: any) => setKpiEditForm({ ...kpiEditForm, direction: e.target.value })}
+                    >
+                      <option value="LESS_THAN_OR_EQUAL">≤ (Makin Rendah Makin Baik - cth: MTTR/Downtime)</option>
+                      <option value="GREATER_THAN_OR_EQUAL">≥ (Makin Tinggi Makin Baik - cth: MTBF/PM On-Time)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="spv-form-group">
+                    <label htmlFor="kpi-unit-input">Satuan Nilai *</label>
+                    <input
+                      id="kpi-unit-input"
+                      type="text"
+                      required
+                      value={kpiEditForm.unit}
+                      onChange={(e) => setKpiEditForm({ ...kpiEditForm, unit: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="spv-form-group">
+                    <label htmlFor="kpi-period-input">Periode Berlaku Target *</label>
+                    <input
+                      id="kpi-period-input"
+                      type="text"
+                      required
+                      value={kpiEditForm.effectivePeriod}
+                      onChange={(e) => setKpiEditForm({ ...kpiEditForm, effectivePeriod: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="spv-form-group">
+                  <label htmlFor="kpi-scope-input">Cakupan Mesin / Kelompok Mesin *</label>
+                  <input
+                    id="kpi-scope-input"
+                    type="text"
+                    required
+                    value={kpiEditForm.scope}
+                    onChange={(e) => setKpiEditForm({ ...kpiEditForm, scope: e.target.value })}
+                  />
+                </div>
+
+                <div className="spv-form-group">
+                  <label htmlFor="kpi-reason-input">Alasan Penyesuaian Target (Wajib untuk Audit Trail ALCOA) *</label>
+                  <textarea
+                    id="kpi-reason-input"
+                    rows={3}
+                    required
+                    placeholder="Contoh: Pengetatan target MTTR pasca implementasi modul pelatihan perbaikan cepat dan ketersediaan sparepart fast-moving..."
+                    value={kpiEditForm.reason}
+                    onChange={(e) => setKpiEditForm({ ...kpiEditForm, reason: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <footer className="spv-modal-footer">
+                <button
+                  type="button"
+                  className="btn-spv-secondary"
+                  onClick={() => setIsKpiModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button type="submit" className="spv-btn-kpi-edit">
+                  <Save size={15} />
+                  <span>Simpan &amp; Terapkan Target KPI</span>
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* URS 8.1 Klausul 1 & 6: MODAL PEMBATALAN CATATAN (VOID ONLY, NO HARD DELETE) */}
+      {isVoidModalOpen && ticketToVoid && (
+        <div className="spv-modal-overlay" role="dialog" aria-modal="true">
+          <div className="spv-modal-content" style={{ maxWidth: '540px' }}>
+            <header className="spv-modal-header" style={{ borderBottomColor: '#fecaca' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b91c1c' }}>
+                <AlertTriangle size={20} />
+                <h3 style={{ color: '#991b1b' }}>Pembatalan Catatan Tiket (Void Only)</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVoidModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                aria-label="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleConfirmVoidTicket}>
+              <div className="spv-modal-body">
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.8rem', color: '#991b1b', lineHeight: 1.5 }}>
+                  <strong>Perlindungan Riwayat:</strong> Sistem tidak menyediakan penghapusan permanen. Catatan ini akan ditandai berstatus <strong>VOID (Dibatalkan)</strong>, tidak dihitung dalam downtime lini aktif, namun tetap tersimpan utuh dan dapat diaudit kapan saja.
+                </div>
+
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
+                  <div><strong>No. Tiket:</strong> {ticketToVoid.ticket}</div>
+                  <div><strong>Mesin:</strong> {ticketToVoid.machine} ({ticketToVoid.section})</div>
+                  <div><strong>Masalah:</strong> {ticketToVoid.keterangan}</div>
+                  <div><strong>Status Saat Ini:</strong> {ticketToVoid.status}</div>
+                </div>
+
+                <div className="spv-form-group">
+                  <label htmlFor="void-reason-textarea">Alasan Pembatalan Catatan (Wajib Diisi untuk Audit Trail) *</label>
+                  <textarea
+                    id="void-reason-textarea"
+                    rows={3}
+                    required
+                    placeholder="Contoh: Tiket dibuat ganda oleh operator / salah memilih unit mesin pada lini filling..."
+                    value={voidReasonInput}
+                    onChange={(e) => setVoidReasonInput(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <footer className="spv-modal-footer">
+                <button
+                  type="button"
+                  className="btn-spv-secondary"
+                  onClick={() => setIsVoidModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#dc2626',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <X size={15} />
+                  <span>Konfirmasi Pembatalan (Void)</span>
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* URS 8.1 Klausul 3 & 4: MODAL KOREKSI DATA PENGUKURAN MAINTENANCE */}
+      {isCorrectionModalOpen && ticketToCorrect && (
+        <div className="spv-modal-overlay" role="dialog" aria-modal="true">
+          <div className="spv-modal-content">
+            <header className="spv-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <SlidersHorizontal size={20} color="var(--color-icon-neutral, #64748b)" />
+                <h3>Koreksi Data Pengukuran Maintenance</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCorrectionModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                aria-label="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleSaveDataCorrection}>
+              <div className="spv-modal-body">
+                <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.8rem', color: '#0369a1', lineHeight: 1.5 }}>
+                  <strong>Keterlacakan &amp; Pembaruan Indikator:</strong> Perubahan waktu kerusakan, waktu perbaikan, atau klasifikasi insiden dicatat permanen dalam log audit (sebelum vs sesudah). Indikator MTTR, MTBF, dan Downtime akan dikalkulasi ulang otomatis setelah koreksi disimpan.
+                </div>
+
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
+                  <div><strong>No. Tiket:</strong> {ticketToCorrect.ticket} · <strong>Mesin:</strong> {ticketToCorrect.machine}</div>
+                  <div><strong>Masalah Terlapor:</strong> {ticketToCorrect.keterangan}</div>
+                </div>
+
+                <div className="spv-form-group">
+                  <label htmlFor="correction-field-select">Parameter yang Dikoreksi *</label>
+                  <select
+                    id="correction-field-select"
+                    value={correctionForm.field}
+                    onChange={(e: any) => {
+                      const f = e.target.value as 'durasiPerbaikanMenit' | 'waktuTungguPartMenit' | 'waktuMulai' | 'kategori';
+                      let before = '';
+                      let label = '';
+                      if (f === 'durasiPerbaikanMenit') {
+                        before = String(ticketToCorrect.durasiPerbaikanMenit ?? '');
+                        label = 'Durasi Perbaikan Aktif (Menit)';
+                      } else if (f === 'waktuTungguPartMenit') {
+                        before = String((ticketToCorrect.waktuTungguPartMenit ?? 0));
+                        label = 'Waktu Tunggu Suku Cadang (Menit)';
+                      } else if (f === 'waktuMulai') {
+                        before = ticketToCorrect.waktuMulai || '';
+                        label = 'Waktu Mulai Kerusakan (Timestamp)';
+                      } else if (f === 'kategori') {
+                        before = ticketToCorrect.kategori || 'Kerusakan Umum';
+                        label = 'Kategori / Klasifikasi Kerusakan';
+                      }
+                      setCorrectionForm({
+                        field: f,
+                        fieldLabel: label,
+                        beforeValue: before,
+                        afterValue: before,
+                        reason: '',
+                      });
+                    }}
+                  >
+                    <option value="durasiPerbaikanMenit">Durasi Perbaikan Aktif (Menit)</option>
+                    <option value="waktuTungguPartMenit">Waktu Tunggu Suku Cadang (Menit)</option>
+                    <option value="waktuMulai">Waktu Mulai Kerusakan (Timestamp)</option>
+                    <option value="kategori">Kategori / Klasifikasi Kerusakan</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="spv-form-group">
+                    <label htmlFor="correction-before-val">Nilai Sebelum (Read-Only) *</label>
+                    <input
+                      id="correction-before-val"
+                      type="text"
+                      readOnly
+                      disabled
+                      value={correctionForm.beforeValue}
+                      style={{ background: '#f1f5f9', color: '#64748b' }}
+                    />
+                  </div>
+
+                  <div className="spv-form-group">
+                    <label htmlFor="correction-after-val">Nilai Sesudah Koreksi *</label>
+                    <input
+                      id="correction-after-val"
+                      type={correctionForm.field.includes('Menit') ? 'number' : 'text'}
+                      required
+                      value={correctionForm.afterValue}
+                      onChange={(e) => setCorrectionForm({ ...correctionForm, afterValue: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="spv-form-group">
+                  <label htmlFor="correction-reason-input">Alasan Koreksi Pengukuran (Wajib untuk Audit Trail ALCOA) *</label>
+                  <textarea
+                    id="correction-reason-input"
+                    rows={3}
+                    required
+                    placeholder="Contoh: Koreksi durasi aktif perbaikan setelah sinkronisasi dengan logbook shift teknisi dan rekaman counter sensor..."
+                    value={correctionForm.reason}
+                    onChange={(e) => setCorrectionForm({ ...correctionForm, reason: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <footer className="spv-modal-footer">
+                <button
+                  type="button"
+                  className="btn-spv-secondary"
+                  onClick={() => setIsCorrectionModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#0284c7',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Save size={15} />
+                  <span>Simpan Koreksi &amp; Perbarui Indikator</span>
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* URS 8.1 Klausul 5: MODAL REVISI LAPORAN SHIFT TERKIRIM */}
+      {isShiftRevisionModalOpen && (
+        <div className="spv-modal-overlay" role="dialog" aria-modal="true">
+          <div className="spv-modal-content" style={{ maxWidth: '600px' }}>
+            <header className="spv-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <History size={20} color="var(--color-icon-neutral, #64748b)" />
+                <h3>Buat Revisi Laporan Shift Terkirim</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShiftRevisionModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                aria-label="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleSaveShiftRevision}>
+              <div className="spv-modal-body">
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.8rem', color: '#166534', lineHeight: 1.5 }}>
+                  <strong>Koreksi Laporan Terkirim:</strong> Perubahan terhadap laporan shift yang telah dikirim mengikuti alur revisi terkontrol. Riwayat pengiriman awal (Rev 0) tetap tersimpan utuh dan versi revisi baru (Rev {shiftRevisions.length}) akan diarsipkan tanpa menimpa data asal.
+                </div>
+
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
+                  <div><strong>Laporan:</strong> {selectedShiftWindow.label} ({selectedShiftWindow.timeRange})</div>
+                  <div><strong>Tanggal Asal:</strong> {autoGeneratedData.date}</div>
+                  <div><strong>Nomor Revisi Baru:</strong> <span style={{ fontWeight: 800, color: '#047857' }}>Rev {shiftRevisions.length}</span></div>
+                </div>
+
+                <div className="spv-form-group">
+                  <label htmlFor="shift-revision-reason">Alasan Revisi Laporan Shift (Wajib) *</label>
+                  <textarea
+                    id="shift-revision-reason"
+                    rows={2}
+                    required
+                    placeholder="Contoh: Penambahan rincian suku cadang heater sealing yang diganti pada mesin Ilapak 12..."
+                    value={shiftRevisionForm.reason}
+                    onChange={(e) => setShiftRevisionForm({ ...shiftRevisionForm, reason: e.target.value })}
+                  />
+                </div>
+
+                <div className="spv-form-group">
+                  <label htmlFor="shift-revision-summary">Rincian Perubahan yang Disetujui</label>
+                  <textarea
+                    id="shift-revision-summary"
+                    rows={3}
+                    placeholder="Jelaskan butir koreksi yang telah diverifikasi fisik oleh SPV Maintenance..."
+                    value={shiftRevisionForm.changesSummary}
+                    onChange={(e) => setShiftRevisionForm({ ...shiftRevisionForm, changesSummary: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <footer className="spv-modal-footer">
+                <button
+                  type="button"
+                  className="btn-spv-secondary"
+                  onClick={() => setIsShiftRevisionModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button type="submit" className="spv-btn-kpi-edit">
+                  <Save size={15} />
+                  <span>Terbitkan Revisi Laporan Shift</span>
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL REVIEW BATCH MINGGUAN SPV */}
+      {batchModalOpen && (
+        <div className="spv-modal-overlay" role="dialog" aria-modal="true">
+          <div className="spv-modal-content" style={{ maxWidth: '620px' }}>
+            <header className="spv-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ClipboardList size={20} color="var(--color-icon-neutral, #64748b)" />
+                <h3>Tinjauan &amp; Evaluasi Batch Mingguan ({selectedTicketIds.size} Tiket)</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBatchModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                aria-label="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleBatchReviewSubmit();
+              }}
+            >
+              <div className="spv-modal-body">
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.8rem', color: '#166534', lineHeight: 1.5 }}>
+                  <strong>Efisiensi Pengawasan Lapangan:</strong> Mesin telah beroperasi kembali segera setelah teknisi menyelesaikan perbaikan. Mode ini digunakan untuk mencatat evaluasi berkala dan arahan supervisor secara serentak tanpa perlu membuka tiket satu per satu.
+                </div>
+
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
+                  <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>Tiket Terpilih dalam Batch:</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxHeight: '110px', overflowY: 'auto' }}>
+                    {tickets
+                      .filter((t) => selectedTicketIds.has(t.ticket))
+                      .map((t) => (
+                        <span
+                          key={t.ticket}
+                          style={{
+                            background: '#e2e8f0',
+                            color: '#1e293b',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                          }}
+                        >
+                          {t.ticket} ({t.machine})
+                        </span>
+                      ))}
+                  </div>
+                </div>
+
+                <div className="spv-form-group">
+                  <label htmlFor="batch-review-note-input">Catatan Evaluasi / Rekomendasi Supervisor *</label>
+                  <textarea
+                    id="batch-review-note-input"
+                    rows={4}
+                    required
+                    placeholder="Contoh: Evaluasi Mingguan Pekan-42: Seluruh insiden seal dan cutter lini filling telah dievaluasi bersama tim teknisi. Komponen kritis telah dijadwalkan inspeksi saat PM akhir pekan."
+                    value={batchReviewNote}
+                    onChange={(e) => setBatchReviewNote(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <footer className="spv-modal-footer">
+                <button
+                  type="button"
+                  className="btn-spv-secondary"
+                  onClick={() => setBatchModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#059669',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.55rem 1.15rem',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Check size={16} />
+                  <span>Simpan Evaluasi Batch ({selectedTicketIds.size} Tiket)</span>
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Footer Portal */}
+      <footer className="spv-footer">
+        <span>Machine Card · Portal Pengawasan Supervisor Maintenance Bintang Toedjoe</span>
+        <div className="spv-footer-status">
+          <span className="spv-pulse-dot" />
+          <span>Pengawasan Maintenance Aktif</span>
+        </div>
+      </footer>
+
+      {/* Mobile & Tablet Bottom Navigation Bar (Jempol-Friendly Supervisor) */}
+      <nav className="mobile-bottom-nav" aria-label="Navigasi Bawah Supervisor">
+        <button
+          type="button"
+          className={`mobile-bottom-nav-item ${activeTab === 'LINES' ? 'is-active' : ''}`}
+          onClick={() => {
+            setActiveTab('LINES');
+            setSelectedMachineForAnalysis(null);
+          }}
+          title="Status Lini & Mesin"
+        >
+          <div className="bottom-nav-icon-wrap">
+            <Activity size={20} />
+            {activeBreakdownMachines.size > 0 && (
+              <span className="bottom-nav-badge alert">{activeBreakdownMachines.size}</span>
+            )}
+          </div>
+          <span>Lini Mesin</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-bottom-nav-item ${activeTab === 'WORKORDERS' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('WORKORDERS')}
+          title="Verifikasi Breakdown"
+        >
+          <div className="bottom-nav-icon-wrap">
+            <ShieldCheck size={20} />
+            {tickets.filter((t) => t.status === 'CLOSED' && !t.supervisorVerified).length > 0 && (
+              <span className="bottom-nav-badge alert">
+                {tickets.filter((t) => t.status === 'CLOSED' && !t.supervisorVerified).length}
+              </span>
+            )}
+          </div>
+          <span>Verifikasi</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-bottom-nav-item ${activeTab === 'ANALYTICS' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('ANALYTICS')}
+          title="Pola & Akuntabilitas Lapangan"
+        >
+          <div className="bottom-nav-icon-wrap">
+            <BarChart2 size={20} />
+            {patternInsights.missingWrCount > 0 && (
+              <span className="bottom-nav-badge alert">{patternInsights.missingWrCount}</span>
+            )}
+          </div>
+          <span>Pola &amp; Tren</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-bottom-nav-item ${activeTab === 'HANDOVER' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('HANDOVER')}
+          title="Laporan Shift & Handover"
+        >
+          <div className="bottom-nav-icon-wrap">
+            <ClipboardList size={20} />
+          </div>
+          <span>Laporan Shift</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+);
+}
