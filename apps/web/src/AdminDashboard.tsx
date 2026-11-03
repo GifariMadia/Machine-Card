@@ -2198,3 +2198,553 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
                         value={operatingPerPage}
                         onChange={(e) => {
                           setOperatingPerPage(Number(e.target.value));
+                          setOperatingPage(1);
+                        }}
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="pagination-ctrls">
+                    <button
+                      type="button"
+                      disabled={operatingPage === 1}
+                      onClick={() => setOperatingPage((p) => Math.max(1, p - 1))}
+                      aria-label="Halaman logbook sebelumnya"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span className="pagination-page-status">
+                      {operatingPage} / {totalOperatingPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={operatingPage >= totalOperatingPages}
+                      onClick={() => setOperatingPage((p) => Math.min(totalOperatingPages, p + 1))}
+                      aria-label="Halaman logbook berikutnya"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </footer>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* TAB 3: MASTER PART & ATURAN LIFETIME */}
+        {activeTab === 'PARTS' && (
+          <div>
+            {/* Global Lifetime Rules Card */}
+            <div className="admin-rule-card">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <h3>
+                    <ShieldCheck size={20} color="var(--color-icon-neutral, #64748b)" />
+                    Aturan Batas Monitoring Lifetime Spare Part (Plant Standard)
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                    Ambang batas persentase pemakaian suku cadang yang digunakan untuk memicu peringatan dini dan jadwal penggantian preventif.
+                  </p>
+                </div>
+                {!editingRule ? (
+                  <button
+                    type="button"
+                    className="btn-admin-secondary"
+                    onClick={() => {
+                      setTempRule(lifetimeRule);
+                      setEditingRule(true);
+                    }}
+                  >
+                    <Edit3 size={15} />
+                    <span>Ubah Batas</span>
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      className="btn-admin-secondary"
+                      onClick={() => setEditingRule(false)}
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-admin-primary"
+                      onClick={handleSaveLifetimeRule}
+                    >
+                      <Save size={15} />
+                      Simpan Aturan
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="admin-rule-grid">
+                <div className="admin-rule-box">
+                  {!editingRule ? (
+                    <strong>{lifetimeRule.warningThreshold}%</strong>
+                  ) : (
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={tempRule.warningThreshold}
+                      onChange={(e) =>
+                        setTempRule({ ...tempRule, warningThreshold: Number(e.target.value) })
+                      }
+                      style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 700,
+                        width: '80px',
+                        padding: '2px 6px',
+                      }}
+                    />
+                  )}
+                  <span>Ambang Awal Peringatan (Warning Level - Indikator Kuning)</span>
+                </div>
+
+                <div className="admin-rule-box">
+                  {!editingRule ? (
+                    <strong>{lifetimeRule.replacementLimit}%</strong>
+                  ) : (
+                    <input
+                      type="number"
+                      min="50"
+                      max="150"
+                      value={tempRule.replacementLimit}
+                      onChange={(e) =>
+                        setTempRule({ ...tempRule, replacementLimit: Number(e.target.value) })
+                      }
+                      style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 700,
+                        width: '80px',
+                        padding: '2px 6px',
+                      }}
+                    />
+                  )}
+                  <span>Batas Wajib Penggantian / Overdue (Danger Level - Indikator Merah)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Banner Notifikasi Part Baru dari Breakdown yang Menunggu Justifikasi */}
+            {pendingJustifications.filter((j) => j.status === 'PENDING').length > 0 && partSubTab === 'CATALOG' && (
+              <div className="admin-justification-banner">
+                <div className="banner-left">
+                  <AlertTriangle size={20} color="#b45309" />
+                  <div>
+                    <strong>Terdapat {pendingJustifications.filter((j) => j.status === 'PENDING').length} Part Baru dari Laporan Breakdown Teknisi Menunggu Justifikasi</strong>
+                    <p>Teknisi memasukkan penggantian part yang belum terdaftar di sistem saat perbaikan breakdown. Silakan lakukan standarisasi penamaan dan penetapan rumus lifetime mesin.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-admin-action-sm btn-action-edit"
+                  onClick={() => setPartSubTab('JUSTIFICATIONS')}
+                >
+                  <ClipboardList size={13} />
+                  <span>Buka Antrean Justifikasi ({pendingJustifications.filter((j) => j.status === 'PENDING').length})</span>
+                </button>
+              </div>
+            )}
+
+            {/* Sub-Navigasi Tab: Katalog Master vs Justifikasi Part Baru dari Breakdown */}
+            <section className="admin-content-card">
+              <div className="admin-subnav-bar">
+                <button
+                  type="button"
+                  className={`admin-subnav-btn ${partSubTab === 'CATALOG' ? 'active' : ''}`}
+                  onClick={() => setPartSubTab('CATALOG')}
+                >
+                  Katalog Master Spare Part ({parts.length})
+                </button>
+                <button
+                  type="button"
+                  className={`admin-subnav-btn ${partSubTab === 'JUSTIFICATIONS' ? 'active' : ''}`}
+                  onClick={() => setPartSubTab('JUSTIFICATIONS')}
+                >
+                  <ClipboardList size={14} />
+                  <span>Justifikasi Part Baru dari Breakdown</span>
+                  {pendingJustifications.filter((j) => j.status === 'PENDING').length > 0 && (
+                    <span className="admin-badge-count-warning">
+                      {pendingJustifications.filter((j) => j.status === 'PENDING').length} Menunggu
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {partSubTab === 'CATALOG' ? (
+                <>
+                  <div className="admin-toolbar-wrap">
+                    <div>
+                      <strong style={{ fontSize: '1rem', color: '#0a1e15' }}>
+                        Katalog Master Spare Part Mesin
+                      </strong>
+                      <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                        Standar suku cadang dan target masa pakai sebelum dilakukan maintenance preventif.
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <div className="admin-search-box" style={{ maxWidth: '280px' }}>
+                        <Search size={16} />
+                        <input
+                          type="text"
+                          value={partSearch}
+                          onChange={(e) => setPartSearch(e.target.value)}
+                          placeholder="Cari suku cadang..."
+                          aria-label="Cari suku cadang"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-admin-primary"
+                        onClick={() => setNewPartModalOpen(true)}
+                      >
+                        <PlusCircle size={16} />
+                        <span>Tambah Master Part</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="admin-table-responsive">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>KODE PART</th>
+                          <th>NAMA SUKU CADANG &amp; NO. PART</th>
+                          <th>SPESIFIKASI / MATERIAL</th>
+                          <th>KATEGORI TEKNIK</th>
+                          <th>DASAR INTERVAL &amp; TARGET</th>
+                          <th className="text-center th-action-cell">AKSI MASTER</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedParts.map((p) => (
+                          <tr key={p.id}>
+                            <td data-label="Kode Part">
+                              <span className="admin-code-badge">{p.id}</span>
+                            </td>
+                            <td data-label="Nama Suku Cadang">
+                              <strong>{p.name}</strong>
+                              {p.partNumber && (
+                                <div style={{ fontSize: '0.74rem', color: '#0369a1', fontWeight: 600 }}>
+                                  Part No: {p.partNumber}
+                                </div>
+                              )}
+                            </td>
+                            <td data-label="Spesifikasi">{p.specification}</td>
+                            <td data-label="Kategori Teknik">
+                              <span className="admin-role-badge role-teknisi">{p.category}</span>
+                            </td>
+                            <td data-label="Dasar Interval &amp; Target">
+                              <span
+                                style={{
+                                  fontSize: '0.72rem',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  background: p.intervalBasis === 'JAM_OPERASI' ? '#e0f2fe' : '#f1f5f9',
+                                  color: p.intervalBasis === 'JAM_OPERASI' ? '#0369a1' : '#475569',
+                                  fontWeight: 700,
+                                  marginRight: '6px',
+                                }}
+                              >
+                                {p.intervalBasis === 'JAM_OPERASI' ? 'Jam Operasi' : 'Kalender'}
+                              </span>
+                              <strong>
+                                {p.intervalBasis === 'JAM_OPERASI'
+                                  ? `${p.defaultLifetimeDays} Jam`
+                                  : `${p.defaultLifetimeDays} Hari`}
+                              </strong>
+                            </td>
+                            <td data-label="Aksi Master" className="text-center td-action-cell">
+                              <div className="admin-table-actions-inline">
+                                <button
+                                  type="button"
+                                  className="btn-admin-action-sm btn-action-edit"
+                                  onClick={() => handleOpenEditMasterPart(p)}
+                                  title="Ubah spesifikasi, nama, dan rumus lifetime master part"
+                                >
+                                  <Edit3 size={12} />
+                                  <span>Ubah Rumus</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+
+                        {filteredParts.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="text-center" style={{ padding: '2.5rem 1rem' }}>
+                              <Wrench size={32} color="var(--color-icon-neutral, #64748b)" />
+                              <strong style={{ display: 'block', marginTop: '0.5rem' }}>
+                                Tidak ada suku cadang ditemukan
+                              </strong>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination Footer untuk Katalog Master Part */}
+                  <footer className="table-pagination-footer">
+                    <div className="pagination-left-wrap">
+                      <span className="pagination-info">
+                        Menampilkan {paginatedParts.length ? (partPage - 1) * partPerPage + 1 : 0}–
+                        {Math.min(partPage * partPerPage, filteredParts.length)} dari {filteredParts.length} suku cadang
+                      </span>
+                      <div className="pagination-size-selector">
+                        <label htmlFor="part-page-size">Per halaman:</label>
+                        <select
+                          id="part-page-size"
+                          value={partPerPage}
+                          onChange={(e) => {
+                            setPartPerPage(Number(e.target.value));
+                            setPartPage(1);
+                          }}
+                        >
+                          <option value={5}>5</option>
+                          <option value={10}>10</option>
+                          <option value={20}>20</option>
+                          <option value={50}>50</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="pagination-ctrls">
+                      <button
+                        type="button"
+                        disabled={partPage === 1}
+                        onClick={() => setPartPage((p) => Math.max(1, p - 1))}
+                        aria-label="Halaman suku cadang sebelumnya"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <span className="pagination-page-status">
+                        {partPage} / {totalPartPages}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={partPage >= totalPartPages}
+                        onClick={() => setPartPage((p) => Math.min(totalPartPages, p + 1))}
+                        aria-label="Halaman suku cadang berikutnya"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  </footer>
+                </>
+              ) : (
+                /* SUB-TAB: ANTREAN JUSTIFIKASI PART BARU DARI BREAKDOWN */
+                <div>
+                  <div className="admin-toolbar-wrap" style={{ marginBottom: '1rem' }}>
+                    <div>
+                      <strong style={{ fontSize: '1rem', color: '#0a1e15' }}>
+                        Antrean Justifikasi &amp; Penetapan Rumus Lifetime Part Baru
+                      </strong>
+                      <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                        Daftar penggantian part baru yang diinput teknisi dari tiket breakdown dan belum terdaftar di sistem. Admin dapat menstandarkan nama dan menetapkan rumus interval lifetimenya.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="admin-table-responsive">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>TIKET BREAKDOWN &amp; MESIN</th>
+                          <th>PART DARI TEKNISI</th>
+                          <th>SPESIFIKASI &amp; QTY</th>
+                          <th>TEKNISI PELAPOR</th>
+                          <th>STATUS JUSTIFIKASI</th>
+                          <th className="text-center th-action-cell">AKSI JUSTIFIKASI</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingJustifications.map((item) => (
+                          <tr key={item.id}>
+                            <td data-label="Tiket & Mesin">
+                              <span className="admin-code-badge">{item.ticket}</span>
+                              <strong style={{ display: 'block', marginTop: '2px', color: '#0f172a' }}>
+                                {item.machine}
+                              </strong>
+                              <small style={{ color: '#64748b' }}>{item.position}</small>
+                            </td>
+                            <td data-label="Part dari Teknisi">
+                              <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>
+                                {item.partName}
+                              </strong>
+                              {item.adminJustification && (
+                                <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 600 }}>
+                                  Resmi: {item.adminJustification.standardizedName} ({item.adminJustification.approvedPartId})
+                                </div>
+                              )}
+                            </td>
+                            <td data-label="Spesifikasi & Qty">
+                              <div>{item.specification || '—'}</div>
+                              <small style={{ fontWeight: 600, color: '#334155' }}>Jumlah: {item.quantity} pcs</small>
+                            </td>
+                            <td data-label="Teknisi Pelapor">
+                              <strong>{item.technicianName}</strong>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                {new Date(item.reportedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </div>
+                            </td>
+                            <td data-label="Status Justifikasi">
+                              {item.status === 'PENDING' && (
+                                <span className="admin-ticket-status-badge status-open" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a' }}>
+                                  Menunggu Justifikasi
+                                </span>
+                              )}
+                              {item.status === 'APPROVED' && (
+                                <span className="admin-ticket-status-badge status-closed">
+                                  Telah Ditetapkan ({item.adminJustification?.intervalBasis === 'JAM_OPERASI' ? `${item.adminJustification.defaultLifetimeDays} Jam` : `${item.adminJustification?.defaultLifetimeDays} Hari`})
+                                </span>
+                              )}
+                              {item.status === 'REJECTED' && (
+                                <span className="admin-ticket-status-badge status-open">
+                                  Ditolak / Diabaikan
+                                </span>
+                              )}
+                            </td>
+                            <td data-label="Aksi Justifikasi" className="text-center td-action-cell">
+                              {item.status === 'PENDING' ? (
+                                <div className="admin-table-actions-inline">
+                                  <button
+                                    type="button"
+                                    className="btn-admin-action-sm btn-action-edit"
+                                    onClick={() => handleOpenJustification(item)}
+                                    title="Justifikasi standarisasi nama dan tetapkan rumus lifetime"
+                                  >
+                                    <Edit3 size={13} />
+                                    <span>Justifikasi &amp; Tetapkan Rumus</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-admin-action-sm btn-action-deactivate"
+                                    onClick={() => handleRejectJustification(item.id)}
+                                    title="Abaikan usulan part ini"
+                                  >
+                                    <X size={13} />
+                                    <span>Abaikan</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Selesai Diproses</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+
+                        {pendingJustifications.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="text-center" style={{ padding: '2.5rem 1rem' }}>
+                              <CheckCircle2 size={32} color="#059669" />
+                              <strong style={{ display: 'block', marginTop: '0.5rem' }}>
+                                Tidak ada antrean justifikasi part baru
+                              </strong>
+                              <small style={{ color: '#64748b' }}>Semua spare part dari laporan breakdown teknisi telah terdata di master part.</small>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        {/* TAB 4: LOG AUDIT SISTEM & KEAMANAN */}
+        {activeTab === 'AUDIT' && (
+          <section className="admin-content-card">
+            <div className="admin-toolbar-wrap">
+              <div>
+                <strong style={{ fontSize: '1rem', color: '#0a1e15' }}>
+                  Log Audit Aktivitas Sistem &amp; Otorisasi RBAC
+                </strong>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Rekam jejak kepatuhan (*audit trail*), otorisasi peran pengguna, status mesin, justifikasi spare part, dan perubahan konfigurasi plant.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <div className="admin-search-box" style={{ maxWidth: '280px' }}>
+                  <Search size={16} />
+                  <input
+                    type="text"
+                    value={auditSearch}
+                    onChange={(e) => setAuditSearch(e.target.value)}
+                    placeholder="Cari ID log, aktivitas, target..."
+                    aria-label="Cari log audit sistem"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Pills Kategori Event */}
+            <div className="admin-filter-pills" style={{ marginBottom: '1rem' }}>
+              <span className="admin-filter-label">Kategori Event:</span>
+              {[
+                { id: 'ALL', label: 'Semua Event' },
+                { id: 'USER_MANAGEMENT', label: 'User & RBAC' },
+                { id: 'MACHINE_CONFIG', label: 'Konfigurasi Mesin' },
+                { id: 'PART_JUSTIFICATION', label: 'Justifikasi Part' },
+                { id: 'SYSTEM_RULE', label: 'Aturan Plant' },
+                { id: 'SECURITY', label: 'Keamanan' },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  className={`admin-pill-btn ${auditEventFilter === f.id ? 'active' : ''}`}
+                  onClick={() => setAuditEventFilter(f.id)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="admin-table-responsive">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>WAKTU &amp; ID LOG</th>
+                    <th>AKTOR / ADMIN</th>
+                    <th>KATEGORI EVENT</th>
+                    <th>AKTIVITAS &amp; TARGET</th>
+                    <th>RINCIAN PERUBAHAN SISTEM</th>
+                    <th>STATUS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedAuditLogs.map((log) => (
+                    <tr key={log.id}>
+                      <td data-label="Waktu & ID Log">
+                        <span className="admin-code-badge">{log.id}</span>
+                        <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '3px' }}>
+                          {new Date(log.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })} · {new Date(log.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </td>
+                      <td data-label="Aktor / Admin">
+                        <strong style={{ color: '#0f172a' }}>{log.actorName}</strong>
+                        <div>
+                          <span className="admin-role-badge role-admin" style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
+                            {log.actorRole}
+                          </span>
+                        </div>
+                      </td>
+                      <td data-label="Kategori Event">
+                        <span
+                          style={{
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            background:
+                              log.eventType === 'USER_MANAGEMENT'
