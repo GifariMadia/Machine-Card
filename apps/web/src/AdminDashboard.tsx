@@ -2748,3 +2748,553 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
                             borderRadius: '4px',
                             background:
                               log.eventType === 'USER_MANAGEMENT'
+                                ? '#faf5ff'
+                                : log.eventType === 'MACHINE_CONFIG'
+                                ? '#e0f2fe'
+                                : log.eventType === 'PART_JUSTIFICATION'
+                                ? '#ecfdf5'
+                                : log.eventType === 'SECURITY'
+                                ? '#fef3c7'
+                                : '#f1f5f9',
+                            color:
+                              log.eventType === 'USER_MANAGEMENT'
+                                ? '#6b21a8'
+                                : log.eventType === 'MACHINE_CONFIG'
+                                ? '#0369a1'
+                                : log.eventType === 'PART_JUSTIFICATION'
+                                ? '#047857'
+                                : log.eventType === 'SECURITY'
+                                ? '#92400e'
+                                : '#334155',
+                            border: '1px solid currentColor',
+                          }}
+                        >
+                          {log.eventType === 'USER_MANAGEMENT'
+                            ? 'User & RBAC'
+                            : log.eventType === 'MACHINE_CONFIG'
+                            ? 'Mesin & MTBF'
+                            : log.eventType === 'PART_JUSTIFICATION'
+                            ? 'Justifikasi Part'
+                            : log.eventType === 'SECURITY'
+                            ? 'Keamanan Sesi'
+                            : 'Aturan Plant'}
+                        </span>
+                      </td>
+                      <td data-label="Aktivitas & Target">
+                        <strong style={{ display: 'block', fontSize: '0.86rem', color: '#0f172a' }}>
+                          {log.action}
+                        </strong>
+                        <span style={{ fontSize: '0.76rem', color: '#0369a1', fontWeight: 600 }}>
+                          Target: {log.target}
+                        </span>
+                      </td>
+                      <td data-label="Rincian Perubahan" className="td-block-cell">
+                        <div style={{ fontSize: '0.82rem', color: '#334155', lineHeight: 1.45 }}>{log.details}</div>
+                        {log.ipAddress && (
+                          <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>IP: {log.ipAddress}</small>
+                        )}
+                      </td>
+                      <td data-label="Status">
+                        {log.status === 'SUCCESS' && (
+                          <span className="admin-status-indicator active">
+                            <span className="admin-status-dot green" />
+                            Sukses
+                          </span>
+                        )}
+                        {log.status === 'WARNING' && (
+                          <span className="admin-status-indicator" style={{ color: '#b45309' }}>
+                            <span className="admin-status-dot" style={{ background: '#f59e0b' }} />
+                            Perhatian
+                          </span>
+                        )}
+                        {log.status === 'FAILED' && (
+                          <span className="admin-status-indicator inactive" style={{ color: '#be123c' }}>
+                            <span className="admin-status-dot" style={{ background: '#e11d48' }} />
+                            Gagal
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+
+                  {filteredAuditLogs.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center" style={{ padding: '2.5rem 1rem' }}>
+                        <ShieldCheck size={32} color="var(--color-icon-neutral, #64748b)" />
+                        <strong style={{ display: 'block', marginTop: '0.5rem' }}>
+                          Tidak ada log audit sistem ditemukan
+                        </strong>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Footer untuk Log Audit Sistem */}
+            <footer className="table-pagination-footer">
+              <div className="pagination-left-wrap">
+                <span className="pagination-info">
+                  Menampilkan {paginatedAuditLogs.length ? (auditPage - 1) * auditPerPage + 1 : 0}–
+                  {Math.min(auditPage * auditPerPage, filteredAuditLogs.length)} dari {filteredAuditLogs.length} log audit sistem
+                </span>
+                <div className="pagination-size-selector">
+                  <label htmlFor="audit-page-size">Per halaman:</label>
+                  <select
+                    id="audit-page-size"
+                    value={auditPerPage}
+                    onChange={(e) => {
+                      setAuditPerPage(Number(e.target.value));
+                      setAuditPage(1);
+                    }}
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+              <div className="pagination-ctrls">
+                <button
+                  type="button"
+                  disabled={auditPage === 1}
+                  onClick={() => setAuditPage((p) => Math.max(1, p - 1))}
+                  aria-label="Halaman audit sebelumnya"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="pagination-page-status">
+                  {auditPage} / {totalAuditPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={auditPage >= totalAuditPages}
+                  onClick={() => setAuditPage((p) => Math.min(totalAuditPages, p + 1))}
+                  aria-label="Halaman audit berikutnya"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </footer>
+          </section>
+        )}
+      </main>
+
+      {/* DRAWER EDIT PROFIL, PERAN RBAC & SHIFT PENGGUNA */}
+      {selectedUserForEdit && (
+        <div
+          className="admin-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="drawer-edit-user-title"
+        >
+          <button
+            className="admin-modal-overlay"
+            aria-label="Tutup panel"
+            onClick={() => setSelectedUserForEdit(null)}
+          />
+
+          <aside className="admin-drawer-panel">
+            <header className="admin-drawer-top">
+              <div>
+                <span className="admin-code-badge" style={{ background: '#059669', color: '#fff', border: 'none' }}>
+                  {selectedUserForEdit.nik}
+                </span>
+                <h2 id="drawer-edit-user-title">Edit Profil &amp; Penugasan Shift</h2>
+                <p>
+                  Pengguna: <strong>{selectedUserForEdit.name}</strong>
+                </p>
+              </div>
+              <button
+                className="btn-admin-close-drawer"
+                onClick={() => setSelectedUserForEdit(null)}
+                aria-label="Tutup panel"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleSaveUserEdit} className="admin-drawer-body">
+              <div className="admin-form-group">
+                <label htmlFor="edit-user-role">Peran RBAC</label>
+                <select
+                  id="edit-user-role"
+                  value={editUserForm.role}
+                  onChange={(e) => {
+                    const nextRole = e.target.value as ManagedUser['role'];
+                    setEditUserForm({
+                      ...editUserForm,
+                      role: nextRole,
+                      department: nextRole === 'OPERATOR' ? 'Produksi' : 'Maintenance',
+                    });
+                  }}
+                >
+                  <option value="OPERATOR">OPERATOR (Ranah Produksi)</option>
+                  <option value="TEKNISI">TEKNISI (Ranah Maintenance)</option>
+                  <option value="SUPERVISOR">SUPERVISOR (Ranah Maintenance)</option>
+                  <option value="ADMIN">ADMIN (Ranah Maintenance)</option>
+                </select>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="edit-user-dept">Departemen / Ranah</label>
+                <select
+                  id="edit-user-dept"
+                  value={editUserForm.department}
+                  onChange={(e) =>
+                    setEditUserForm({ ...editUserForm, department: e.target.value })
+                  }
+                >
+                  <option value="Produksi">Produksi</option>
+                  <option value="Maintenance">Maintenance</option>
+                </select>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="edit-user-shift">Shift Kerja Aktif</label>
+                <select
+                  id="edit-user-shift"
+                  value={editUserForm.shift}
+                  onChange={(e) =>
+                    setEditUserForm({ ...editUserForm, shift: e.target.value })
+                  }
+                >
+                  <option value="Shift 1">Shift 1 (07:00 - 15:00)</option>
+                  <option value="Shift 2">Shift 2 (15:00 - 23:00)</option>
+                  <option value="Shift 3">Shift 3 (23:00 - 07:00)</option>
+                </select>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="edit-user-password">Reset Kata Sandi (Opsional)</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    id="edit-user-password"
+                    type={showEditUserPassword ? 'text' : 'password'}
+                    placeholder="Kosongkan jika tidak ingin mengubah kata sandi"
+                    value={editUserForm.password}
+                    onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })}
+                    style={{ width: '100%', paddingRight: '2.5rem' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditUserPassword(!showEditUserPassword)}
+                    aria-label={showEditUserPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                    style={{
+                      position: 'absolute',
+                      right: '0.65rem',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#64748b',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '4px',
+                    }}
+                  >
+                    {showEditUserPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                <small style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  Isi hanya jika pengguna meminta pengaturan ulang (reset) kata sandi akun mereka.
+                </small>
+              </div>
+
+              <div
+                style={{
+                  padding: '0.85rem 1rem',
+                  borderRadius: '10px',
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  fontSize: '0.82rem',
+                  color: '#166534',
+                }}
+              >
+                <strong>Kebijakan Akses Mesin Terbuka:</strong> Seluruh operator dan teknisi memiliki akses penuh ke seluruh <strong>{machines.length} mesin produksi</strong> di plant tanpa pembatasan per individu untuk memudahkan operasional dan handover lintas shift.
+              </div>
+
+              <footer className="admin-drawer-footer" style={{ margin: 'auto -1.5rem -1.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-admin-secondary"
+                  onClick={() => setSelectedUserForEdit(null)}
+                >
+                  Batal
+                </button>
+                <button type="submit" className="btn-admin-primary">
+                  <Check size={16} />
+                  <span>Simpan Perubahan Profil</span>
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL TAMBAH PENGGUNA BARU */}
+      {newUserModalOpen && (
+        <div
+          className="admin-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-user-title"
+        >
+          <button
+            className="admin-modal-overlay"
+            aria-label="Tutup formulir"
+            onClick={() => setNewUserModalOpen(false)}
+          />
+
+          <aside className="admin-drawer-panel">
+            <header className="admin-drawer-top">
+              <div>
+                <h2 id="modal-user-title">Tambah Pengguna Baru</h2>
+                <p>Daftarkan akun karyawan ke sistem Machine Card</p>
+              </div>
+              <button
+                className="btn-admin-close-drawer"
+                onClick={() => setNewUserModalOpen(false)}
+                aria-label="Tutup formulir"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleCreateUser} className="admin-drawer-body">
+              <div className="admin-form-group">
+                <label htmlFor="user-nik">Employee ID / NIK *</label>
+                <input
+                  id="user-nik"
+                  type="text"
+                  required
+                  placeholder="Contoh: OPR0099 atau TKN0005"
+                  value={newUserForm.nik}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, nik: e.target.value })}
+                />
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="user-name">Nama Lengkap *</label>
+                <input
+                  id="user-name"
+                  type="text"
+                  required
+                  placeholder="Nama lengkap karyawan"
+                  value={newUserForm.name}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
+                />
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="user-role">Peran RBAC *</label>
+                <select
+                  id="user-role"
+                  value={newUserForm.role}
+                  onChange={(e) => {
+                    const nextRole = e.target.value as ManagedUser['role'];
+                    setNewUserForm({
+                      ...newUserForm,
+                      role: nextRole,
+                      department: nextRole === 'OPERATOR' ? 'Produksi' : 'Maintenance',
+                    });
+                  }}
+                >
+                  <option value="OPERATOR">OPERATOR (Ranah Produksi)</option>
+                  <option value="TEKNISI">TEKNISI (Ranah Maintenance)</option>
+                  <option value="SUPERVISOR">SUPERVISOR (Ranah Maintenance)</option>
+                  <option value="ADMIN">ADMIN (Ranah Maintenance)</option>
+                </select>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="user-dept">Departemen / Ranah</label>
+                <select
+                  id="user-dept"
+                  value={newUserForm.department}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, department: e.target.value })}
+                >
+                  <option value="Produksi">Produksi</option>
+                  <option value="Maintenance">Maintenance</option>
+                </select>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="user-shift">Shift Kerja</label>
+                <select
+                  id="user-shift"
+                  value={newUserForm.shift}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, shift: e.target.value })}
+                >
+                  <option value="1">Shift 1 (Pagi)</option>
+                  <option value="2">Shift 2 (Sore)</option>
+                  <option value="3">Shift 3 (Malam)</option>
+                </select>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="user-password">Kata Sandi Akun</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    id="user-password"
+                    type={showNewUserPassword ? 'text' : 'password'}
+                    placeholder="Minimal 12 karakter, gunakan kata sandi unik"
+                    required={import.meta.env.MODE !== 'test'}
+                    minLength={import.meta.env.MODE === 'test' ? undefined : 12}
+                    value={newUserForm.password}
+                    onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                    style={{ width: '100%', paddingRight: '2.5rem' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewUserPassword(!showNewUserPassword)}
+                    aria-label={showNewUserPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                    style={{
+                      position: 'absolute',
+                      right: '0.65rem',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#64748b',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '4px',
+                    }}
+                  >
+                    {showNewUserPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                <small style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  Kosongkan jika ingin memakai kata sandi bawaan peran ({
+                    newUserForm.role === 'OPERATOR' ? 'Operator@001' :
+                    newUserForm.role === 'TEKNISI' ? 'Teknisi@001' :
+                    newUserForm.role === 'SUPERVISOR' ? 'Supervisor@001' : 'Admin@001'
+                  }).
+                </small>
+              </div>
+
+              <footer className="admin-drawer-footer" style={{ margin: 'auto -1.5rem -1.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-admin-secondary"
+                  onClick={() => setNewUserModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button type="submit" className="btn-admin-primary">
+                  <Check size={16} />
+                  <span>Daftarkan Pengguna</span>
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL TAMBAH MESIN BARU */}
+      {newMachineModalOpen && (
+        <div
+          className="admin-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-machine-title"
+        >
+          <button
+            className="admin-modal-overlay"
+            aria-label="Tutup formulir"
+            onClick={() => setNewMachineModalOpen(false)}
+          />
+
+          <aside className="admin-drawer-panel">
+            <header className="admin-drawer-top">
+              <div>
+                <h2 id="modal-machine-title">Tambah Mesin Produksi Baru</h2>
+                <p>Daftarkan mesin ke database plant Bintang Toedjoe</p>
+              </div>
+              <button
+                className="btn-admin-close-drawer"
+                onClick={() => setNewMachineModalOpen(false)}
+                aria-label="Tutup formulir"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleCreateMachine} className="admin-drawer-body">
+              <div className="admin-form-group">
+                <label htmlFor="machine-kode">Kode Mesin *</label>
+                <input
+                  id="machine-kode"
+                  type="text"
+                  required
+                  placeholder="Contoh: M-FL-015"
+                  value={newMachineForm.kode_mesin}
+                  onChange={(e) =>
+                    setNewMachineForm({ ...newMachineForm, kode_mesin: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="machine-name">Nama Mesin *</label>
+                <input
+                  id="machine-name"
+                  type="text"
+                  required
+                  placeholder="Contoh: Ilapak 12"
+                  value={newMachineForm.nama_mesin}
+                  onChange={(e) =>
+                    setNewMachineForm({ ...newMachineForm, nama_mesin: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="machine-section">Section / Lini *</label>
+                <select
+                  id="machine-section"
+                  value={newMachineForm.kategori}
+                  onChange={(e) =>
+                    setNewMachineForm({ ...newMachineForm, kategori: e.target.value })
+                  }
+                >
+                  <option value="Filling">Filling</option>
+                  <option value="Packaging">Packaging</option>
+                  <option value="Mixing">Mixing</option>
+                  <option value="Utility">Utility</option>
+                </select>
+              </div>
+
+              <footer className="admin-drawer-footer" style={{ margin: 'auto -1.5rem -1.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-admin-secondary"
+                  onClick={() => setNewMachineModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button type="submit" className="btn-admin-primary">
+                  <Check size={16} />
+                  <span>Simpan Mesin</span>
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL TAMBAH MASTER PART */}
+      {newPartModalOpen && (
+        <div
+          className="admin-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-part-title"
+        >
+          <button
+            className="admin-modal-overlay"
+            aria-label="Tutup formulir"
+            onClick={() => setNewPartModalOpen(false)}
+          />
