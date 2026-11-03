@@ -3848,3 +3848,541 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
                         onClick={() => setOperatingForm({ ...operatingForm, jamShiftKalender: p.val })}
                       >
                         {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label>Jam Operasi Aktual (Jam) *</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  required
+                  style={{ fontSize: '1.05rem', fontWeight: 700 }}
+                  value={operatingForm.jamOperasiAktual}
+                  onChange={(e) => setOperatingForm({ ...operatingForm, jamOperasiAktual: parseFloat(e.target.value) || 0 })}
+                />
+
+                <div className="friendly-stepper-wrap" style={{ marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    className="btn-friendly-stepper"
+                    onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: Math.max(0, +(operatingForm.jamOperasiAktual - 1).toFixed(1)) })}
+                  >
+                    -1h
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-friendly-stepper"
+                    onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: Math.max(0, +(operatingForm.jamOperasiAktual - 0.5).toFixed(1)) })}
+                  >
+                    -0.5h
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-friendly-stepper"
+                    onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: +(operatingForm.jamOperasiAktual + 0.5).toFixed(1) })}
+                  >
+                    +0.5h
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-friendly-stepper"
+                    onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: +(operatingForm.jamOperasiAktual + 1).toFixed(1) })}
+                  >
+                    +1h
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-friendly-stepper"
+                    style={{ marginLeft: 'auto', background: '#ecfdf5', color: '#047857', borderColor: '#a7f3d0' }}
+                    onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: operatingForm.jamShiftKalender })}
+                  >
+                    = Shift Penuh
+                  </button>
+                </div>
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label>Sumber Pencatatan *</label>
+                <input
+                  type="text"
+                  required
+                  value={operatingForm.sumberData}
+                  onChange={(e) => setOperatingForm({ ...operatingForm, sumberData: e.target.value })}
+                />
+                <div style={{ marginTop: '5px' }}>
+                  <div className="friendly-preset-group">
+                    {[
+                      '📋 Logbook Shift Fisik',
+                      '🔢 Counter Running Mesin',
+                      '📝 Rekap Harian Produksi',
+                      '🔧 Verifikasi Fisik Admin',
+                    ].map((src) => (
+                      <button
+                        key={src.replace(/^[📋🔢📝🔧]\s*/u, '')}
+                        type="button"
+                        className={`btn-friendly-preset ${operatingForm.sumberData === src ? 'active' : ''}`}
+                        onClick={() => setOperatingForm({ ...operatingForm, sumberData: src })}
+                      >
+                        {src.replace(/^[📋🔢📝🔧]\s*/u, '')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label>Penanggung Jawab *</label>
+                <input
+                  type="text"
+                  required
+                  value={operatingForm.penanggungJawab}
+                  onChange={(e) => setOperatingForm({ ...operatingForm, penanggungJawab: e.target.value })}
+                />
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={operatingForm.isComplete}
+                    onChange={(e) => setOperatingForm({ ...operatingForm, isComplete: e.target.checked })}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <strong style={{ color: '#0a1e15' }}>Data Lengkap &amp; Final</strong>
+                </label>
+              </div>
+
+              <div className="admin-form-group">
+                <label>Catatan Penjelasan</label>
+                <textarea
+                  rows={2}
+                  value={operatingForm.catatanPenjelasan}
+                  onChange={(e) => setOperatingForm({ ...operatingForm, catatanPenjelasan: e.target.value })}
+                  placeholder="Catatan verifikasi logbook..."
+                />
+              </div>
+
+              <footer className="admin-drawer-footer" style={{ margin: 'auto -1.5rem -1.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-admin-secondary"
+                  onClick={() => setNewOperatingModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button type="submit" className="btn-admin-primary">
+                  <Check size={16} />
+                  <span>Simpan Data Jam Operasi</span>
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* Drawer: Justifikasi Part Baru dari Breakdown */}
+      {justificationModalOpen && selectedJustification && (
+        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-justif-title">
+          <button
+            className="admin-modal-overlay"
+            aria-label="Tutup formulir justifikasi"
+            onClick={() => setJustificationModalOpen(false)}
+          />
+
+          <aside className="admin-drawer-panel" style={{ maxWidth: '580px' }}>
+            <header className="admin-drawer-top">
+              <div>
+                <span className="admin-code-badge" style={{ background: '#d97706', color: '#fff', marginRight: '6px' }}>
+                  {selectedJustification.ticket}
+                </span>
+                <h2 id="modal-justif-title">Justifikasi Part Baru dari Breakdown</h2>
+                <p>Standardisasi nama &amp; penetapan rumus lifetime mesin ({selectedJustification.machine})</p>
+              </div>
+              <button
+                className="btn-admin-close-drawer"
+                onClick={() => setJustificationModalOpen(false)}
+                aria-label="Tutup formulir"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleSaveJustification} className="admin-drawer-body">
+              {/* Asal Laporan Breakdown */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.85rem 1rem', fontSize: '0.82rem' }}>
+                <div style={{ fontWeight: 700, color: '#334155', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Wrench size={14} color="var(--color-icon-neutral, #64748b)" />
+                  <span>Sumber: Penggantian Part pada Tiket Breakdown</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.4rem', color: '#64748b' }}>
+                  <div>No. Tiket: <strong style={{ color: '#0f172a' }}>{selectedJustification.ticket}</strong></div>
+                  <div>Mesin: <strong style={{ color: '#0f172a' }}>{selectedJustification.machine}</strong></div>
+                  <div>Teknisi: <strong style={{ color: '#0f172a' }}>{selectedJustification.technicianName}</strong></div>
+                  <div>Input Teknisi: <strong style={{ color: '#0f172a' }}>{selectedJustification.partName} ({selectedJustification.quantity} pcs)</strong></div>
+                  <div style={{ gridColumn: 'span 2' }}>Posisi: <strong style={{ color: '#0f172a' }}>{selectedJustification.position}</strong></div>
+                </div>
+              </div>
+
+              {/* Form Standarisasi */}
+              <div className="admin-form-group">
+                <label htmlFor="justif-id">Kode Master Part (ID Baru) *</label>
+                <input
+                  id="justif-id"
+                  type="text"
+                  required
+                  value={justificationForm.id}
+                  onChange={(e) => setJustificationForm({ ...justificationForm, id: e.target.value })}
+                  style={{ fontFamily: 'Consolas, monospace', fontWeight: 700 }}
+                />
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="justif-name">Nama Resmi Spare Part (Hasil Standarisasi) *</label>
+                <input
+                  id="justif-name"
+                  type="text"
+                  required
+                  value={justificationForm.standardizedName}
+                  onChange={(e) => setJustificationForm({ ...justificationForm, standardizedName: e.target.value })}
+                  placeholder="Contoh: Rubber Sealing Pad"
+                />
+                <small style={{ color: '#64748b', fontSize: '0.74rem', marginTop: '2px' }}>
+                  Nama resmi standar plant yang akan digunakan pada katalog mesin dan laporan shift.
+                </small>
+              </div>
+
+              <div className="admin-form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="admin-form-group">
+                  <label htmlFor="justif-part-no">Nomor Part (OEM / Part Number)</label>
+                  <input
+                    id="justif-part-no"
+                    type="text"
+                    value={justificationForm.partNumber}
+                    onChange={(e) => setJustificationForm({ ...justificationForm, partNumber: e.target.value })}
+                    placeholder="Contoh: RBR-SL-3010"
+                  />
+                </div>
+
+                <div className="admin-form-group">
+                  <label htmlFor="justif-cat">Kategori Teknik *</label>
+                  <select
+                    id="justif-cat"
+                    value={justificationForm.category}
+                    onChange={(e) => setJustificationForm({ ...justificationForm, category: e.target.value })}
+                  >
+                    <option value="Cutting">Cutting</option>
+                    <option value="Heating">Heating</option>
+                    <option value="Sealing">Sealing</option>
+                    <option value="Pneumatic">Pneumatic</option>
+                    <option value="Electrical">Electrical</option>
+                    <option value="Filling">Filling</option>
+                    <option value="Mechanical">Mechanical</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="justif-spec">Spesifikasi / Material</label>
+                <input
+                  id="justif-spec"
+                  type="text"
+                  value={justificationForm.specification}
+                  onChange={(e) => setJustificationForm({ ...justificationForm, specification: e.target.value })}
+                  placeholder="Contoh: Silicone High-Temp 30 x 10 mm"
+                />
+              </div>
+
+              {/* Penetapan Rumus Lifetime */}
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, color: '#166534', marginBottom: '0.35rem', fontSize: '0.88rem' }}>
+                  <Clock3 size={15} />
+                  <span>Penetapan Rumus &amp; Parameter Lifetime Mesin</span>
+                </div>
+                <p style={{ margin: '0 0 0.75rem', fontSize: '0.78rem', color: '#15803d' }}>
+                  Pilih basis rumus penggantian preventif untuk suku cadang ini.
+                </p>
+
+                <div className="admin-form-group" style={{ marginBottom: '0.75rem' }}>
+                  <label style={{ fontWeight: 700, color: '#166534' }}>Dasar Interval Lifetime *</label>
+                  <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.25rem' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="justif-intervalBasis"
+                        checked={justificationForm.intervalBasis === 'JAM_OPERASI'}
+                        onChange={() => setJustificationForm({ ...justificationForm, intervalBasis: 'JAM_OPERASI', defaultLifetimeDays: justificationForm.defaultLifetimeDays < 200 ? 1500 : justificationForm.defaultLifetimeDays })}
+                      />
+                      <span><strong>Jam Operasi</strong> (Running Hours)</span>
+                    </label>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="justif-intervalBasis"
+                        checked={justificationForm.intervalBasis === 'KALENDER'}
+                        onChange={() => setJustificationForm({ ...justificationForm, intervalBasis: 'KALENDER', defaultLifetimeDays: justificationForm.defaultLifetimeDays > 365 ? 90 : justificationForm.defaultLifetimeDays })}
+                      />
+                      <span><strong>Kalender</strong> (Hari)</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="admin-form-group" style={{ marginBottom: '0.5rem' }}>
+                  <label htmlFor="justif-lifetime" style={{ fontWeight: 700, color: '#166534' }}>
+                    Target Masa Pakai Normal ({justificationForm.intervalBasis === 'JAM_OPERASI' ? 'Jam Operasi' : 'Hari Kalender'}) *
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      id="justif-lifetime"
+                      type="number"
+                      min="1"
+                      required
+                      value={justificationForm.defaultLifetimeDays}
+                      onChange={(e) => setJustificationForm({ ...justificationForm, defaultLifetimeDays: Number(e.target.value) })}
+                      style={{ maxWidth: '140px', fontWeight: 700, fontSize: '0.95rem' }}
+                    />
+                    <span style={{ fontWeight: 600, color: '#166534', fontSize: '0.84rem' }}>
+                      {justificationForm.intervalBasis === 'JAM_OPERASI' ? 'Jam Operasi' : 'Hari Kalender'}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: '#ffffff', borderRadius: '6px', border: '1px solid #dcfce7', fontSize: '0.75rem', color: '#166534' }}>
+                  <div>Ambang Peringatan ({lifetimeRule.warningThreshold}%): <strong>~{Math.round((justificationForm.defaultLifetimeDays * lifetimeRule.warningThreshold) / 100)} {justificationForm.intervalBasis === 'JAM_OPERASI' ? 'Jam' : 'Hari'}</strong> (Status Kuning)</div>
+                  <div>Batas Ganti Wajib ({lifetimeRule.replacementLimit}%): <strong>{justificationForm.defaultLifetimeDays} {justificationForm.intervalBasis === 'JAM_OPERASI' ? 'Jam' : 'Hari'}</strong> (Status Merah)</div>
+                </div>
+              </div>
+
+              <footer className="admin-drawer-footer" style={{ margin: 'auto -1.5rem -1.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-admin-secondary"
+                  onClick={() => setJustificationModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button type="submit" className="btn-admin-primary">
+                  <CheckCircle2 size={16} />
+                  <span>Setujui &amp; Daftarkan ke Master Part</span>
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* Drawer: Ubah Rumus & Detail Master Part */}
+      {editMasterPartModalOpen && editingMasterPart && (
+        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-edit-part-title">
+          <button
+            className="admin-modal-overlay"
+            aria-label="Tutup formulir edit part"
+            onClick={() => setEditMasterPartModalOpen(false)}
+          />
+
+          <aside className="admin-drawer-panel" style={{ maxWidth: '560px' }}>
+            <header className="admin-drawer-top">
+              <div>
+                <span className="admin-code-badge" style={{ background: '#0284c7', color: '#fff', marginRight: '6px' }}>
+                  {editingMasterPart.id}
+                </span>
+                <h2 id="modal-edit-part-title">Ubah Rumus &amp; Detail Master Part</h2>
+                <p>Konfigurasi parameter masa pakai dan kategori suku cadang</p>
+              </div>
+              <button
+                className="btn-admin-close-drawer"
+                onClick={() => setEditMasterPartModalOpen(false)}
+                aria-label="Tutup formulir"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleSaveEditMasterPart} className="admin-drawer-body">
+              <div className="admin-form-group">
+                <label htmlFor="edit-part-name">Nama Spare Part *</label>
+                <input
+                  id="edit-part-name"
+                  type="text"
+                  required
+                  value={editMasterPartForm.name}
+                  onChange={(e) => setEditMasterPartForm({ ...editMasterPartForm, name: e.target.value })}
+                />
+              </div>
+
+              <div className="admin-form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="admin-form-group">
+                  <label htmlFor="edit-part-number">Nomor Part (OEM)</label>
+                  <input
+                    id="edit-part-number"
+                    type="text"
+                    value={editMasterPartForm.partNumber}
+                    onChange={(e) => setEditMasterPartForm({ ...editMasterPartForm, partNumber: e.target.value })}
+                  />
+                </div>
+
+                <div className="admin-form-group">
+                  <label htmlFor="edit-part-cat">Kategori Teknik</label>
+                  <select
+                    id="edit-part-cat"
+                    value={editMasterPartForm.category}
+                    onChange={(e) => setEditMasterPartForm({ ...editMasterPartForm, category: e.target.value })}
+                  >
+                    <option value="Cutting">Cutting</option>
+                    <option value="Heating">Heating</option>
+                    <option value="Sealing">Sealing</option>
+                    <option value="Pneumatic">Pneumatic</option>
+                    <option value="Electrical">Electrical</option>
+                    <option value="Filling">Filling</option>
+                    <option value="Mechanical">Mechanical</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="edit-part-spec">Spesifikasi / Material *</label>
+                <input
+                  id="edit-part-spec"
+                  type="text"
+                  required
+                  value={editMasterPartForm.specification}
+                  onChange={(e) => setEditMasterPartForm({ ...editMasterPartForm, specification: e.target.value })}
+                />
+              </div>
+
+              {/* Rumus Lifetime Section */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
+                <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem', fontSize: '0.88rem' }}>
+                  Konfigurasi Rumus &amp; Batas Lifetime
+                </div>
+
+                <div className="admin-form-group" style={{ marginBottom: '0.75rem' }}>
+                  <label>Dasar Perhitungan Interval *</label>
+                  <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.25rem' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="edit-intervalBasis"
+                        checked={editMasterPartForm.intervalBasis === 'JAM_OPERASI'}
+                        onChange={() => setEditMasterPartForm({ ...editMasterPartForm, intervalBasis: 'JAM_OPERASI' })}
+                      />
+                      <span>Jam Operasi Mesin</span>
+                    </label>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="edit-intervalBasis"
+                        checked={editMasterPartForm.intervalBasis === 'KALENDER'}
+                        onChange={() => setEditMasterPartForm({ ...editMasterPartForm, intervalBasis: 'KALENDER' })}
+                      />
+                      <span>Hari Kalender</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="admin-form-group" style={{ marginBottom: '0.5rem' }}>
+                  <label htmlFor="edit-part-lifetime">
+                    Target Interval Penggantian ({editMasterPartForm.intervalBasis === 'JAM_OPERASI' ? 'Jam Operasi' : 'Hari'}) *
+                  </label>
+                  <input
+                    id="edit-part-lifetime"
+                    type="number"
+                    min="1"
+                    required
+                    value={editMasterPartForm.defaultLifetimeDays}
+                    onChange={(e) => setEditMasterPartForm({ ...editMasterPartForm, defaultLifetimeDays: Number(e.target.value) })}
+                    style={{ maxWidth: '140px', fontWeight: 700 }}
+                  />
+                </div>
+              </div>
+
+              <footer className="admin-drawer-footer" style={{ margin: 'auto -1.5rem -1.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-admin-secondary"
+                  onClick={() => setEditMasterPartModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button type="submit" className="btn-admin-primary">
+                  <Save size={16} />
+                  <span>Simpan Perubahan Rumus</span>
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* Footer Portal */}
+      <footer className="admin-footer">
+        <span>Machine Card · Portal Administrasi Sistem &amp; RBAC Bintang Toedjoe</span>
+        <div className="admin-footer-status">
+          <span className="admin-status-dot green" />
+          <span>Sistem Otorisasi Aktif</span>
+        </div>
+      </footer>
+
+      {/* Mobile & Tablet Bottom Navigation Bar (Jempol-Friendly Admin) */}
+      <nav className="mobile-bottom-nav" aria-label="Navigasi Bawah Admin">
+        <button
+          type="button"
+          className={`mobile-bottom-nav-item ${activeTab === 'USERS' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('USERS')}
+          title="Manajemen Pengguna & RBAC"
+        >
+          <div className="bottom-nav-icon-wrap">
+            <Users size={20} />
+          </div>
+          <span>Pengguna</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-bottom-nav-item ${activeTab === 'MACHINES' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('MACHINES')}
+          title="Katalog Master Mesin & Lini"
+        >
+          <div className="bottom-nav-icon-wrap">
+            <Cog size={20} />
+          </div>
+          <span>Master Mesin</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-bottom-nav-item ${activeTab === 'PARTS' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('PARTS')}
+          title="Master Spare Part & Lifetime"
+        >
+          <div className="bottom-nav-icon-wrap">
+            <Wrench size={20} />
+          </div>
+          <span>Spare Part</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-bottom-nav-item ${activeTab === 'AUDIT' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('AUDIT')}
+          title="Audit Open Work Global"
+        >
+          <div className="bottom-nav-icon-wrap">
+            <ShieldCheck size={20} />
+            {auditTickets.filter((t) => t.status === 'OPEN').length > 0 && (
+              <span className="bottom-nav-badge alert">
+                {auditTickets.filter((t) => t.status === 'OPEN').length}
+              </span>
+            )}
+          </div>
+          <span>Audit Trail</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+);
+}
