@@ -1648,3 +1648,553 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
                       <td data-label="Shift">{u.shifts.join(', ') || 'Shift 1'}</td>
                       <td data-label="Cakupan Akses Plant" className="td-block-cell">
                         <span style={{ fontSize: '0.82rem', color: '#0f172a' }}>
+                          <strong>Seluruh Mesin Plant ({machines.length} Unit)</strong>{' '}
+                          <small className="text-muted">(Akses Terbuka Lintas Lini)</small>
+                        </span>
+                      </td>
+                      <td data-label="Status">
+                        <span
+                          className={`admin-status-indicator ${u.active ? 'active' : 'inactive'}`}
+                        >
+                          <span className={`admin-status-dot ${u.active ? 'green' : 'gray'}`} />
+                          {u.active ? 'Aktif' : 'Nonaktif'}
+                        </span>
+                      </td>
+                      <td data-label="Aksi Manajemen" className="text-center td-action-cell">
+                        <div className="admin-table-actions-inline">
+                          <button
+                            type="button"
+                            className="btn-admin-action-sm btn-action-edit"
+                            onClick={() => handleOpenEditUser(u)}
+                            title="Edit peran RBAC, departemen, dan shift kerja pengguna"
+                          >
+                            <Edit3 size={13} />
+                            <span>Edit Profil</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn-admin-action-sm ${u.active ? 'btn-action-deactivate' : 'btn-action-activate'}`}
+                            onClick={() => handleToggleUserActive(u.id)}
+                            title={u.active ? 'Nonaktifkan akun pengguna' : 'Aktifkan akun pengguna'}
+                          >
+                            <Power size={13} />
+                            <span>{u.active ? 'Nonaktifkan' : 'Aktifkan'}</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {filteredUsers.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="text-center" style={{ padding: '2.5rem 1rem' }}>
+                        <Users size={32} color="var(--color-icon-neutral, #64748b)" />
+                        <strong style={{ display: 'block', marginTop: '0.5rem' }}>
+                          Tidak ada pengguna ditemukan
+                        </strong>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Footer untuk Tabel Pengguna */}
+            <footer className="table-pagination-footer">
+              <div className="pagination-left-wrap">
+                <span className="pagination-info">
+                  Menampilkan {paginatedUsers.length ? (userPage - 1) * userPerPage + 1 : 0}–
+                  {Math.min(userPage * userPerPage, filteredUsers.length)} dari {filteredUsers.length} pengguna
+                </span>
+                <div className="pagination-size-selector">
+                  <label htmlFor="user-page-size">Per halaman:</label>
+                  <select
+                    id="user-page-size"
+                    value={userPerPage}
+                    onChange={(e) => {
+                      setUserPerPage(Number(e.target.value));
+                      setUserPage(1);
+                    }}
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+              <div className="pagination-ctrls">
+                <button
+                  type="button"
+                  disabled={userPage === 1}
+                  onClick={() => setUserPage((p) => Math.max(1, p - 1))}
+                  aria-label="Halaman pengguna sebelumnya"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="pagination-page-status">
+                  {userPage} / {totalUserPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={userPage >= totalUserPages}
+                  onClick={() => setUserPage((p) => Math.min(totalUserPages, p + 1))}
+                  aria-label="Halaman pengguna berikutnya"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </footer>
+          </section>
+        )}
+
+        {/* TAB 2: MASTER MESIN */}
+        {activeTab === 'MACHINES' && (
+          <section className="admin-content-card">
+            {/* SUB-NAV SELECTION */}
+            <div className="admin-subnav-bar">
+              <button
+                type="button"
+                className={`admin-subnav-btn ${machineSubTab === 'CATALOG' ? 'active' : ''}`}
+                onClick={() => setMachineSubTab('CATALOG')}
+              >
+                Katalog &amp; Status Mesin
+              </button>
+              <button
+                type="button"
+                className={`admin-subnav-btn ${machineSubTab === 'OPERATING_HOURS' ? 'active' : ''}`}
+                onClick={() => setMachineSubTab('OPERATING_HOURS')}
+              >
+                <Activity size={14} />
+                <span>Data Jam Operasi Aktual (Input Manual SPV &amp; Admin)</span>
+              </button>
+            </div>
+
+            {machineSubTab === 'CATALOG' ? (
+              <>
+                <div className="admin-toolbar-wrap">
+                  <div className="admin-search-box">
+                    <Search size={18} />
+                    <input
+                      type="text"
+                      value={machineSearch}
+                      onChange={(e) => setMachineSearch(e.target.value)}
+                      placeholder="Cari kode atau nama mesin..."
+                      aria-label="Cari mesin"
+                    />
+                  </div>
+
+                  <div className="admin-filter-pills">
+                    <span className="admin-filter-label">Section:</span>
+                    {['ALL', 'Filling', 'Packaging', 'Mixing'].map((sec) => (
+                      <button
+                        key={sec}
+                        type="button"
+                        className={`admin-pill-btn ${machineSectionFilter === sec ? 'active' : ''}`}
+                        onClick={() => setMachineSectionFilter(sec)}
+                      >
+                        {sec === 'ALL' ? 'Semua Section' : sec}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="admin-toolbar-actions">
+                    <button
+                      type="button"
+                      className="btn-admin-primary"
+                      onClick={() => setNewMachineModalOpen(true)}
+                    >
+                      <PlusCircle size={16} />
+                      <span>Tambah Mesin Baru</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="admin-table-responsive">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>KODE MESIN</th>
+                        <th>NAMA MESIN</th>
+                        <th>SECTION / LINI PRODUKSI</th>
+                        <th>STATUS OPERASIONAL</th>
+                        <th>JAM OPERASI &amp; MTBF</th>
+                        <th className="text-center">AKSI MASTER &amp; LOGBOOK</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedMachines.map((m) => {
+                        const rec = operatingHoursRecords.find((r) => r.namaMesin === m.nama_mesin || r.kodeMesin === m.kode_mesin);
+                        const machineTickets = auditTickets.filter((t) => t.machine === m.nama_mesin);
+                        const breakdownCount = Math.max(1, machineTickets.length);
+                        const rawMtbf = rec && rec.jamOperasiAktual > 0 ? (rec.jamOperasiAktual / breakdownCount).toFixed(1) : null;
+
+                        return (
+                          <tr key={m.kode_mesin}>
+                            <td data-label="Kode Mesin">
+                              <span className="admin-code-badge">{m.kode_mesin}</span>
+                            </td>
+                            <td data-label="Nama Mesin">
+                              <strong>{m.nama_mesin}</strong>
+                            </td>
+                            <td data-label="Section / Lini">
+                              <span style={{ fontWeight: 600, color: '#475569' }}>{m.kategori}</span>
+                            </td>
+                            <td data-label="Status Operasional">
+                              <span
+                                className={`admin-status-indicator ${
+                                  m.status === 'AKTIF' ? 'active' : 'inactive'
+                                }`}
+                              >
+                                <span
+                                  className={`admin-status-dot ${
+                                    m.status === 'AKTIF' ? 'green' : 'gray'
+                                  }`}
+                                />
+                                {m.status === 'AKTIF' ? 'Beroperasi' : 'Nonaktif'}
+                              </span>
+                            </td>
+                            <td data-label="Jam Operasi & MTBF">
+                              {rec && rec.jamOperasiAktual > 0 ? (
+                                <div className="admin-mtbf-cell">
+                                  <span className="mtbf-hours-badge">{rec.jamOperasiAktual} Jam</span>
+                                  <span className="mtbf-ratio">MTBF: ~{rawMtbf} Jam</span>
+                                </div>
+                              ) : (
+                                <div className="admin-mtbf-cell muted">
+                                  <span className="mtbf-hours-badge muted">0 Jam</span>
+                                  <span className="mtbf-ratio muted">MTBF: —</span>
+                                </div>
+                              )}
+                            </td>
+                            <td data-label="Aksi" className="text-center td-action-cell">
+                              <div className="admin-table-actions-inline">
+                                <button
+                                  type="button"
+                                  className="btn-admin-action-sm btn-action-edit"
+                                  onClick={() => {
+                                    if (rec) {
+                                      setSelectedOperatingRecord(rec);
+                                      setOperatingForm({
+                                        kodeMesin: rec.kodeMesin,
+                                        namaMesin: rec.namaMesin,
+                                        periode: rec.periode,
+                                        jamOperasiAktual: rec.jamOperasiAktual,
+                                        jamShiftKalender: rec.jamShiftKalender,
+                                        sumberData: rec.sumberData,
+                                        penanggungJawab: rec.penanggungJawab,
+                                        isComplete: rec.isComplete,
+                                        catatanPenjelasan: rec.catatanPenjelasan || '',
+                                      });
+                                    } else {
+                                      setOperatingForm({
+                                        kodeMesin: m.kode_mesin,
+                                        namaMesin: m.nama_mesin,
+                                        periode: 'Oktober 2026',
+                                        jamOperasiAktual: 7.0,
+                                        jamShiftKalender: 7.0,
+                                        sumberData: `Input Manual Admin (${admin.name})`,
+                                        penanggungJawab: `${admin.name} (Admin)`,
+                                        isComplete: true,
+                                        catatanPenjelasan: '',
+                                      });
+                                      setNewOperatingModalOpen(true);
+                                    }
+                                  }}
+                                  title="Kelola jam operasi & MTBF mesin ini"
+                                >
+                                  <Edit3 size={12} />
+                                  <span>Logbook MTBF</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`btn-admin-action-sm ${m.status === 'AKTIF' ? 'btn-action-deactivate' : 'btn-action-activate'}`}
+                                  onClick={() => handleToggleMachineStatus(m.kode_mesin)}
+                                  title="Ubah status aktif/nonaktif mesin"
+                                >
+                                  <Power size={12} />
+                                  <span>{m.status === 'AKTIF' ? 'Set Nonaktif' : 'Set Beroperasi'}</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {filteredMachines.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="text-center" style={{ padding: '2.5rem 1rem' }}>
+                            <Cog size={32} color="var(--color-icon-neutral, #64748b)" />
+                            <strong style={{ display: 'block', marginTop: '0.5rem' }}>
+                              Tidak ada mesin ditemukan
+                            </strong>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Footer untuk Tabel Master Mesin */}
+                <footer className="table-pagination-footer">
+                  <div className="pagination-left-wrap">
+                    <span className="pagination-info">
+                      Menampilkan {paginatedMachines.length ? (machinePage - 1) * machinePerPage + 1 : 0}–
+                      {Math.min(machinePage * machinePerPage, filteredMachines.length)} dari {filteredMachines.length} mesin
+                    </span>
+                    <div className="pagination-size-selector">
+                      <label htmlFor="machine-page-size">Per halaman:</label>
+                      <select
+                        id="machine-page-size"
+                        value={machinePerPage}
+                        onChange={(e) => {
+                          setMachinePerPage(Number(e.target.value));
+                          setMachinePage(1);
+                        }}
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="pagination-ctrls">
+                    <button
+                      type="button"
+                      disabled={machinePage === 1}
+                      onClick={() => setMachinePage((p) => Math.max(1, p - 1))}
+                      aria-label="Halaman mesin sebelumnya"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span className="pagination-page-status">
+                      {machinePage} / {totalMachinePages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={machinePage >= totalMachinePages}
+                      onClick={() => setMachinePage((p) => Math.min(totalMachinePages, p + 1))}
+                      aria-label="Halaman mesin berikutnya"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </footer>
+              </>
+            ) : (
+              <div>
+                {/* Clean Header & Action Bar */}
+                <div className="admin-subtab-header">
+                  <div className="admin-subtab-header-left">
+                    <div className="admin-subtab-title-row">
+                      <Activity size={18} color="var(--color-icon-neutral, #64748b)" />
+                      <h2>
+                        Logbook Jam Operasi Aktual Mesin &amp; Basis MTBF Presisi
+                      </h2>
+                      <span className="admin-status-pill green">
+                        Integrasi Sederhana: Input Manual Terverifikasi SPV &amp; Admin
+                      </span>
+                    </div>
+                    <p className="admin-subtab-subtitle">
+                      Pencatatan jam operasi riil per mesin untuk kalkulasi ketersediaan (Availability) dan estimasi MTBF presisi.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn-admin-primary"
+                    onClick={() => {
+                      setOperatingForm({
+                        kodeMesin: machines[0]?.kode_mesin || 'MESIN-001',
+                        namaMesin: machines[0]?.nama_mesin || 'Ilapak 1',
+                        periode: 'Oktober 2026',
+                        jamOperasiAktual: 7.0,
+                        jamShiftKalender: 7.0,
+                        sumberData: `Input Manual Admin (${admin.name})`,
+                        penanggungJawab: `${admin.name} (Admin)`,
+                        isComplete: true,
+                        catatanPenjelasan: '',
+                      });
+                      setNewOperatingModalOpen(true);
+                    }}
+                  >
+                    <PlusCircle size={15} />
+                    <span>+ Input Data Jam Operasi</span>
+                  </button>
+                </div>
+
+                {/* Clean Toolbar */}
+                <div className="admin-toolbar-wrap" style={{ marginBottom: '1rem' }}>
+                  <div className="admin-search-box" style={{ maxWidth: '300px' }}>
+                    <Search size={16} />
+                    <input
+                      type="text"
+                      value={machineSearch}
+                      onChange={(e) => setMachineSearch(e.target.value)}
+                      placeholder="Cari kode atau nama mesin..."
+                      aria-label="Cari mesin di data jam operasi"
+                    />
+                  </div>
+                </div>
+
+                <div className="admin-table-responsive">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>MESIN &amp; PERIODE</th>
+                        <th>JAM OPERASI AKTUAL</th>
+                        <th>JAM SHIFT KALENDER</th>
+                        <th>ESTIMASI MTBF</th>
+                        <th>SUMBER &amp; PIC</th>
+                        <th>STATUS KELENGKAPAN</th>
+                        <th className="text-center">AKSI ADMIN</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedOperatingRecords.map((rec) => {
+                        const machineTickets = auditTickets.filter((t) => t.machine === rec.namaMesin);
+                        const unclosedTickets = machineTickets.filter((t) => t.status !== 'CLOSED');
+                        const closedTickets = machineTickets.filter((t) => t.status === 'CLOSED');
+                        const breakdownCount = Math.max(1, machineTickets.length);
+                        const rawMtbf = (rec.jamOperasiAktual / breakdownCount).toFixed(1);
+                        const availPercent =
+                          rec.jamShiftKalender > 0
+                            ? Math.min(100, Math.round((rec.jamOperasiAktual / rec.jamShiftKalender) * 100))
+                            : 0;
+
+                        return (
+                          <tr key={rec.id}>
+                            <td data-label="Mesin & Periode">
+                              <strong style={{ color: '#0f172a' }}>{rec.namaMesin}</strong>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                {rec.kodeMesin} · Periode {rec.periode}
+                              </div>
+                            </td>
+                            <td data-label="Jam Operasi Aktual">
+                              {rec.jamOperasiAktual === 0 ? (
+                                <span style={{ color: '#94a3b8', fontWeight: 600, fontSize: '0.88rem' }}>0 Jam</span>
+                              ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>
+                                    {rec.jamOperasiAktual} Jam
+                                  </strong>
+                                  <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>
+                                    ({availPercent}%)
+                                  </span>
+                                </div>
+                              )}
+                            </td>
+                            <td data-label="Jam Shift Kalender">
+                              <span style={{ color: '#334155', fontWeight: 600 }}>{rec.jamShiftKalender} Jam</span>
+                            </td>
+                            <td data-label="Estimasi MTBF">
+                              {rec.jamOperasiAktual === 0 ? (
+                                <span style={{ color: '#94a3b8' }}>—</span>
+                              ) : !rec.isComplete ? (
+                                <div>
+                                  <strong style={{ color: '#334155', fontSize: '0.9rem' }}>~ {rawMtbf} Jam</strong>
+                                  <div style={{ fontSize: '0.72rem', color: '#b45309', fontWeight: 600 }}>
+                                    Belum Final: Data Parsial
+                                  </div>
+                                </div>
+                              ) : unclosedTickets.length > 0 ? (
+                                <div>
+                                  <strong style={{ color: '#334155', fontSize: '0.9rem' }}>~ {rawMtbf} Jam</strong>
+                                  <div style={{ fontSize: '0.72rem', color: '#b45309', fontWeight: 600 }}>
+                                    Estimasi ({unclosedTickets.length} Tiket Open: {unclosedTickets.map((u) => u.ticket).join(', ')})
+                                  </div>
+                                </div>
+                              ) : (
+                                <div>
+                                  <strong style={{ color: '#0f172a', fontSize: '0.9rem' }}>{rawMtbf} Jam / Gangguan</strong>
+                                  <div style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>
+                                    Nilai Final ({closedTickets.length} Tiket Closed)
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                            <td data-label="Sumber & PIC">
+                              {rec.jamOperasiAktual === 0 ? (
+                                <span style={{ color: '#94a3b8', fontSize: '0.82rem' }}>—</span>
+                              ) : (
+                                <div>
+                                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155' }}>
+                                    {rec.sumberData}
+                                  </div>
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                    PIC: {rec.penanggungJawab}
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                            <td data-label="Status Kelengkapan">
+                              {rec.isComplete ? (
+                                <span className="admin-status-indicator active" style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                                  <CheckCircle2 size={13} />
+                                  Data Lengkap
+                                </span>
+                              ) : (
+                                <span className="admin-status-indicator inactive" style={{ background: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                                  Belum Lengkap
+                                </span>
+                              )}
+                            </td>
+                            <td data-label="Aksi Admin" className="text-center td-action-cell">
+                              <div className="admin-table-actions-inline">
+                                <button
+                                  type="button"
+                                  className="btn-admin-action-sm btn-action-edit"
+                                  onClick={() => {
+                                    setSelectedOperatingRecord(rec);
+                                    setOperatingForm({
+                                      kodeMesin: rec.kodeMesin,
+                                      namaMesin: rec.namaMesin,
+                                      periode: rec.periode,
+                                      jamOperasiAktual: rec.jamOperasiAktual,
+                                      jamShiftKalender: rec.jamShiftKalender,
+                                      sumberData: rec.sumberData,
+                                      penanggungJawab: rec.penanggungJawab,
+                                      isComplete: rec.isComplete,
+                                      catatanPenjelasan: rec.catatanPenjelasan || '',
+                                    });
+                                  }}
+                                  title="Edit / Input data jam operasi aktual mesin"
+                                >
+                                  <Edit3 size={13} />
+                                  <span>Edit / Input</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {filteredOperatingRecords.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="text-center" style={{ padding: '2.5rem 1rem' }}>
+                            <Activity size={32} color="var(--color-icon-neutral, #64748b)" />
+                            <strong style={{ display: 'block', marginTop: '0.5rem' }}>
+                              Tidak ada data jam operasi ditemukan
+                            </strong>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Footer untuk Logbook Jam Operasi */}
+                <footer className="table-pagination-footer">
+                  <div className="pagination-left-wrap">
+                    <span className="pagination-info">
+                      Menampilkan {paginatedOperatingRecords.length ? (operatingPage - 1) * operatingPerPage + 1 : 0}–
+                      {Math.min(operatingPage * operatingPerPage, filteredOperatingRecords.length)} dari {filteredOperatingRecords.length} data operasi
+                    </span>
+                    <div className="pagination-size-selector">
+                      <label htmlFor="operating-page-size">Per halaman:</label>
+                      <select
+                        id="operating-page-size"
+                        value={operatingPerPage}
+                        onChange={(e) => {
+                          setOperatingPerPage(Number(e.target.value));
