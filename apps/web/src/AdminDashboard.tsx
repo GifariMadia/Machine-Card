@@ -3298,3 +3298,553 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
             aria-label="Tutup formulir"
             onClick={() => setNewPartModalOpen(false)}
           />
+
+          <aside className="admin-drawer-panel">
+            <header className="admin-drawer-top">
+              <div>
+                <h2 id="modal-part-title">Tambah Master Suku Cadang</h2>
+                <p>Definisikan komponen spare part dan target lifetime</p>
+              </div>
+              <button
+                className="btn-admin-close-drawer"
+                onClick={() => setNewPartModalOpen(false)}
+                aria-label="Tutup formulir"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleCreatePart} className="admin-drawer-body">
+              <div className="admin-form-group">
+                <label htmlFor="part-name">Nama Spare Part *</label>
+                <input
+                  id="part-name"
+                  type="text"
+                  required
+                  placeholder="Contoh: Pisau Rotary Cutter"
+                  value={newPartForm.name}
+                  onChange={(e) => setNewPartForm({ ...newPartForm, name: e.target.value })}
+                />
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="part-number">Nomor Part (Bila Tersedia)</label>
+                <input
+                  id="part-number"
+                  type="text"
+                  placeholder="Contoh: CUT-8025-HSS"
+                  value={newPartForm.partNumber}
+                  onChange={(e) => setNewPartForm({ ...newPartForm, partNumber: e.target.value })}
+                />
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="part-spec">Spesifikasi / Ukuran / Material *</label>
+                <input
+                  id="part-spec"
+                  type="text"
+                  required
+                  placeholder="Contoh: Tungsten Carbide 120 x 30 mm"
+                  value={newPartForm.specification}
+                  onChange={(e) =>
+                    setNewPartForm({ ...newPartForm, specification: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="part-category">Kategori Teknik</label>
+                <select
+                  id="part-category"
+                  value={newPartForm.category}
+                  onChange={(e) => setNewPartForm({ ...newPartForm, category: e.target.value })}
+                >
+                  <option value="Mechanical">Mechanical</option>
+                  <option value="Electrical">Electrical</option>
+                  <option value="Pneumatic">Pneumatic</option>
+                  <option value="Cutting">Cutting</option>
+                  <option value="Heating">Heating</option>
+                </select>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="part-interval-basis">Dasar Perhitungan Interval *</label>
+                <select
+                  id="part-interval-basis"
+                  value={newPartForm.intervalBasis}
+                  onChange={(e) =>
+                    setNewPartForm({ ...newPartForm, intervalBasis: e.target.value as any })
+                  }
+                >
+                  <option value="KALENDER">Waktu Kalender (Hari)</option>
+                  <option value="JAM_OPERASI">Jam Operasi Aktual (Jam)</option>
+                </select>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="part-lifetime">
+                  Target Interval Penggantian ({newPartForm.intervalBasis === 'JAM_OPERASI' ? 'Jam Operasi' : 'Hari'}) *
+                </label>
+                <input
+                  id="part-lifetime"
+                  type="number"
+                  min="1"
+                  required
+                  value={newPartForm.defaultLifetimeDays}
+                  onChange={(e) =>
+                    setNewPartForm({ ...newPartForm, defaultLifetimeDays: Number(e.target.value) })
+                  }
+                />
+              </div>
+
+              <footer className="admin-drawer-footer" style={{ margin: 'auto -1.5rem -1.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-admin-secondary"
+                  onClick={() => setNewPartModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button type="submit" className="btn-admin-primary">
+                  <Check size={16} />
+                  <span>Simpan Suku Cadang</span>
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL EDIT / INPUT JAM OPERASI AKTUAL OLEH ADMIN (URS 3.6 - FRIENDLY) */}
+      {selectedOperatingRecord && (
+        <div
+          className="admin-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-edit-operating-title"
+        >
+          <button
+            className="admin-modal-overlay"
+            aria-label="Tutup formulir"
+            onClick={() => setSelectedOperatingRecord(null)}
+          />
+
+          <aside className="admin-drawer-panel" style={{ maxWidth: '540px' }}>
+            <header className="admin-drawer-top">
+              <div>
+                <span className="admin-code-badge" style={{ background: '#0284c7', color: '#fff', marginRight: '6px' }}>
+                  {selectedOperatingRecord.kodeMesin}
+                </span>
+                <h2 id="modal-edit-operating-title">{selectedOperatingRecord.namaMesin}</h2>
+                <p>Input / Verifikasi Jam Operasi Aktual Mesin · Periode {selectedOperatingRecord.periode}</p>
+              </div>
+              <button
+                className="btn-admin-close-drawer"
+                onClick={() => setSelectedOperatingRecord(null)}
+                aria-label="Tutup formulir"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleSaveOperatingHours} className="admin-drawer-body">
+              <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '1rem', fontSize: '0.82rem', color: '#475569' }}>
+                Integrasi Sederhana: Input manual terpusat oleh SPV &amp; Admin (berdasarkan catatan logbook fisik shift/counter). Data ini langsung tersinkronisasi realtime dengan SPV Dashboard.
+              </div>
+
+              {/* 1. Jam Shift Kalender & Quick Presets */}
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label>Jam Shift Kalender (Total Waktu Shift Terjadwal) *</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  required
+                  value={operatingForm.jamShiftKalender}
+                  onChange={(e) => setOperatingForm({ ...operatingForm, jamShiftKalender: parseFloat(e.target.value) || 0 })}
+                />
+                <div style={{ marginTop: '5px' }}>
+                  <small style={{ color: '#64748b', display: 'block', marginBottom: '3px' }}>Preset Jam Shift:</small>
+                  <div className="friendly-preset-group">
+                    {[
+                      { label: '7h (1 Shift)', val: 7 },
+                      { label: '14h (2 Shift)', val: 14 },
+                      { label: '21h (3 Shift)', val: 21 },
+                      { label: '176h (1 Bulan)', val: 176 },
+                    ].map((p) => (
+                      <button
+                        key={p.label}
+                        type="button"
+                        className={`btn-friendly-preset ${operatingForm.jamShiftKalender === p.val ? 'active' : ''}`}
+                        onClick={() => setOperatingForm({ ...operatingForm, jamShiftKalender: p.val })}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Jam Operasi Aktual & Stepper Buttons */}
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label>Jam Operasi Aktual (Jam Riil Berputar) *</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  required
+                  style={{ fontSize: '1.05rem', fontWeight: 700 }}
+                  value={operatingForm.jamOperasiAktual}
+                  onChange={(e) => setOperatingForm({ ...operatingForm, jamOperasiAktual: parseFloat(e.target.value) || 0 })}
+                />
+                <small style={{ color: '#64748b', display: 'block', marginTop: '3px' }}>
+                  Jam operasi riil mesin berputar, terpisah dari jam shift kalender.
+                </small>
+
+                <div className="friendly-stepper-wrap" style={{ marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    className="btn-friendly-stepper"
+                    onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: Math.max(0, +(operatingForm.jamOperasiAktual - 5).toFixed(1)) })}
+                  >
+                    -5h
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-friendly-stepper"
+                    onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: Math.max(0, +(operatingForm.jamOperasiAktual - 1).toFixed(1)) })}
+                  >
+                    -1h
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-friendly-stepper"
+                    onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: Math.max(0, +(operatingForm.jamOperasiAktual - 0.5).toFixed(1)) })}
+                  >
+                    -0.5h
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-friendly-stepper"
+                    onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: +(operatingForm.jamOperasiAktual + 0.5).toFixed(1) })}
+                  >
+                    +0.5h
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-friendly-stepper"
+                    onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: +(operatingForm.jamOperasiAktual + 1).toFixed(1) })}
+                  >
+                    +1h
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-friendly-stepper"
+                    onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: +(operatingForm.jamOperasiAktual + 5).toFixed(1) })}
+                  >
+                    +5h
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-friendly-stepper"
+                    style={{ marginLeft: 'auto', background: '#ecfdf5', color: '#047857', borderColor: '#a7f3d0' }}
+                    onClick={() => setOperatingForm({ ...operatingForm, jamOperasiAktual: operatingForm.jamShiftKalender })}
+                  >
+                    = Shift Penuh
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. Live Calculation Preview Card */}
+              {(() => {
+                const calcAvail = operatingForm.jamShiftKalender > 0
+                  ? ((operatingForm.jamOperasiAktual / operatingForm.jamShiftKalender) * 100).toFixed(1)
+                  : '0';
+                const calcDowntime = (operatingForm.jamShiftKalender - operatingForm.jamOperasiAktual).toFixed(1);
+                const machineTickets = auditTickets.filter((t) => t.machine === selectedOperatingRecord.namaMesin);
+                const breakdownCount = Math.max(1, machineTickets.length);
+                const calcMtbf = (operatingForm.jamOperasiAktual / breakdownCount).toFixed(1);
+                const isOvertime = operatingForm.jamOperasiAktual > operatingForm.jamShiftKalender;
+
+                return (
+                  <div className={`friendly-live-preview ${isOvertime ? 'warning' : ''}`}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <strong style={{ fontSize: '0.85rem', color: isOvertime ? '#92400e' : '#166534' }}>
+                        {isOvertime ? '⚠️ Perhatian: Waktu Operasi Melebihi Shift' : 'Hasil kalkulasi otomatis:'}
+                      </strong>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: isOvertime ? '#b45309' : '#047857' }}>
+                        {isOvertime ? 'Overtime Terdeteksi' : 'Normal Shift'}
+                      </span>
+                    </div>
+                    <div className="friendly-preview-grid">
+                      <div className="friendly-preview-item">
+                        <div className="friendly-preview-lbl">Availability</div>
+                        <div className="friendly-preview-val" style={{ color: Number(calcAvail) >= 80 ? '#047857' : '#d97706' }}>
+                          {calcAvail}%
+                        </div>
+                      </div>
+                      <div className="friendly-preview-item">
+                        <div className="friendly-preview-lbl">Idle / Downtime</div>
+                        <div className="friendly-preview-val" style={{ color: Number(calcDowntime) > 0 ? '#b91c1c' : '#047857' }}>
+                          {calcDowntime} Jam
+                        </div>
+                      </div>
+                      <div className="friendly-preview-item">
+                        <div className="friendly-preview-lbl">Estimasi MTBF</div>
+                        <div className="friendly-preview-val" style={{ color: '#0284c7' }}>
+                          {calcMtbf} Jam
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* 3b. Status Tiket Breakdown & Operator Closing (Audit URS 3.6 & 7.6) */}
+              {(() => {
+                const machineTickets = auditTickets.filter((t) => t.machine === selectedOperatingRecord.namaMesin);
+                const unclosedTickets = machineTickets.filter((t) => t.status !== 'CLOSED');
+                const closedTickets = machineTickets.filter((t) => t.status === 'CLOSED');
+
+                return (
+                  <div style={{ marginBottom: '1rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.85rem 1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>
+                        Status Tiket Breakdown &amp; Operator Closing:
+                      </strong>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: unclosedTickets.length > 0 ? '#b45309' : '#047857' }}>
+                        {unclosedTickets.length > 0 ? `${unclosedTickets.length} Tiket Belum Closing` : 'Semua Tiket Closed'}
+                      </span>
+                    </div>
+
+                    {unclosedTickets.length > 0 ? (
+                      <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '8px 10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#92400e', fontSize: '0.78rem', fontWeight: 700 }}>
+                          <AlertTriangle size={14} />
+                          <span>Perhatian: Ada {unclosedTickets.length} tiket breakdown belum di-closing oleh operator!</span>
+                        </div>
+                        <p style={{ margin: '4px 0 8px', fontSize: '0.73rem', color: '#78350f', lineHeight: 1.4 }}>
+                          Nilai MTBF berstatus <strong>estimasi sementara</strong> sampai seluruh tiket berikut diselesaikan &amp; ditutup (closed) oleh operator:
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          {unclosedTickets.map((t) => (
+                            <div
+                              key={t.ticket}
+                              style={{
+                                background: '#ffffff',
+                                border: '1px solid #fed7aa',
+                                borderRadius: '5px',
+                                padding: '5px 8px',
+                                fontSize: '0.74rem',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: '8px',
+                              }}
+                            >
+                              <div>
+                                <strong style={{ color: '#0284c7' }}>{t.ticket}</strong>
+                                <span style={{ color: '#475569', marginLeft: '6px' }}>{t.keterangan}</span>
+                                {t.reporterName && (
+                                  <small style={{ color: '#94a3b8', display: 'block' }}>Pelapor: {t.reporterName}</small>
+                                )}
+                              </div>
+                              <span
+                                style={{
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  whiteSpace: 'nowrap',
+                                  background: t.status === 'OPEN' ? '#ffe4e6' : '#e0f2fe',
+                                  color: t.status === 'OPEN' ? '#be123c' : '#0369a1',
+                                }}
+                              >
+                                {t.status === 'OPEN' ? 'Open (Menunggu)' : 'Sedang Dikerjakan'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '8px 10px', color: '#065f46', fontSize: '0.78rem' }}>
+                        ✓ Seluruh tiket breakdown ({closedTickets.length} tiket) pada mesin ini telah di-closing oleh operator. Nilai MTBF valid dan siap difinalkan.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* 4. Sumber Data & Quick Pills */}
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label>Sumber Pencatatan Data *</label>
+                <input
+                  type="text"
+                  required
+                  value={operatingForm.sumberData}
+                  onChange={(e) => setOperatingForm({ ...operatingForm, sumberData: e.target.value })}
+                  placeholder="Contoh: Logbook Manual Produksi / Catatan Fisik Shift Admin"
+                />
+                <div style={{ marginTop: '5px' }}>
+                  <small style={{ color: '#64748b', display: 'block', marginBottom: '3px' }}>Pilih Cepat Sumber Data:</small>
+                  <div className="friendly-preset-group">
+                    {[
+                      '📋 Logbook Shift Fisik',
+                      '🔢 Counter Running Mesin',
+                      '📝 Rekap Harian Produksi',
+                      '🔧 Verifikasi Fisik Admin',
+                    ].map((src) => (
+                      <button
+                        key={src.replace(/^[📋🔢📝🔧]\s*/u, '')}
+                        type="button"
+                        className={`btn-friendly-preset ${operatingForm.sumberData === src ? 'active' : ''}`}
+                        onClick={() => setOperatingForm({ ...operatingForm, sumberData: src })}
+                      >
+                        {src.replace(/^[📋🔢📝🔧]\s*/u, '')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Penanggung Jawab */}
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label>Penanggung Jawab / Petugas Input *</label>
+                <input
+                  type="text"
+                  required
+                  value={operatingForm.penanggungJawab}
+                  onChange={(e) => setOperatingForm({ ...operatingForm, penanggungJawab: e.target.value })}
+                />
+              </div>
+
+              {/* 6. Checkbox Data Lengkap */}
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={operatingForm.isComplete}
+                    onChange={(e) => setOperatingForm({ ...operatingForm, isComplete: e.target.checked })}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <strong style={{ color: '#0a1e15' }}>Tandai Data Lengkap &amp; Final (Valid untuk Basis MTBF)</strong>
+                </label>
+              </div>
+
+              {/* 7. Catatan Penjelasan */}
+              <div className="admin-form-group">
+                <label>Catatan Penjelasan (Jika data parsial atau ada penyesuaian)</label>
+                <textarea
+                  rows={2}
+                  value={operatingForm.catatanPenjelasan}
+                  onChange={(e) => setOperatingForm({ ...operatingForm, catatanPenjelasan: e.target.value })}
+                  placeholder="Catatan verifikasi logbook manual..."
+                />
+              </div>
+
+              <footer className="admin-drawer-footer" style={{ margin: 'auto -1.5rem -1.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-admin-secondary"
+                  onClick={() => setSelectedOperatingRecord(null)}
+                >
+                  Batal
+                </button>
+                <button type="submit" className="btn-admin-primary">
+                  <Check size={16} />
+                  <span>Simpan Data Operasi</span>
+                </button>
+              </footer>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL INPUT RECORD BARU OLEH ADMIN (FRIENDLY) */}
+      {newOperatingModalOpen && (
+        <div
+          className="admin-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-new-operating-title"
+        >
+          <button
+            className="admin-modal-overlay"
+            aria-label="Tutup formulir"
+            onClick={() => setNewOperatingModalOpen(false)}
+          />
+
+          <aside className="admin-drawer-panel" style={{ maxWidth: '540px' }}>
+            <header className="admin-drawer-top">
+              <div>
+                <h2 id="modal-new-operating-title">Input Jam Operasi Aktual Mesin</h2>
+                <p>Tambah data waktu operasional riil mesin</p>
+              </div>
+              <button
+                className="btn-admin-close-drawer"
+                onClick={() => setNewOperatingModalOpen(false)}
+                aria-label="Tutup formulir"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form onSubmit={handleCreateOperatingHours} className="admin-drawer-body">
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label>Pilih Mesin *</label>
+                <select
+                  value={operatingForm.kodeMesin}
+                  onChange={(e) => {
+                    const found = machines.find((m) => m.kode_mesin === e.target.value);
+                    setOperatingForm({
+                      ...operatingForm,
+                      kodeMesin: e.target.value,
+                      namaMesin: found ? found.nama_mesin : operatingForm.namaMesin,
+                    });
+                  }}
+                >
+                  {machines.map((m) => (
+                    <option key={m.kode_mesin} value={m.kode_mesin}>
+                      {m.kode_mesin} - {m.nama_mesin} ({m.kategori})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label>Periode Waktu *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Oktober 2026 atau Shift 1 (24 Okt 2026)"
+                  value={operatingForm.periode}
+                  onChange={(e) => setOperatingForm({ ...operatingForm, periode: e.target.value })}
+                />
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label>Jam Shift Kalender (Jam) *</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  required
+                  value={operatingForm.jamShiftKalender}
+                  onChange={(e) => setOperatingForm({ ...operatingForm, jamShiftKalender: parseFloat(e.target.value) || 0 })}
+                />
+                <div style={{ marginTop: '5px' }}>
+                  <small style={{ color: '#64748b', display: 'block', marginBottom: '3px' }}>Preset Jam Shift:</small>
+                  <div className="friendly-preset-group">
+                    {[
+                      { label: '7h (1 Shift)', val: 7 },
+                      { label: '14h (2 Shift)', val: 14 },
+                      { label: '21h (3 Shift)', val: 21 },
+                      { label: '176h (1 Bulan)', val: 176 },
+                    ].map((p) => (
+                      <button
+                        key={p.label}
+                        type="button"
+                        className={`btn-friendly-preset ${operatingForm.jamShiftKalender === p.val ? 'active' : ''}`}
+                        onClick={() => setOperatingForm({ ...operatingForm, jamShiftKalender: p.val })}
+                      >
+                        {p.label}
