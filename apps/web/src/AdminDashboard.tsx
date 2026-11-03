@@ -1098,3 +1098,553 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
 
     const partAudit: SystemAuditEntry = {
       id: `LOG-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Date.now().toString().slice(-4)}`,
+      timestamp: new Date().toISOString(),
+      actorName: `${safeAdmin.name} (${safeAdmin.nik || 'ADM0001'})`,
+      actorRole: 'ADMIN',
+      eventType: 'PART_JUSTIFICATION',
+      action: 'Registrasi Master Part Baru',
+      target: `${created.name} (${created.id})`,
+      details: `Penambahan suku cadang: Kat=${created.category}, Basis=${created.intervalBasis}, Lifetime=${created.defaultLifetimeDays}.`,
+      ipAddress: '—',
+      status: 'SUCCESS',
+    };
+    setSystemAuditLogs((prev) => [partAudit, ...prev]);
+
+    setNewPartModalOpen(false);
+    setNewPartForm({
+      name: '',
+      partNumber: '',
+      specification: '',
+      category: 'Mechanical',
+      position: 'Line 1',
+      intervalBasis: 'KALENDER',
+      defaultLifetimeDays: 90,
+    });
+  }
+
+  // Save Lifetime Rule
+  function handleSaveLifetimeRule() {
+    if (!(tempRule.warningThreshold > 0 && tempRule.replacementLimit > tempRule.warningThreshold)) { alert('Batas ganti harus lebih besar dari batas peringatan.'); return; }
+    storage.setItem('machine-card-lifetime-rules', JSON.stringify(tempRule));
+    setLifetimeRule(tempRule);
+    setEditingRule(false);
+
+    const auditEntry: SystemAuditEntry = {
+      id: `LOG-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Date.now().toString().slice(-4)}`,
+      timestamp: new Date().toISOString(),
+      actorName: `${safeAdmin.name} (${safeAdmin.nik || 'ADM0001'})`,
+      actorRole: 'ADMIN',
+      eventType: 'SYSTEM_RULE',
+      action: 'Pembaruan Rumus & Kebijakan Lifetime Part',
+      target: 'Aturan Parameter Lifetime Global',
+      details: `Pembaruan formula lifetime suku cadang: Ambang batas peringatan ${tempRule.warningThreshold}%, Batas ganti wajib ${tempRule.replacementLimit}%.`,
+      ipAddress: '—',
+      status: 'SUCCESS',
+    };
+    setSystemAuditLogs((prev) => [auditEntry, ...prev]);
+  }
+
+  // Open Justification Drawer for a pending breakdown part
+  function handleOpenJustification(item: PendingPartJustification) {
+    setSelectedJustification(item);
+    const nextNum = parts.length + 1;
+    const suggestedId = `PART-${String(nextNum).padStart(3, '0')}`;
+
+    let cat = 'Mechanical';
+    const nameLower = item.partName.toLowerCase();
+    if (nameLower.includes('seal') || nameLower.includes('rubber') || nameLower.includes('gasket')) cat = 'Sealing';
+    else if (nameLower.includes('heater') || nameLower.includes('wire') || nameLower.includes('elemen')) cat = 'Heating';
+    else if (nameLower.includes('pisau') || nameLower.includes('cut') || nameLower.includes('blade')) cat = 'Cutting';
+    else if (nameLower.includes('sensor') || nameLower.includes('prox') || nameLower.includes('fuse')) cat = 'Electrical';
+    else if (nameLower.includes('piston') || nameLower.includes('nozzle') || nameLower.includes('filling')) cat = 'Filling';
+    else if (nameLower.includes('pneumatic') || nameLower.includes('silinder') || nameLower.includes('valve')) cat = 'Pneumatic';
+
+    setJustificationForm({
+      id: suggestedId,
+      standardizedName: item.partName,
+      partNumber: `OEM-${item.partName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase()}-${String(nextNum).padStart(3, '0')}`,
+      category: cat,
+      specification: item.specification || 'Standar Spesifikasi Pabrik',
+      intervalBasis: cat === 'Cutting' || cat === 'Sealing' ? 'KALENDER' : 'JAM_OPERASI',
+      defaultLifetimeDays: cat === 'Cutting' || cat === 'Sealing' ? 90 : 1500,
+      notes: `Diverifikasi dari laporan breakdown tiket ${item.ticket} (${item.machine}) oleh Admin ${safeAdmin.name}`,
+    });
+    setJustificationModalOpen(true);
+  }
+
+  // Submit Justification
+  function handleSaveJustification(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedJustification) return;
+    if (!justificationForm.standardizedName.trim()) return;
+
+    const newMasterPart: MasterPartItem = {
+      id: justificationForm.id.trim() || `PART-${String(parts.length + 1).padStart(3, '0')}`,
+      name: justificationForm.standardizedName.trim(),
+      partNumber: justificationForm.partNumber.trim() || undefined,
+      specification: justificationForm.specification.trim(),
+      category: justificationForm.category,
+      intervalBasis: justificationForm.intervalBasis,
+      defaultLifetimeDays: Number(justificationForm.defaultLifetimeDays) || (justificationForm.intervalBasis === 'JAM_OPERASI' ? 1500 : 90),
+    };
+
+    setParts((prev) => [...prev, newMasterPart]);
+
+    setPendingJustifications((prev) =>
+      prev.map((item) =>
+        item.id === selectedJustification.id
+          ? {
+              ...item,
+              status: 'APPROVED',
+              adminJustification: {
+                approvedPartId: newMasterPart.id,
+                standardizedName: newMasterPart.name,
+                partNumber: newMasterPart.partNumber || '',
+                category: newMasterPart.category,
+                specification: newMasterPart.specification,
+                intervalBasis: newMasterPart.intervalBasis || 'JAM_OPERASI',
+                defaultLifetimeDays: newMasterPart.defaultLifetimeDays,
+                reviewedBy: safeAdmin.name,
+                reviewedAt: new Date().toISOString(),
+                notes: justificationForm.notes,
+              },
+            }
+          : item
+      )
+    );
+
+    // Daftarkan suku cadang yang telah diverifikasi ini ke database suku cadang terpasang mesin (machine-card-parts)
+    try {
+      const rawStored = storage.getItem('machine-card-parts');
+      const curList: any[] = rawStored ? JSON.parse(rawStored) : [];
+      const newMonitoredPart = {
+        id: newMasterPart.id,
+        machine: selectedJustification.machine,
+        part: newMasterPart.name,
+        partNumber: newMasterPart.partNumber || `OEM-${newMasterPart.id}`,
+        specification: newMasterPart.specification,
+        position: selectedJustification.position || 'Lini Produksi',
+        replacedAt: selectedJustification.reportedAt ? selectedJustification.reportedAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+        intervalBasis: newMasterPart.intervalBasis || 'JAM_OPERASI',
+        intervalTarget: newMasterPart.defaultLifetimeDays,
+        unit: newMasterPart.intervalBasis === 'JAM_OPERASI' ? 'Jam Operasi' : 'Hari',
+        currentUsage: 0,
+        lifetimeDays: newMasterPart.defaultLifetimeDays,
+        usedDays: 0,
+        isDataComplete: true,
+      };
+      const filtered = curList.filter(
+        (p) => !(p.machine === selectedJustification.machine && p.position === newMonitoredPart.position && (p.id === newMonitoredPart.id || p.part.toLowerCase() === newMonitoredPart.part.toLowerCase()))
+      );
+      const updatedParts = [newMonitoredPart, ...filtered];
+      storage.setItem('machine-card-parts', JSON.stringify(updatedParts));
+      window.dispatchEvent(new CustomEvent('mc-parts-updated'));
+    } catch {}
+
+    // Rekam Log Audit Sistem & Keamanan (Kepatuhan ALCOA+)
+    const auditEntry: SystemAuditEntry = {
+      id: `LOG-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Date.now().toString().slice(-4)}`,
+      timestamp: new Date().toISOString(),
+      actorName: `${safeAdmin.name} (${safeAdmin.nik || 'ADM0001'})`,
+      actorRole: 'ADMIN',
+      eventType: 'PART_JUSTIFICATION',
+      action: 'Justifikasi & Standarisasi Part Baru',
+      target: `${newMasterPart.name} (${newMasterPart.id})`,
+      details: `Justifikasi part baru dari tiket ${selectedJustification.ticket} (${selectedJustification.machine}), standardisasi nama "${selectedJustification.partName}" -> "${newMasterPart.name}", kategori ${newMasterPart.category}, basis ${newMasterPart.intervalBasis} (${newMasterPart.defaultLifetimeDays} ${newMasterPart.intervalBasis === 'JAM_OPERASI' ? 'Jam' : 'Hari'}).`,
+      ipAddress: '—',
+      status: 'SUCCESS',
+    };
+    setSystemAuditLogs((prev) => [auditEntry, ...prev]);
+
+    setJustificationModalOpen(false);
+    setSelectedJustification(null);
+  }
+
+  // Reject / Ignore Justification
+  function handleRejectJustification(id: string) {
+    const item = pendingJustifications.find((p) => p.id === id);
+    setPendingJustifications((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: 'REJECTED' } : p))
+    );
+    if (item) {
+      const rejectLog: SystemAuditEntry = {
+        id: `LOG-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Date.now().toString().slice(-4)}`,
+        timestamp: new Date().toISOString(),
+        actorName: `${safeAdmin.name} (${safeAdmin.nik || 'ADM0001'})`,
+        actorRole: 'ADMIN',
+        eventType: 'PART_JUSTIFICATION',
+        action: 'Penolakan Justifikasi Part Baru',
+        target: `${item.partName} (${item.ticket})`,
+        details: `Penolakan justifikasi suku cadang "${item.partName}" dari tiket ${item.ticket} (${item.machine}). Part tidak distandardisasi ke katalog master.`,
+        ipAddress: '—',
+        status: 'WARNING',
+      };
+      setSystemAuditLogs((prev) => [rejectLog, ...prev]);
+    }
+  }
+
+  // Edit Existing Master Part
+  function handleOpenEditMasterPart(p: MasterPartItem) {
+    setEditingMasterPart(p);
+    setEditMasterPartForm({
+      id: p.id,
+      name: p.name,
+      partNumber: p.partNumber || '',
+      specification: p.specification,
+      category: p.category,
+      intervalBasis: p.intervalBasis || 'KALENDER',
+      defaultLifetimeDays: p.defaultLifetimeDays,
+    });
+    setEditMasterPartModalOpen(true);
+  }
+
+  function handleSaveEditMasterPart(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingMasterPart) return;
+
+    const updated: MasterPartItem = {
+      ...editingMasterPart,
+      name: editMasterPartForm.name.trim(),
+      partNumber: editMasterPartForm.partNumber.trim() || undefined,
+      specification: editMasterPartForm.specification.trim(),
+      category: editMasterPartForm.category,
+      intervalBasis: editMasterPartForm.intervalBasis,
+      defaultLifetimeDays: Number(editMasterPartForm.defaultLifetimeDays) || 90,
+    };
+
+    setParts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    setEditMasterPartModalOpen(false);
+    setEditingMasterPart(null);
+  }
+
+  return (
+    <div className={`dashboard-app-container admin-portal-root ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      {/* Mobile Scrim */}
+      {sidebarOpen && (
+        <div
+          className="sidebar-scrim-overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Tutup menu navigasi"
+        />
+      )}
+
+      {/* Industrial Sidebar Navigation */}
+      <aside className={`dashboard-sidebar ${sidebarOpen ? 'is-open' : ''} ${sidebarCollapsed ? 'is-collapsed' : ''}`}>
+        <div className="sidebar-brand-header">
+          <div className="sidebar-brand-logo" title="BINTANG TOEDJOE · Machine Card Portal Administrasi & RBAC">
+            <span className="brand-badge-box" aria-label="Logo Bintang Toedjoe">
+              <img
+                src="/assets/bintang-toedjoe-mark.webp"
+                alt="Logo Bintang Toedjoe"
+                className="brand-logo-mark"
+              />
+            </span>
+            <div className="brand-text-block">
+              <strong>BINTANG TOEDJOE</strong>
+              <small>Machine Card · Portal Administrasi &amp; RBAC</small>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-sidebar-collapse-desktop"
+            onClick={toggleSidebarCollapse}
+            title={sidebarCollapsed ? 'Perluas Sidebar (Tampilkan Teks)' : 'Ciutkan Sidebar (Hanya Ikon)'}
+            aria-label={sidebarCollapsed ? 'Perluas Sidebar' : 'Ciutkan Sidebar'}
+          >
+            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+          <button
+            type="button"
+            className="btn-sidebar-close"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Tutup sidebar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="sidebar-role-indicator" title="ADMIN · Ranah Maintenance">
+          <span className="role-pill-tag role-admin">
+            <span className="pulse-green-dot" />
+            <span className="role-pill-text">ADMIN</span>
+          </span>
+          <span className="sidebar-plant-label">Ranah Maintenance</span>
+        </div>
+
+        <nav className="sidebar-navigation-menu" role="tablist" aria-label="Menu Modul Administrator">
+          <div className="sidebar-nav-heading">NAVIGASI MODUL</div>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'USERS'}
+            title="Pengguna & RBAC"
+            data-tooltip="Pengguna & RBAC"
+            className={`sidebar-nav-btn ${activeTab === 'USERS' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('USERS');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <Users size={18} />
+              <span>Pengguna &amp; RBAC</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'MACHINES'}
+            title="Master Mesin"
+            data-tooltip="Master Mesin"
+            className={`sidebar-nav-btn ${activeTab === 'MACHINES' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('MACHINES');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <Cog size={18} />
+              <span>Master Mesin</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'PARTS'}
+            title="Master Part & Lifetime"
+            data-tooltip="Master Part & Lifetime"
+            className={`sidebar-nav-btn ${activeTab === 'PARTS' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('PARTS');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <Wrench size={18} />
+              <span>Master Part &amp; Lifetime</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'AUDIT'}
+            title="Log Audit Sistem & Keamanan"
+            data-tooltip="Log Audit Sistem & Keamanan"
+            className={`sidebar-nav-btn ${activeTab === 'AUDIT' ? 'is-active' : ''}`}
+            onClick={() => {
+              setActiveTab('AUDIT');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="sidebar-nav-btn-left">
+              <ShieldCheck size={18} />
+              <span>Log Audit Sistem &amp; Keamanan</span>
+            </div>
+          </button>
+        </nav>
+
+        {/* Sidebar Footer User Card */}
+        <div className="sidebar-footer-profile">
+          <div className="sidebar-user-info" title={`${safeAdmin.name} (${safeAdmin.nik}) · Dept: ${safeAdmin.departments.join(', ')}`}>
+            <div className="sidebar-avatar-circle">
+              {safeAdmin.name.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="sidebar-user-text">
+              <strong>{safeAdmin.name} · {safeAdmin.nik}</strong>
+              <small>Dept: {safeAdmin.departments.join(', ')}</small>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-sidebar-logout-icon"
+            onClick={onLogout}
+            title="Keluar dari sesi admin"
+            aria-label="Logout"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="dashboard-main-area">
+        {/* Top Navbar */}
+        <header className="dashboard-topbar admin-topbar">
+          <div className="topbar-left-zone">
+            <div className="topbar-breadcrumb-trail">
+              <span>Beranda</span>
+              <span>/</span>
+              <strong>
+                {activeTab === 'USERS'
+                  ? 'Manajemen Pengguna & Otorisasi RBAC'
+                  : activeTab === 'MACHINES'
+                  ? 'Katalog Master Mesin & Lini'
+                  : activeTab === 'PARTS'
+                  ? 'Master Spare Part & Aturan Lifetime'
+                  : 'Log Audit Sistem & Keamanan'}
+              </strong>
+            </div>
+          </div>
+
+          <div className="topbar-right-zone admin-topbar-context">
+            <div className="topbar-chip admin-context-chip superadmin">
+              <span className="admin-pulse-dot" />
+              <span className="chip-label">Akses Superadmin</span>
+              <strong>{safeAdmin.name}</strong>
+            </div>
+            <div className="topbar-chip admin-context-chip">
+              <span className="chip-label">Divisi</span>
+              <strong>{safeAdmin.departments.join(', ')}</strong>
+            </div>
+            <div className="topbar-chip admin-context-chip">
+              <span className="chip-label">Plant</span>
+              <strong>Pulogadung Central</strong>
+            </div>
+            <button className="btn-admin-logout" onClick={onLogout} title="Keluar dari sesi admin">
+              <LogOut size={16} />
+              <span>Keluar</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Main Workspace */}
+        <main className="dashboard-content-scroll admin-main">
+          {activeTab === 'AUDIT' && <ServerAuditPanel />}
+          {legacyImportSummary().length > 0 && <section className="admin-content-card" style={{ padding: 20, marginBottom: 20 }}>
+            <strong>Catatan browser lama tersedia</strong>
+            <p>Pratinjau sumber: {legacyImportSummary().join(', ')}. Catatan lama tetap disimpan sebagai cadangan. Profil pengguna lama ikut diimpor; akun tambahan mendapat kata sandi acak di folder privat server. Kata sandi lama browser tidak digunakan kembali.</p>
+            <button type="button" className="spv-btn-kpi-edit" onClick={importLegacyRecords}>Impor catatan lama ke server</button>
+          </section>}
+
+          {/* Quick Metrics Strip */}
+          <div className="admin-quick-stats-strip">
+            <div className="admin-stat-item">
+              <span className="stat-label">Total Pengguna</span>
+              <strong className="stat-value">{users.length}</strong>
+            </div>
+            <div className="admin-stat-divider" />
+            <div className="admin-stat-item">
+              <span className="stat-label">Mesin Aktif</span>
+              <strong className="stat-value">
+                {machines.filter((m) => m.status === 'AKTIF').length}/{machines.length}
+              </strong>
+            </div>
+            <div className="admin-stat-divider" />
+            <div className="admin-stat-item">
+              <span className="stat-label">Master Part</span>
+              <strong className="stat-value">{parts.length}</strong>
+            </div>
+            <div className="admin-stat-divider" />
+            <div className="admin-stat-item">
+              <span className="stat-label">Log Audit Sistem</span>
+              <strong className="stat-value">{systemAuditLogs.length}</strong>
+            </div>
+          </div>
+
+        {/* TAB 1: PENGGUNA & RBAC */}
+        {activeTab === 'USERS' && (
+          <section className="admin-content-card">
+            <div className="admin-toolbar-wrap">
+              <div className="admin-search-box">
+                <Search size={18} />
+                <input
+                  type="text"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Cari NIK, nama, atau departemen..."
+                  aria-label="Cari pengguna"
+                />
+                {userSearch && (
+                  <button className="btn-admin-clear-search" onClick={() => setUserSearch('')}>
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
+
+              <div className="admin-filter-pills">
+                <span className="admin-filter-label">Peran:</span>
+                <button
+                  type="button"
+                  className={`admin-pill-btn ${userRoleFilter === 'ALL' ? 'active' : ''}`}
+                  onClick={() => setUserRoleFilter('ALL')}
+                >
+                  Semua ({users.length})
+                </button>
+                <button
+                  type="button"
+                  className={`admin-pill-btn ${userRoleFilter === 'OPERATOR' ? 'active' : ''}`}
+                  onClick={() => setUserRoleFilter('OPERATOR')}
+                >
+                  Operator ({users.filter((u) => u.role === 'OPERATOR').length})
+                </button>
+                <button
+                  type="button"
+                  className={`admin-pill-btn ${userRoleFilter === 'TEKNISI' ? 'active' : ''}`}
+                  onClick={() => setUserRoleFilter('TEKNISI')}
+                >
+                  Teknisi ({users.filter((u) => u.role === 'TEKNISI').length})
+                </button>
+                <button
+                  type="button"
+                  className={`admin-pill-btn ${userRoleFilter === 'SUPERVISOR' ? 'active' : ''}`}
+                  onClick={() => setUserRoleFilter('SUPERVISOR')}
+                >
+                  Supervisor ({users.filter((u) => u.role === 'SUPERVISOR').length})
+                </button>
+                <button
+                  type="button"
+                  className={`admin-pill-btn ${userRoleFilter === 'ADMIN' ? 'active' : ''}`}
+                  onClick={() => setUserRoleFilter('ADMIN')}
+                >
+                  Admin ({users.filter((u) => u.role === 'ADMIN').length})
+                </button>
+              </div>
+
+              <div className="admin-toolbar-actions">
+                <button
+                  type="button"
+                  className="btn-admin-primary"
+                  onClick={() => setNewUserModalOpen(true)}
+                >
+                  <PlusCircle size={16} />
+                  <span>Tambah Pengguna</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="admin-table-responsive">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>NIK / USERNAME</th>
+                    <th>NAMA PENGGUNA</th>
+                    <th>PERAN RBAC</th>
+                    <th>DEPARTEMEN</th>
+                    <th>SHIFT</th>
+                    <th>CAKUPAN AKSES PLANT</th>
+                    <th>STATUS</th>
+                    <th className="text-center">AKSI MANAJEMEN</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedUsers.map((u) => (
+                    <tr key={u.id}>
+                      <td data-label="NIK / Username">
+                        <span className="admin-code-badge">{u.nik}</span>
+                      </td>
+                      <td data-label="Nama Pengguna">
+                        <strong>{u.name}</strong>
+                      </td>
+                      <td data-label="Peran RBAC">
+                        <span className={`admin-role-badge role-${u.role.toLowerCase()}`}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td data-label="Departemen">{u.departments.join(', ')}</td>
+                      <td data-label="Shift">{u.shifts.join(', ') || 'Shift 1'}</td>
+                      <td data-label="Cakupan Akses Plant" className="td-block-cell">
+                        <span style={{ fontSize: '0.82rem', color: '#0f172a' }}>
