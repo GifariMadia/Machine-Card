@@ -178,3 +178,178 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
         </div>
       );
     }
+    return this.props.children;
+  }
+}
+
+export default function App() {
+  const [user, setUser] = useState<AppUser | null>(() => {
+    if (import.meta.env.MODE !== 'test') return null;
+    try {
+      const stored = sessionStorage.getItem('machine-card-session');
+      if (!stored) return null;
+      const parsed = JSON.parse(stored) as AppUser;
+      if (!parsed || typeof parsed !== 'object' || !parsed.nik) {
+        try { sessionStorage.removeItem('machine-card-session'); } catch {}
+        return null;
+      }
+      return {
+        ...parsed,
+        role: parsed.role || 'OPERATOR',
+      } as AppUser;
+    } catch {
+      try { sessionStorage.removeItem('machine-card-session'); } catch {}
+      return null;
+    }
+  });
+
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const [loading, setLoading] = useState(import.meta.env.MODE !== 'test');
+  const [sync, setSync] = useState({ pending: false, error: '' });
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    if (import.meta.env.MODE === 'test') return;
+    sessionStorage.removeItem('machine-card-session');
+    try { backupLegacyBusinessData(); } catch { /* Original browser records remain untouched if backup quota is exceeded. */ }
+    const listener = (event: Event) => setSync((event as CustomEvent).detail);
+    const expired = () => { setSessionExpired(true); };
+    window.addEventListener('mc-sync-status', listener);
+    window.addEventListener('mc-session-expired', expired);
+    void (async () => {
+      try {
+        const response = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+        if (response.ok) { const account = await response.json(); await loadBusinessData(); setUser(account); }
+      } catch { setSync({ pending: false, error: 'Server tidak dapat dihubungi. Data lokal tetap dipertahankan.' }); }
+      finally { setLoading(false); }
+    })();
+    return () => { window.removeEventListener('mc-sync-status', listener); window.removeEventListener('mc-session-expired', expired); };
+  }, []);
+  useEffect(() => {
+    if (!user || import.meta.env.MODE === 'test') return;
+    const poll = setInterval(() => {
+      if (document.querySelector('[role=dialog]') || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '')) return;
+      void refreshBusinessData().then(async (changed) => {
+        if (changed) setRevision((value) => value + 1);
+        const response = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+        if (response.ok) { const account = await response.json(); setUser((previous) => JSON.stringify(previous) === JSON.stringify(account) ? previous : account); }
+        else if (response.status === 401) setSessionExpired(true);
+      }).catch(() => {});
+    }, 5000);
+    return () => clearInterval(poll);
+  }, [user]);
+  async function signedIn(account: AppUser) {
+    if (import.meta.env.MODE === 'test') { setUser(account); return; }
+    setLoading(true);
+    try { await loadBusinessData(); setUser(account); setSync({ pending: false, error: '' }); }
+    catch (error) { setSync({ pending: false, error: String(error) }); }
+    finally { setLoading(false); }
+  }
+
+
+  const logout = () => {
+    if (import.meta.env.MODE !== 'test') { void fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }); resetBusinessData(); }
+    try {
+      sessionStorage.removeItem('machine-card-session');
+    } catch {}
+    setUser(null);
+  };
+
+  // Session berakhir setelah 30 menit inaktivitas keyboard/mouse
+  useEffect(() => {
+    if (!user) return;
+
+    const INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 minutes
+    let timerId = setTimeout(() => {
+      setSessionExpired(true);
+    }, INACTIVITY_LIMIT_MS);
+
+    let lastHeartbeat = 0;
+    const onUserActivity = () => {
+      if (import.meta.env.MODE !== 'test' && Date.now() - lastHeartbeat > 60000) {
+        lastHeartbeat = Date.now();
+        void fetch('/api/auth/activity', { method: 'POST', credentials: 'same-origin' }).then((response) => { if (response.status === 401) setSessionExpired(true); }).catch(() => {});
+      }
+      clearTimeout(timerId);
+      timerId = setTimeout(() => {
+        setSessionExpired(true);
+      }, INACTIVITY_LIMIT_MS);
+    };
+
+    window.addEventListener('mousemove', onUserActivity);
+    window.addEventListener('keydown', onUserActivity);
+    window.addEventListener('click', onUserActivity);
+    window.addEventListener('scroll', onUserActivity);
+
+    return () => {
+      clearTimeout(timerId);
+      window.removeEventListener('mousemove', onUserActivity);
+      window.removeEventListener('keydown', onUserActivity);
+      window.removeEventListener('click', onUserActivity);
+      window.removeEventListener('scroll', onUserActivity);
+    };
+  }, [user]);
+
+  if (loading) return <DashboardLoadingFallback />;
+
+  if (!user) {
+    return (
+      <ErrorBoundary>
+        {sync.error && <p role="alert">{sync.error}</p>}
+        <LoginPage onLogin={(account) => void signedIn(account)} />
+      </ErrorBoundary>
+    );
+  }
+
+  const renderDashboard = () => {
+    if (user.role === 'ADMIN') {
+      return <AdminDashboard admin={user as Admin} onLogout={logout} />;
+    }
+    if (user.role === 'SUPERVISOR') {
+      return <SupervisorDashboard supervisor={user as Supervisor} onLogout={logout} />;
+    }
+    if (user.role === 'TEKNISI') {
+      return <TechnicianDashboard technician={user} onLogout={logout} />;
+    }
+    return <OperatorDashboard operator={user as Operator} onLogout={logout} />;
+  };
+
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<DashboardLoadingFallback />}>
+        <React.Fragment key={revision}>{renderDashboard()}</React.Fragment>
+      </Suspense>
+      {(sync.pending || sync.error) && <div className="session-expired-overlay" role={sync.error ? 'alertdialog' : 'status'} aria-modal="true">
+        <div className="session-expired-dialog"><div className="session-dialog-header">{sync.error ? 'Perubahan belum tersimpan' : 'Menyimpan ke server…'}</div>
+          <div className="session-dialog-body">{sync.error || 'Tunggu sampai penyimpanan dikonfirmasi.'}</div>
+          {sync.error && <div className="session-dialog-footer"><button type="button" onClick={() => window.location.reload()}>Muat data terbaru</button></div>}
+        </div>
+      </div>}
+
+      {/* Modal Dialog Session Expired */}
+      {sessionExpired && (
+        <div className="session-expired-overlay" role="dialog" aria-modal="true" aria-label="Sesi Berakhir">
+          <div className="session-expired-dialog">
+            <div className="session-dialog-header">
+              Sesi Keamanan Berakhir
+            </div>
+            <div className="session-dialog-body">
+              <p style={{ margin: 0 }}>Sesi kerja Anda telah berakhir karena tidak ada aktivitas selama 30 menit. Silakan login kembali.</p>
+            </div>
+            <div className="session-dialog-footer">
+              <button
+                type="button"
+                className="btn-session-ok"
+                onClick={() => {
+                  setSessionExpired(false);
+                  logout();
+                }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </ErrorBoundary>
+  );
+}
