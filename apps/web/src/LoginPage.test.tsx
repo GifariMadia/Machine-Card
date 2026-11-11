@@ -98,3 +98,106 @@ describe('LoginPage Bintang Toedjoe & Kalbe Panca Sradha (Multi-Role RBAC)', () 
     fireEvent.click(rememberCheckbox);
 
     fireEvent.click(screen.getByRole('button', { name: /^LOGIN$/i }));
+
+    await waitFor(() => {
+      expect(onLogin).toHaveBeenCalledWith(expect.objectContaining({
+        nik: exampleOperator.nik,
+        name: exampleOperator.name,
+      }));
+      expect(localStorage.getItem('machine-card-employee-id')).toBe(exampleOperator.nik);
+    });
+  });
+
+  it('dapat login sebagai Teknisi dengan kredensial valid', async () => {
+    const onLogin = vi.fn();
+    render(<LoginPage onLogin={onLogin} />);
+
+    fireEvent.change(screen.getByLabelText(/EMAIL \/ EMPLOYEE ID/i), { target: { value: exampleTechnician.nik } });
+    fireEvent.change(screen.getByLabelText(/^PASSWORD$/i), { target: { value: exampleTechnician.password } });
+    fireEvent.click(screen.getByRole('button', { name: /^LOGIN$/i }));
+
+    await waitFor(() => {
+      expect(onLogin).toHaveBeenCalledWith(expect.objectContaining({
+        nik: exampleTechnician.nik,
+        role: 'TEKNISI',
+        name: 'Budi Santoso',
+      }));
+    });
+  });
+
+  it('dapat login sebagai Supervisor dengan kredensial valid', async () => {
+    const onLogin = vi.fn();
+    render(<LoginPage onLogin={onLogin} />);
+
+    fireEvent.change(screen.getByLabelText(/EMAIL \/ EMPLOYEE ID/i), { target: { value: exampleSupervisor.nik } });
+    fireEvent.change(screen.getByLabelText(/^PASSWORD$/i), { target: { value: exampleSupervisor.password } });
+    fireEvent.click(screen.getByRole('button', { name: /^LOGIN$/i }));
+
+    await waitFor(() => {
+      expect(onLogin).toHaveBeenCalledWith(expect.objectContaining({
+        nik: exampleSupervisor.nik,
+        role: 'SUPERVISOR',
+        name: 'Hendra Gunawan',
+      }));
+    });
+  });
+
+  it('dapat login sebagai Admin dengan kredensial valid', async () => {
+    const onLogin = vi.fn();
+    render(<LoginPage onLogin={onLogin} />);
+
+    fireEvent.change(screen.getByLabelText(/EMAIL \/ EMPLOYEE ID/i), { target: { value: exampleAdmin.nik } });
+    fireEvent.change(screen.getByLabelText(/^PASSWORD$/i), { target: { value: exampleAdmin.password } });
+    fireEvent.click(screen.getByRole('button', { name: /^LOGIN$/i }));
+
+    await waitFor(() => {
+      expect(onLogin).toHaveBeenCalledWith(expect.objectContaining({
+        nik: exampleAdmin.nik,
+        role: 'ADMIN',
+        name: 'Siti Rahma',
+      }));
+    });
+  });
+
+  it('dapat menampilkan dan menyembunyikan password', () => {
+    const onLogin = vi.fn();
+    render(<LoginPage onLogin={onLogin} />);
+
+    const passInput = screen.getByLabelText(/^PASSWORD$/i) as HTMLInputElement;
+    expect(passInput.type).toBe('password');
+
+    const toggleBtn = screen.getByRole('button', { name: /Lihat password/i });
+    fireEvent.click(toggleBtn);
+    expect(passInput.type).toBe('text');
+
+    fireEvent.click(screen.getByRole('button', { name: /Sembunyikan password/i }));
+    expect(passInput.type).toBe('password');
+  });
+
+  it('menolak login jika akun berstatus nonaktif sesuai URS 1.2', async () => {
+    const onLogin = vi.fn();
+    // Simulasikan akun teknisi dinonaktifkan di master data
+    localStorage.setItem(
+      'machine-card-managed-users',
+      JSON.stringify([
+        {
+          id: 'usr-tkn-1',
+          nik: exampleTechnician.nik,
+          name: exampleTechnician.name,
+          role: 'TEKNISI',
+          active: false,
+        },
+      ])
+    );
+
+    render(<LoginPage onLogin={onLogin} />);
+
+    fireEvent.change(screen.getByLabelText(/EMAIL \/ EMPLOYEE ID/i), { target: { value: exampleTechnician.nik } });
+    fireEvent.change(screen.getByLabelText(/^PASSWORD$/i), { target: { value: exampleTechnician.password } });
+    fireEvent.click(screen.getByRole('button', { name: /^LOGIN$/i }));
+
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.getByText(/Akses ditolak: Akun Anda berstatus nonaktif/i)).toBeTruthy();
+    expect(onLogin).not.toHaveBeenCalled();
+  });
+});
