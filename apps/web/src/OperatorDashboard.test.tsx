@@ -168,3 +168,170 @@ describe('OperatorDashboard & Open Work Reporting Portal', () => {
     const viewTicketsBtn = screen.getByRole('button', { name: /Lihat di Tiket Aktif/i });
     fireEvent.click(viewTicketsBtn);
 
+    // Check active tab is now tickets
+    expect(screen.getByRole('tab', { name: /Tiket Aktif/i }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByText('OW-20261014-99999')).toBeTruthy();
+    expect(screen.getByText(/Pisau pemotong I-Cut tumpul/i)).toBeTruthy();
+    expect(screen.getAllByText(/Menunggu Teknisi/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('dapat beralih filter status tiket di tab Tiket Aktif', () => {
+    const onLogout = vi.fn();
+    render(<OperatorDashboard operator={exampleOperator} onLogout={onLogout} />);
+
+    // Switch to tickets tab
+    const ticketsTab = screen.getByRole('tab', { name: /Tiket Aktif/i });
+    fireEvent.click(ticketsTab);
+
+    // Check filter pills
+    expect(screen.getByRole('button', { name: /^Semua Aktif/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Menunggu Teknisi/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Sedang Dikerjakan/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Riwayat Selesai/i })).toBeTruthy();
+
+    // Default: tiket yang sudah diclosing (CLOSED) TIDAK muncul di daftar aktif utama
+    expect(screen.queryByText('OW-233174')).toBeNull();
+
+    // Filter to Riwayat Selesai
+    const selesaiFilter = screen.getByRole('button', { name: /^Riwayat Selesai/i });
+    fireEvent.click(selesaiFilter);
+
+    // Seeded closed ticket should now be visible
+    expect(screen.getByText('OW-233174')).toBeTruthy();
+    expect(screen.getAllByText(/Selesai Perbaikan/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('dapat membuka modal closing operator dan menutup tiket setelah mesin beroperasi kembali', async () => {
+    const onLogout = vi.fn();
+    render(<OperatorDashboard operator={exampleOperator} onLogout={onLogout} />);
+
+    // Switch to tickets tab
+    const ticketsTab = screen.getByRole('tab', { name: /Tiket Aktif/i });
+    fireEvent.click(ticketsTab);
+
+    // Find and click "Closing Tiket (Mesin Beroperasi)" button
+    const closeButtons = screen.getAllByRole('button', { name: /Closing Tiket \(Mesin Beroperasi\)/i });
+    expect(closeButtons.length).toBeGreaterThan(0);
+    fireEvent.click(closeButtons[0]);
+
+    // Check modal appears
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByText('Closing Tiket')).toBeTruthy();
+
+    // Fill notes and submit
+    const notesInput = screen.getByLabelText(/Catatan Uji Coba \/ Running Test/i);
+    fireEvent.change(notesInput, { target: { value: 'Running test 15 menit produk baik, speed normal 75 rpm.' } });
+
+    // Submit form
+    const form = screen.getByRole('dialog').querySelector('form')!;
+    fireEvent.submit(form);
+
+    // Verify banner success appears
+    await waitFor(() => {
+      expect(screen.getByText(/Berhasil Ditutup - Mesin Beroperasi/i)).toBeTruthy();
+    });
+  });
+
+  it('memanggil onLogout saat tombol Keluar diklik', () => {
+    const onLogout = vi.fn();
+    render(<OperatorDashboard operator={exampleOperator} onLogout={onLogout} />);
+
+    const logoutBtn = screen.getByRole('button', { name: /Keluar/i });
+    fireEvent.click(logoutBtn);
+
+    expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it('mendukung aksesibilitas keyboard (Escape untuk menutup drawer dan modal closing)', () => {
+    const onLogout = vi.fn();
+    render(<OperatorDashboard operator={exampleOperator} onLogout={onLogout} />);
+
+    // Buka drawer Open Work lalu tekan Escape
+    const reportButtons = screen.getAllByRole('button', { name: /Laporkan Breakdown/i });
+    fireEvent.click(reportButtons[0]);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('menyediakan opsi interval pagination dan mengingat preferensi perPage di kedua halaman', () => {
+    const onLogout = vi.fn();
+    render(<OperatorDashboard operator={exampleOperator} onLogout={onLogout} />);
+
+    // Selector per page di tab Mesin
+    const machinePerPageSelect = screen.getByLabelText(/Jumlah mesin per halaman/i) as HTMLSelectElement;
+    expect(machinePerPageSelect).toBeTruthy();
+    fireEvent.change(machinePerPageSelect, { target: { value: '5' } });
+    expect(machinePerPageSelect.value).toBe('5');
+    expect(localStorage.getItem('mc-operator-machines-per-page')).toBe('5');
+
+    // Beralih ke tab Tiket
+    const ticketsTab = screen.getByRole('tab', { name: /Tiket Aktif/i });
+    fireEvent.click(ticketsTab);
+
+    // Selector per page di tab Tiket
+    const ticketPerPageSelect = screen.getByLabelText(/Jumlah tiket per halaman/i) as HTMLSelectElement;
+    expect(ticketPerPageSelect).toBeTruthy();
+    fireEvent.change(ticketPerPageSelect, { target: { value: '20' } });
+    expect(ticketPerPageSelect.value).toBe('20');
+    expect(localStorage.getItem('mc-operator-tickets-per-page')).toBe('20');
+  });
+
+  it('menampilkan tiket SELESAI_PERBAIKAN di banner siap closing dan operator dapat melakukan running test & finishing closing', async () => {
+    const onLogout = vi.fn();
+    const repairDoneTicket = {
+      ticket: 'OW-20261025-001',
+      machine: 'Ilapak 1',
+      section: 'Filling',
+      reporter: 'OPR0001',
+      reporterName: 'Suparmi',
+      shift: '1',
+      keterangan: 'Sensor sealing macet',
+      status: 'SELESAI_PERBAIKAN',
+      action: 'Penggantian sensor proximity dan re-wiring',
+      technicianName: 'PDA / RMA',
+      waktuMulai: '2026-10-25T08:00:00.000Z',
+      waktuSelesai: '2026-10-25T09:15:00.000Z',
+      createdAt: '2026-10-25T08:00:00.000Z',
+    };
+    localStorage.setItem('machine-card-open-work', JSON.stringify([repairDoneTicket]));
+
+    render(<OperatorDashboard operator={exampleOperator} onLogout={onLogout} />);
+
+    // Verifikasi banner siap closing muncul untuk tiket tersebut
+    expect(screen.getByText(/Mesin Ilapak 1 Siap Running Test \/ Ditutup/i)).toBeTruthy();
+    expect(screen.getByText(/Penggantian sensor proximity dan re-wiring/i)).toBeTruthy();
+
+    // Klik tombol closing dari banner
+    const closingActionBtn = screen.getByRole('button', { name: /Closing Tiket \(Mesin Beroperasi\)/i });
+    fireEvent.click(closingActionBtn);
+
+    // Modal closing terbuka
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getAllByText('OW-20261025-001').length).toBeGreaterThanOrEqual(1);
+
+    // Isi formulir uji coba / running test
+    const notesInput = screen.getByLabelText(/Catatan Uji Coba \/ Running Test/i);
+    fireEvent.change(notesInput, { target: { value: 'Trial run 15 menit 120 sachet normal dan tidak macet lagi.' } });
+
+    // Submit closing oleh Operator
+    const submitBtn = screen.getByRole('button', { name: /Konfirmasi & Tutup Tiket/i });
+    fireEvent.click(submitBtn);
+
+    // Banner sukses closing tampil
+    await waitFor(() => {
+      expect(screen.getByText(/OW-20261025-001 \(Mesin Beroperasi Kembali & Tiket Ditutup\)/i)).toBeTruthy();
+    });
+
+    // Verifikasi status di localStorage berubah menjadi CLOSED oleh operator
+    const stored = JSON.parse(localStorage.getItem('machine-card-open-work') || '[]');
+    const closed = stored.find((t: any) => t.ticket === 'OW-20261025-001');
+    expect(closed).toBeTruthy();
+    expect(closed.status).toBe('CLOSED');
+    expect(closed.catatanClosing).toContain('Trial run 15 menit');
+  });
+});
+
+
+
