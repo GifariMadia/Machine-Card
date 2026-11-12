@@ -208,3 +208,211 @@ describe('TechnicianDashboard & Maintenance Execution Portal (RBAC Teknisi 3 Mod
       reporterName: 'A. Dahlan',
       shift: '1',
       issue: 'Pneumatic silinder bocor',
+      status: 'IN_PROGRESS',
+      waktuMulai: new Date().toISOString(),
+    };
+    localStorage.setItem('machine-card-open-work', JSON.stringify([inProgressTicket]));
+
+    render(<TechnicianDashboard technician={exampleTechnician} onLogout={onLogout} />);
+
+    // Pindah ke tab Pekerjaan Tengah Diambil
+    const activeTabBtn = screen.getByRole('tab', { name: /Pekerjaan Tengah Diambil/i });
+    fireEvent.click(activeTabBtn);
+
+    // Klik tombol Update
+    const updateButtons = screen.getAllByRole('button', { name: /^Update$/i });
+    expect(updateButtons.length).toBeGreaterThan(0);
+    fireEvent.click(updateButtons[0]);
+
+    // Klik tombol tunda / tunggu part di dalam drawer
+    const pauseBtn = screen.getByRole('button', { name: /Tunda \/ Tunggu Part/i });
+    fireEvent.click(pauseBtn);
+
+    // Modal penundaan muncul
+    expect(screen.getByText(/Tunda Pengerjaan Breakdown/i)).toBeTruthy();
+    expect(screen.getByText(/Pemisahan Waktu Tunggu Part vs Waktu Kerja Murni/i)).toBeTruthy();
+
+    // Isi alasan penundaan
+    const reasonTextarea = screen.getByPlaceholderText(/Contoh: Menunggu stok seal ring 25mm/i);
+    fireEvent.change(reasonTextarea, { target: { value: 'Menunggu kiriman seal kit dari gudang spare part' } });
+
+    // Konfirmasi penundaan
+    const confirmBtn = screen.getByRole('button', { name: /Konfirmasi Penundaan/i });
+    fireEvent.click(confirmBtn);
+
+    // Status terupdate
+    expect(screen.getByText(/Pekerjaan Ditunda: Menunggu Suku Cadang/i)).toBeTruthy();
+  });
+
+  it('mendukung status PENDING dengan pencatatan kondisi terakhir, tindak lanjut, dan mempertahankan umur tiket (URS 5.1 & 5.2)', () => {
+    const onLogout = vi.fn();
+    const olderDate = new Date(Date.now() - 5 * 3600000).toISOString(); // 5 jam lalu
+    const inProgressTicket = {
+      ticket: 'OW-URS52-01',
+      machine: 'Ilapak 1',
+      section: 'Packing',
+      reporter: 'OPR001',
+      reporterName: 'Muji',
+      shift: '1',
+      issue: 'Bearing roll panas dan bergetar',
+      status: 'IN_PROGRESS',
+      originalOpenedAt: olderDate,
+      waktuMulai: olderDate,
+    };
+    localStorage.setItem('machine-card-open-work', JSON.stringify([inProgressTicket]));
+
+    render(<TechnicianDashboard technician={exampleTechnician} onLogout={onLogout} />);
+
+    // Pindah ke tab Pekerjaan Tengah Diambil
+    const activeTabBtn = screen.getByRole('tab', { name: /Pekerjaan Tengah Diambil/i });
+    fireEvent.click(activeTabBtn);
+
+    // Buka drawer pekerjaan aktif
+    const updateButtons = screen.getAllByRole('button', { name: /^Update$/i });
+    fireEvent.click(updateButtons[0]);
+
+    // Verifikasi umur tiket
+    expect(screen.getByText(/Umur Tiket:/i)).toBeTruthy();
+
+    // Buka modal tunda / pending
+    const pauseBtn = screen.getByRole('button', { name: /Tunda \/ Tunggu Part/i });
+    fireEvent.click(pauseBtn);
+
+    // Ubah kategori menjadi PENDING
+    const categorySelect = screen.getByRole('combobox');
+    fireEvent.change(categorySelect, { target: { value: 'PENDING' } });
+
+    // Isi alasan, kondisi terakhir, dan rencana tindak lanjut
+    const reasonInput = screen.getByPlaceholderText(/Contoh: Menunggu stok seal ring 25mm/i);
+    fireEvent.change(reasonInput, { target: { value: 'Pergantian shift, pembongkaran bearing belum tuntas' } });
+
+    const kondisiInput = screen.getByPlaceholderText(/Contoh: Silinder dibuka separuh/i);
+    fireEvent.change(kondisiInput, { target: { value: 'Rumah bearing dilepas, roll penyangga telah diganjal' } });
+
+    const tindakLanjutInput = screen.getByPlaceholderText(/Contoh: Pasang spare part baru/i);
+    fireEvent.change(tindakLanjutInput, { target: { value: 'Lanjut pembersihan housing dan pasang bearing 6204-2RS' } });
+
+    // Konfirmasi
+    const confirmBtn = screen.getByRole('button', { name: /Konfirmasi Penundaan/i });
+    fireEvent.click(confirmBtn);
+
+    // Verifikasi audit trail pending
+    expect(screen.getByText(/^Pekerjaan Pending/i)).toBeTruthy();
+    expect(screen.getByText(/Rumah bearing dilepas, roll penyangga telah diganjal/i)).toBeTruthy();
+    expect(screen.getByText(/Lanjut pembersihan housing dan pasang bearing 6204-2RS/i)).toBeTruthy();
+  });
+
+  it('mendukung pencatatan serah-terima shift (handover) lanjutan tanpa menghilangkan catatan shift sebelumnya (URS 5.3)', () => {
+    const onLogout = vi.fn();
+    const handoverTicket = {
+      ticket: 'OW-URS53-01',
+      machine: 'Ilapak 3',
+      section: 'Filling',
+      reporter: 'OPR001',
+      reporterName: 'A. Dahlan',
+      shift: '1',
+      issue: 'Temperatur sealing tidak stabil',
+      status: 'PENDING',
+      originalOpenedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+      action: '[Shift 1 - Anton]: Pengecekan thermocouple dan heater cartridge',
+      riwayatHandover: [
+        {
+          shift: 'Shift 1',
+          tanggal: '2026-10-21',
+          pelaksanaNik: 'TEK0001',
+          pelaksanaNama: 'Anton',
+          progres: 'Thermocouple diganti dengan sensor tipe J baru',
+          kendala: 'Kabel sensor perlu extension',
+          tindakLanjut: 'Shift 2 sambung extension kabel dan kalibrasi PID',
+          waktuDicatat: '21 Okt 2026, 14:45',
+          tanggungJawabShiftAsal: 'Shift 1 (A. Dahlan)',
+        },
+      ],
+    };
+    localStorage.setItem('machine-card-open-work', JSON.stringify([handoverTicket]));
+
+    render(<TechnicianDashboard technician={exampleTechnician} onLogout={onLogout} />);
+
+    // Buka tab Pekerjaan Tengah Diambil
+    const activeTabBtn = screen.getByRole('tab', { name: /Pekerjaan Tengah Diambil/i });
+    fireEvent.click(activeTabBtn);
+
+    // Buka detail pekerjaan
+    const updateButtons = screen.getAllByRole('button', { name: /^Update$/i });
+    fireEvent.click(updateButtons[0]);
+
+    // Verifikasi riwayat shift 1 tetap utuh
+    expect(screen.getByText(/Thermocouple diganti dengan sensor tipe J baru/i)).toBeTruthy();
+    expect(screen.getByText(/Tanggung jawab pelengkapan laporan shift asal tetap pada: Shift 1/i)).toBeTruthy();
+
+    // Tambah handover lanjutan
+    const addHandoverBtn = screen.getByRole('button', { name: /\+ Catat Lanjutan Shift/i });
+    fireEvent.click(addHandoverBtn);
+
+    expect(screen.getAllByText(/Serah-Terima Shift \(Handover\)/i).length).toBeGreaterThanOrEqual(1);
+
+    const progresTextarea = screen.getByPlaceholderText(/Jelaskan progres pekerjaan yang telah diselesaikan/i);
+    fireEvent.change(progresTextarea, { target: { value: 'Penyambungan extension kabel selesai, auto-tuning PID suhu 145 C' } });
+
+    const tindakLanjutTextarea = screen.getByPlaceholderText(/Contoh: Lanjut penggantian bearing/i);
+    fireEvent.change(tindakLanjutTextarea, { target: { value: 'Lanjut uji jalan produksi batch komersial' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Simpan Riwayat Serah-Terima/i });
+    fireEvent.click(submitBtn);
+
+    // Keduanya tampil
+    expect(screen.getAllByText(/Penyambungan extension kabel selesai/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Thermocouple diganti dengan sensor tipe J baru/i)).toBeTruthy();
+  });
+
+  it('memanggil onLogout saat tombol Keluar diklik', () => {
+    const onLogout = vi.fn();
+    render(<TechnicianDashboard technician={exampleTechnician} onLogout={onLogout} />);
+
+    const logoutBtn = screen.getByRole('button', { name: /Keluar/i });
+    fireEvent.click(logoutBtn);
+
+    expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it('menampilkan Active Job Spotlight Banner di tab Pekerjaan Tengah Diambil', () => {
+    const onLogout = vi.fn();
+    const inProgressWork = {
+      ticket: 'OW-20261014-99888',
+      machine: 'SIG 5',
+      section: 'Packaging',
+      reporter: 'OPR0001',
+      reporterName: 'A. Dahlan',
+      shift: '1',
+      issue: 'Sealing jaw oblak dan bergetar',
+      status: 'IN_PROGRESS',
+      technicianName: exampleTechnician.name,
+      waktuMulai: new Date().toISOString(),
+    };
+    localStorage.setItem('machine-card-open-work', JSON.stringify([inProgressWork]));
+
+    render(<TechnicianDashboard technician={exampleTechnician} onLogout={onLogout} />);
+
+    // Pindah ke tab Pekerjaan Tengah Diambil
+    const activeTabBtn = screen.getByRole('tab', { name: /Pekerjaan Tengah Diambil/i });
+    fireEvent.click(activeTabBtn);
+
+    // Spotlight Banner muncul
+    expect(screen.getByText('SEDANG ANDA TANGANI SAAT INI')).toBeTruthy();
+    expect(screen.getByText(/SIG 5 \(Packaging\) · Tiket: OW-20261014-99888/i)).toBeTruthy();
+    expect(screen.getAllByText('Sealing jaw oblak dan bergetar').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /Pause \/ Tunda Pekerjaan/i })).toBeTruthy();
+  });
+
+  it('menerima tindakan manual tanpa rekomendasi atau pengisian part otomatis', () => {
+    render(<TechnicianDashboard technician={exampleTechnician} onLogout={vi.fn()} />);
+    fireEvent.click(screen.getAllByRole('button', { name: /Ambil Pekerjaan/i })[0]);
+    const input = screen.getByLabelText(/Rincian Tindakan Maintenance \/ Perbaikan \*/i) as HTMLTextAreaElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'heater diperiksa manual' } });
+    expect(input.value).toBe('heater diperiksa manual');
+    expect(screen.queryByText(/Smart-Typing Aktif/i)).toBeNull();
+    expect(screen.queryByText(/Rekomendasi Tindakan Cepat/i)).toBeNull();
+    expect(screen.queryByDisplayValue('Sealing heater')).toBeNull();
+  });
+});
