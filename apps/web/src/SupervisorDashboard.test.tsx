@@ -398,3 +398,196 @@ describe('SupervisorDashboard & Production Line Oversight (Peran Supervisor)', (
     expect(screen.getByText(/Monitoring Pekerjaan Terbuka & Matriks Aging Tiket/i)).toBeTruthy();
     expect(screen.getAllByText(/> 24 Jam: Kritis/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/8 - 24 Jam: Sedang/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/< 8 Jam: Baru/i).length).toBeGreaterThan(0);
+
+    // Tiket Chimei JS 05 aging > 24 jam (Prioritas Kritis)
+    expect(screen.getByText('Chimei JS 05 (Packaging)')).toBeTruthy();
+    expect(screen.getByText(/Prioritas Kritis \(> 24 Jam\)/i)).toBeTruthy();
+
+    // Switch ke sub-menu Masa Pakai Part & Jadwal PM
+    fireEvent.click(screen.getByRole('button', { name: 'Part Lifetime & PM' }));
+
+    // Preventive Maintenance & Reschedule
+    expect(screen.getByText(/Kepatuhan Jadwal Preventive Maintenance & Riwayat Reschedule/i)).toBeTruthy();
+    expect(screen.getAllByText(/PM-2026-10-005/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Menunggu spare part packing kit khusus dari vendor/i)).toBeTruthy();
+  });
+
+  it('mengevaluasi ketepatan pelaporan shift dengan toleransi 15 menit dan pemisahan penyebab sesuai URS 7.10', () => {
+    const onLogout = vi.fn();
+    render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+    // Switch ke Tab Handover
+    const handoverTab = screen.getByRole('tab', { name: /Laporan Shift & Handover/i });
+    fireEvent.click(handoverTab);
+
+    // Verifikasi Section Evaluasi Ketepatan Waktu Pelaporan Shift
+    expect(screen.getByText(/Evaluasi Ketepatan Waktu Pelaporan Shift/i)).toBeTruthy();
+    expect(screen.getAllByText(/15 Mnt/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Tepat Waktu \(Dalam Toleransi 15 Mnt\)/i)).toBeTruthy();
+
+    // Uji Simulasi Terlambat (> 15 menit)
+    const lateBtn = screen.getByRole('button', { name: /Simulasi: Terlambat \(> 15 mnt\)/i });
+    fireEvent.click(lateBtn);
+
+    // Status berubah menjadi Terlambat dan menampilkan opsi pemisahan penyebab
+    expect(screen.getByText(/Terlambat: Durasi 35 Menit/i)).toBeTruthy();
+    expect(screen.getByText(/KATEGORI PENYEBAB KETERLAMBATAN/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Kelalaian Petugas/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Gangguan Teknis Sistem/i })).toBeTruthy();
+  });
+
+  describe('URS 8.1 Review dan Perbaikan Data (Audit Trail, Void-Only & Revisi Laporan)', () => {
+    it('mendukung pembatalan catatan tiket tanpa hard-delete (Void Only) dengan alasan wajib sesuai URS 8.1 Klausul 1 & 6', () => {
+      const onLogout = vi.fn();
+      render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+      // Pindah ke tab Verifikasi Breakdown
+      const workordersTab = screen.getByRole('tab', { name: /Verifikasi Breakdown/i });
+      fireEvent.click(workordersTab);
+
+      // Buka dropdown opsi aksi tiket
+      const actionBtns = screen.getAllByRole('button', { name: /Aksi & Opsi Tiket/i });
+      expect(actionBtns.length).toBeGreaterThan(0);
+      fireEvent.click(actionBtns[0]);
+
+      // Cari tombol Batalkan (Void) pertama
+      const voidButtons = screen.getAllByRole('button', { name: /Batalkan \(Void\)/i });
+      expect(voidButtons.length).toBeGreaterThan(0);
+      fireEvent.click(voidButtons[0]);
+
+      // Verifikasi Modal Pembatalan terbuka
+      expect(screen.getByText(/Pembatalan Catatan Tiket \(Void Only\)/i)).toBeTruthy();
+      expect(screen.getByText(/Perlindungan Riwayat/i)).toBeTruthy();
+
+      // Isi alasan pembatalan
+      const reasonTextarea = screen.getByLabelText(/Alasan Pembatalan Catatan \(Wajib Diisi untuk Audit Trail\) \*/i);
+      fireEvent.change(reasonTextarea, {
+        target: { value: 'Salah identifikasi nomor mesin saat pelaporan darurat' },
+      });
+
+      // Konfirmasi pembatalan
+      const confirmVoidBtn = screen.getByRole('button', { name: /Konfirmasi Pembatalan \(Void\)/i });
+      fireEvent.click(confirmVoidBtn);
+
+      // Modal tertutup
+      expect(screen.queryByText(/Pembatalan Catatan Tiket \(Void Only\)/i)).toBeNull();
+
+      // Aktifkan checkbox Tampilkan Catatan Dibatalkan (Void)
+      const showVoidCheckbox = screen.getByLabelText(/Tampilkan Catatan Dibatalkan \(Void\)/i);
+      fireEvent.click(showVoidCheckbox);
+
+      // Pastikan badge Dibatalkan (Void) tampil dan alasan tercatat
+      expect(screen.getAllByText('Dibatalkan (Void)').length).toBeGreaterThan(0);
+      expect(screen.getByText(/Alasan Batal: Salah identifikasi nomor mesin saat pelaporan darurat/i)).toBeTruthy();
+    });
+
+    it('mendukung koreksi data pengukuran dengan audit trail before-after dan pembaruan indikator sesuai URS 8.1 Klausul 2, 3, & 4', () => {
+      const onLogout = vi.fn();
+      render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+      // Pindah ke tab Verifikasi Breakdown
+      const workordersTab = screen.getByRole('tab', { name: /Verifikasi Breakdown/i });
+      fireEvent.click(workordersTab);
+
+      // Buka dropdown opsi aksi tiket
+      const actionBtns = screen.getAllByRole('button', { name: /Aksi & Opsi Tiket/i });
+      expect(actionBtns.length).toBeGreaterThan(0);
+      fireEvent.click(actionBtns[0]);
+
+      // Klik tombol Koreksi Data
+      const correctButtons = screen.getAllByRole('button', { name: /Koreksi Data/i });
+      expect(correctButtons.length).toBeGreaterThan(0);
+      fireEvent.click(correctButtons[0]);
+
+      // Verifikasi Modal Koreksi Data terbuka
+      expect(screen.getByText(/Koreksi Data Pengukuran Maintenance/i)).toBeTruthy();
+
+      // Ubah nilai sesudah koreksi
+      const afterValueInput = screen.getByLabelText(/Nilai Sesudah Koreksi \*/i);
+      fireEvent.change(afterValueInput, { target: { value: '150' } });
+
+      // Isi alasan koreksi audit trail
+      const reasonInput = screen.getByLabelText(/Alasan Koreksi Pengukuran \(Wajib untuk Audit Trail ALCOA\) \*/i);
+      fireEvent.change(reasonInput, {
+        target: { value: 'Penyesuaian durasi perbaikan aktual berdasarkan verifikasi logbook teknisi' },
+      });
+
+      // Submit koreksi data
+      const saveBtn = screen.getByRole('button', { name: /Simpan Koreksi & Perbarui Indikator/i });
+      fireEvent.click(saveBtn);
+
+      // Modal tertutup
+      expect(screen.queryByText(/Koreksi Data Pengukuran Maintenance/i)).toBeNull();
+
+      // Pindah ke tab Monitoring & KPI Maintenance & Sub-menu Antrean Tiket & Jejak Audit
+      const analyticsTab = screen.getByRole('tab', { name: /Monitoring & KPI Maintenance/i });
+      fireEvent.click(analyticsTab);
+    fireEvent.click(screen.getByRole('button', { name: 'Antrean & Jejak Audit' }));
+
+      // Verifikasi jejak audit di Section 6
+      expect(screen.getByText(/Review & Jejak Audit Koreksi Data Pengukuran Maintenance/i)).toBeTruthy();
+      expect(screen.getByText(/Penyesuaian durasi perbaikan aktual berdasarkan verifikasi logbook teknisi/i)).toBeTruthy();
+      expect(screen.getAllByText(/150 Menit/i).length).toBeGreaterThan(0);
+    });
+
+    it('mendukung penerbitan revisi laporan shift terkirim secara non-destruktif sesuai URS 8.1 Klausul 5', () => {
+      const onLogout = vi.fn();
+      render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+      // Pindah ke tab Laporan Shift & Handover
+      const handoverTab = screen.getByRole('tab', { name: /Laporan Shift & Handover/i });
+      fireEvent.click(handoverTab);
+
+      // Pastikan ada riwayat versi awal (Rev 0)
+      expect(screen.getByText(/Riwayat Revisi Laporan Shift/i)).toBeTruthy();
+      expect(screen.getByText(/Rev 0 \(Laporan Asal\)/i)).toBeTruthy();
+
+      // Buka modal revisi laporan
+      const revisionBtn = screen.getByRole('button', { name: /\+ Revisi SPV/i });
+      fireEvent.click(revisionBtn);
+
+      // Modal revisi laporan shift terbuka
+      expect(screen.getByText(/Buat Revisi Laporan Shift Terkirim/i)).toBeTruthy();
+
+      // Isi alasan dan rincian perubahan
+      const reasonInput = screen.getByLabelText(/Alasan Revisi Laporan Shift \(Wajib\) \*/i);
+      fireEvent.change(reasonInput, {
+        target: { value: 'Penambahan rincian pergantian spare part heater sealing' },
+      });
+
+      const summaryInput = screen.getByLabelText(/Rincian Perubahan yang Disetujui/i);
+      fireEvent.change(summaryInput, {
+        target: { value: 'Telah diverifikasi fisik penggantian thermocouple heater' },
+      });
+
+      // Terbitkan revisi
+      const publishBtn = screen.getByRole('button', { name: /Terbitkan Revisi Laporan Shift/i });
+      fireEvent.click(publishBtn);
+
+      // Modal tertutup
+      expect(screen.queryByText(/Buat Revisi Laporan Shift Terkirim/i)).toBeNull();
+
+      // Pastikan versi Rev 1 muncul berdampingan dengan Rev 0 tanpa menimpa data asal
+      expect(screen.getByText(/Rev 0 \(Laporan Asal\)/i)).toBeTruthy();
+      expect(screen.getByText(/Rev 1 \(Revisi Disetujui\)/i)).toBeTruthy();
+      expect(screen.getByText(/Penambahan rincian pergantian spare part heater sealing/i)).toBeTruthy();
+      expect(screen.getByText(/Telah diverifikasi fisik penggantian thermocouple heater/i)).toBeTruthy();
+    });
+  });
+
+  it('hanya menyajikan tepat 4 tab operasional dan membersihkan fitur tidak perlu', () => {
+    const onLogout = vi.fn();
+    render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+    // 4 Tab operasional utama tersedia
+    expect(screen.getByRole('tab', { name: /Status Lini & Mesin/i })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Verifikasi Breakdown/i })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Monitoring & KPI Maintenance/i })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Laporan Shift & Handover/i })).toBeTruthy();
+
+    // Fitur berlebih / non-operasional sudah dibersihkan
+    expect(screen.queryByRole('tab', { name: /Decision Hub/i })).toBeNull();
+    expect(screen.queryByRole('tab', { name: /Roster Operator/i })).toBeNull();
+  });
+});
