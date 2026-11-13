@@ -198,3 +198,203 @@ describe('SupervisorDashboard & Production Line Oversight (Peran Supervisor)', (
     expect(screen.getByText(/4\. Rekomendasi Tindakan Lapangan/i)).toBeTruthy();
 
     // Verify key field accountability metrics
+    expect(screen.getByText(/Kepatuhan Nomor WR:/i)).toBeTruthy();
+    expect(screen.getByText(/Rata-rata Respon Teknisi:/i)).toBeTruthy();
+  });
+
+  it('dapat melakukan simulasi pengiriman laporan shift ke Discord dan memvisualisasikan Discord embed preview', async () => {
+    const onLogout = vi.fn();
+    render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+    // Switch to Handover Tab
+    const handoverTab = screen.getByRole('tab', { name: /Laporan Shift & Handover/i });
+    fireEvent.click(handoverTab);
+
+    // Verify Discord section exists
+    expect(screen.getByText(/Kirim laporan ke Discord/i)).toBeTruthy();
+
+    // Click "Uji Simulasi (Mock)" button
+    const simBtn = screen.getByRole('button', { name: /Uji Simulasi \(Mock\)/i });
+    fireEvent.click(simBtn);
+
+    // Wait for simulation result banner and Discord Embed to appear
+    await waitFor(() => {
+      expect(screen.getByText(/Simulasi pengiriman laporan shift ke Discord berhasil/i)).toBeTruthy();
+      expect(screen.getByText(/B7 Machine Card Bot/i)).toBeTruthy();
+      expect(screen.getAllByText(/LAPORAN SHIFT OTOMATIS/i).length).toBeGreaterThan(0);
+      expect(screen.getByText(/Supervisor Pemantau Shift/i)).toBeTruthy();
+    });
+  });
+
+  it('menampilkan Logbook Jam Operasi Aktual dan Evaluasi MTBF sesuai URS 3.6 di Detail Mesin', () => {
+    const onLogout = vi.fn();
+    render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+    // Cari mesin Ilapak 8 yang memiliki catatan operasi parsial (URS 3.6)
+    const searchInput = screen.getByLabelText(/Cari mesin produksi/i);
+    fireEvent.change(searchInput, { target: { value: 'Ilapak 8' } });
+
+    const detailButtons = screen.getAllByRole('button', { name: /Detail Mesin/i });
+    fireEvent.click(detailButtons[0]);
+
+    // Verifikasi keberadaan Jam Operasi Aktual & Metrik Keandalan terintegrasi
+    expect(screen.getByText(/Jam Operasi Aktual & Metrik Keandalan/i)).toBeTruthy();
+
+    // Pastikan jam operasi aktual dan jam shift kalender terpisah
+    expect(screen.getAllByText(/94 Jam/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/176 Jam/).length).toBeGreaterThan(0);
+
+    // Pastikan data yang belum lengkap ditandai dan bukan final
+    expect(screen.getByText(/Belum Final: Data Parsial/i)).toBeTruthy();
+    expect(screen.getAllByText(/Belum Lengkap/i).length).toBeGreaterThan(0);
+  });
+
+  it('mengembalikan ke daftar mesin saat tombol menu Status Lini & Mesin diklik dari tampilan detail mesin', () => {
+    const onLogout = vi.fn();
+    render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+    // Buka detail mesin
+    const searchInput = screen.getByLabelText(/Cari mesin produksi/i);
+    fireEvent.change(searchInput, { target: { value: 'Ilapak 8' } });
+    const detailButtons = screen.getAllByRole('button', { name: /Detail Mesin/i });
+    fireEvent.click(detailButtons[0]);
+
+    // Verifikasi sedang di detail mesin
+    expect(screen.getByText(/← Kembali ke Daftar Mesin/i)).toBeTruthy();
+
+    // Klik menu Status Lini & Mesin di navigasi sidebar
+    const linesNavBtn = screen.getByRole('tab', { name: /Status Lini & Mesin/i });
+    fireEvent.click(linesNavBtn);
+
+    // Verifikasi detail mesin tertutup dan kembali ke daftar mesin
+    expect(screen.queryByText(/← Kembali ke Daftar Mesin/i)).toBeNull();
+    expect(screen.getByLabelText(/Cari mesin produksi/i)).toBeTruthy();
+  });
+
+  it('memanggil onLogout saat tombol Keluar diklik', () => {
+    const onLogout = vi.fn();
+    render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+    const logoutBtn = screen.getByRole('button', { name: /Keluar/i });
+    fireEvent.click(logoutBtn);
+
+    expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it('menampilkan metrik kinerja maintenance terpadu, agregasi gabungan, dan filter cakupan sesuai URS 7.1, 7.4, 7.5, 7.6', () => {
+    const onLogout = vi.fn();
+    render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+    // Switch ke Tab Analytics & Sub-menu Metrik & Target KPI
+    const analyticsTab = screen.getByRole('tab', { name: /Monitoring & KPI Maintenance/i });
+    fireEvent.click(analyticsTab);
+    fireEvent.click(screen.getByRole('button', { name: 'Metrik & Target KPI' }));
+
+    // Verifikasi Judul & Standar Agregasi
+    expect(screen.getByText(/Monitoring & Pengukuran Kinerja Maintenance/i)).toBeTruthy();
+    expect(screen.getByText(/Standar Perhitungan & Agregasi Gabungan/i)).toBeTruthy();
+
+    // Verifikasi 4 Card KPI Utama
+    expect(screen.getByText(/Mean Time to Repair \(MTTR Gabungan\)/i)).toBeTruthy();
+    expect(screen.getByText(/Mean Time Between Failures \(MTBF\)/i)).toBeTruthy();
+    expect(screen.getAllByText(/Ketepatan Pelaksanaan PM/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Total Downtime Lini Mesin/i)).toBeTruthy();
+
+    // Verifikasi pemisahan waktu aktif vs waktu tunggu suku cadang
+    expect(screen.getByText(/Pemisahan Waktu:/i)).toBeTruthy();
+    expect(screen.getByText(/Waktu Perbaikan Aktif:/i)).toBeTruthy();
+    expect(screen.getByText(/Waktu Tunggu Komponen\/Dukungan:/i)).toBeTruthy();
+
+  });
+
+  it('memungkinkan Supervisor menetapkan target KPI Maintenance dan menyimpan riwayat perubahan target sesuai URS 7.1 Klausul 6', () => {
+    const onLogout = vi.fn();
+    render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+    // Switch ke Tab Analytics & Sub-menu Metrik & Target KPI
+    const analyticsTab = screen.getByRole('tab', { name: /Monitoring & KPI Maintenance/i });
+    fireEvent.click(analyticsTab);
+    fireEvent.click(screen.getByRole('button', { name: 'Metrik & Target KPI' }));
+
+    // Klik tombol Tetapkan Target KPI (SPV)
+    const openModalBtn = screen.getByRole('button', { name: /Tetapkan Target KPI \(SPV\)/i });
+    fireEvent.click(openModalBtn);
+
+    // Modal harus terbuka
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByText(/Penetapan & Penyesuaian Target KPI Maintenance/i)).toBeTruthy();
+    expect(screen.getByText(/Kewenangan SPV Maintenance:/i)).toBeTruthy();
+
+    // Update target value & alasan
+    const targetInput = screen.getByLabelText(/Nilai Target Baru/i);
+    fireEvent.change(targetInput, { target: { value: '1.2' } });
+
+    const reasonInput = screen.getByLabelText(/Alasan Penyesuaian Target/i);
+    fireEvent.change(reasonInput, { target: { value: 'Percepatan respon teknisi Q4 dan ketersediaan kit perbaikan' } });
+
+    // Submit form
+    const saveBtn = screen.getByRole('button', { name: /Simpan & Terapkan Target KPI/i });
+    fireEvent.click(saveBtn);
+
+    // Modal tertutup dan riwayat perubahan tercatat di tabel audit trail ALCOA
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByText(/Percepatan respon teknisi Q4 dan ketersediaan kit perbaikan/i)).toBeTruthy();
+    expect(screen.getAllByText(/≤ 1.2 Jam/i).length).toBeGreaterThan(0);
+  });
+
+  it('menampilkan prioritas penggantian komponen dan batas pengingat 80% sesuai URS 7.2', () => {
+    const onLogout = vi.fn();
+    render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+    // Switch ke Tab Analytics & Sub-menu Masa Pakai Part & Jadwal PM
+    const analyticsTab = screen.getByRole('tab', { name: /Monitoring & KPI Maintenance/i });
+    fireEvent.click(analyticsTab);
+    fireEvent.click(screen.getByRole('button', { name: 'Part Lifetime & PM' }));
+
+    // Verifikasi Bagian Monitoring Lifetime Komponen
+    expect(screen.getByText(/Monitoring Lifetime Komponen & Prioritas Penggantian/i)).toBeTruthy();
+
+    // Verifikasi badge status Melewati Target (Overdue) dan Mendekati Batas (>= 80%)
+    expect(screen.getAllByText(/Kritis: Melewati Target/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Pengingat: Mendekati Batas \(≥ 80%\)/i).length).toBeGreaterThan(0);
+
+    // Komponen Ilapak 5 Pisau I-Cut (progress 105.6%) dan Unifill B Seal Piston (89%)
+    expect(screen.getAllByText('Ilapak 5').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Unifill B').length).toBeGreaterThan(0);
+  });
+
+  it('mendeteksi kerusakan berulang (bad actor) dan pola penggantian sparepart sesuai URS 7.3', () => {
+    const onLogout = vi.fn();
+    render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+    // Switch ke Tab Analytics & Sub-menu Pola Kerusakan & Akuntabilitas
+    const analyticsTab = screen.getByRole('tab', { name: /Monitoring & KPI Maintenance/i });
+    fireEvent.click(analyticsTab);
+
+    // Verifikasi tabel Kerusakan Berulang (Bad Actor)
+    expect(screen.getByText(/Identifikasi Kerusakan Berulang \(Bad Actor \/ Recurrent Issues\)/i)).toBeTruthy();
+    expect(screen.getByText(/Kriteria: Frekuensi ≥ 2 Kejadian/i)).toBeTruthy();
+
+    // Mesin SIG 5 & FBD Jaw Chuan yang memiliki insiden berulang (>= 2x)
+    expect(screen.getAllByText('SIG 5').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('FBD Jaw Chuan').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/2x Kejadian/i).length).toBeGreaterThan(0);
+
+    // Pola Penggantian Suku Cadang Terbanyak
+    expect(screen.getByText(/Pola Penggantian Suku Cadang Terbanyak/i)).toBeTruthy();
+    expect(screen.getAllByText(/Fast Moving Part/i).length).toBeGreaterThan(0);
+  });
+
+  it('menampilkan matriks aging tiket pekerjaan terbuka dan ketepatan PM sesuai URS 7.7 & 7.8', () => {
+    const onLogout = vi.fn();
+    render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
+
+    // Switch ke Tab Analytics & Sub-menu Antrean Tiket & Jejak Audit
+    const analyticsTab = screen.getByRole('tab', { name: /Monitoring & KPI Maintenance/i });
+    fireEvent.click(analyticsTab);
+    fireEvent.click(screen.getByRole('button', { name: 'Antrean & Jejak Audit' }));
+
+    // Matriks Aging Tiket
+    expect(screen.getByText(/Monitoring Pekerjaan Terbuka & Matriks Aging Tiket/i)).toBeTruthy();
+    expect(screen.getAllByText(/> 24 Jam: Kritis/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/8 - 24 Jam: Sedang/i).length).toBeGreaterThan(0);
