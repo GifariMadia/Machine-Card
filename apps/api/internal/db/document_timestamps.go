@@ -77,6 +77,9 @@ func canonicalDocument(a Actor, key string, before, after json.RawMessage) json.
 			if err == nil {
 				var wait float64
 				_ = json.Unmarshal(item["durasiTungguMenit"], &wait)
+				if wait < 0 {
+					wait = 0
+				}
 				minutes := now.Sub(start).Minutes() - wait
 				if minutes < 0 {
 					minutes = 0

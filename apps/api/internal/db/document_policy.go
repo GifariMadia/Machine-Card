@@ -199,22 +199,30 @@ func validateDocument(a Actor, key string, before, after json.RawMessage) error 
 			if status == "SELESAI_PERBAIKAN" && strings.TrimSpace(text(v, "action")) == "" {
 				return ErrConflict
 			}
+			if err := validateNonNegativeNumbers(v, "durasiTungguMenit", "durasiPerbaikanMenit", "waktuTungguPartMenit"); err != nil {
+				return err
+			}
 			if changedOutside(p, v, []string{"status", "action", "technician", "technicianName", "technicianNik", "originalOpenedAt", "waktuMulai", "waktuMulaiTeknisi", "waktuSelesai", "durasiJam", "durasiTungguMenit", "durasiPerbaikanMenit", "waktuTungguPartMenit", "statusHistory", "partReplaced", "followup", "alasanPenundaan", "waktuMulaiTunggu", "kondisiTerakhir", "rencanaTindakLanjut", "riwayatHandover"}) {
 				return ErrForbidden
 			}
 		case "SUPERVISOR":
-			for _, field := range []string{"durasiPerbaikanMenit", "waktuTungguPartMenit"} {
-				if raw, exists := v[field]; exists && string(raw) != "null" {
-					var value float64
-					if json.Unmarshal(raw, &value) != nil || value < 0 {
-						return ErrConflict
-					}
-				}
+			if err := validateNonNegativeNumbers(v, "durasiPerbaikanMenit", "waktuTungguPartMenit"); err != nil {
+				return err
 			}
 			if status != prior && status != "VOID" {
 				return ErrForbidden
 			}
 			if status == "VOID" && strings.TrimSpace(text(v, "voidReason")) == "" {
+				return ErrConflict
+			}
+			controlledChanged := false
+			for _, field := range []string{"durasiPerbaikanMenit", "waktuTungguPartMenit", "waktuMulai", "kategori"} {
+				if !bytes.Equal(p[field], v[field]) {
+					controlledChanged = true
+					break
+				}
+			}
+			if controlledChanged && strings.TrimSpace(text(v, "changeReason")) == "" {
 				return ErrConflict
 			}
 			if changedOutside(p, v, []string{"status", "isVoid", "voidReason", "voidBy", "voidAt", "durasiPerbaikanMenit", "waktuTungguPartMenit", "waktuMulai", "kategori", "supervisorVerified", "supervisorNote", "verifiedAt", "changeReason"}) {
@@ -230,6 +238,18 @@ func validateDocument(a Actor, key string, before, after json.RawMessage) error 
 	}
 	return nil
 }
+func validateNonNegativeNumbers(v map[string]json.RawMessage, fields ...string) error {
+	for _, field := range fields {
+		if raw, exists := v[field]; exists && string(raw) != "null" {
+			var value float64
+			if json.Unmarshal(raw, &value) != nil || value < 0 {
+				return ErrConflict
+			}
+		}
+	}
+	return nil
+}
+
 func text(v map[string]json.RawMessage, key string) string {
 	var s string
 	_ = json.Unmarshal(v[key], &s)
