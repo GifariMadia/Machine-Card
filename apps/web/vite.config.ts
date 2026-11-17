@@ -35,7 +35,7 @@ export default defineConfig({
   server: {
     host: '127.0.0.1',
     allowedHosts: ['localhost', '127.0.0.1'],
-    fs: { deny: ['.env', '.env.*', '**/.runtime/**', '**/.audit-backups/**', '**/private/**', '**/*.{crt,pem,key,pfx}'] },
+    fs: { strict: true, deny: ['.env', '.env.*', '**/.runtime/**', '**/.audit-backups/**', '**/private/**', '**/*.{crt,pem,key,pfx}'] },
     cors: false,
     headers: {
       'Cache-Control': 'no-store, no-cache, must-revalidate',

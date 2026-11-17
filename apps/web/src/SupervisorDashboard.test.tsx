@@ -11,6 +11,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
 });
 
@@ -343,6 +344,8 @@ describe('SupervisorDashboard & Production Line Oversight (Peran Supervisor)', (
   });
 
   it('menampilkan prioritas penggantian komponen dan batas pengingat 80% sesuai URS 7.2', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-27T10:00:00+07:00'));
     const onLogout = vi.fn();
     render(<SupervisorDashboard supervisor={exampleSupervisor} onLogout={onLogout} />);
 
