@@ -21,31 +21,26 @@ export type LoginPageProps = {
 const pancaSradhaItems = [
   {
     badge: '1',
-    keyword: 'Trust',
     title: 'Trust is the glue of life',
     desc: 'Saling percaya adalah perekat diantara kami',
   },
   {
     badge: '2',
-    keyword: 'Mindfulness',
     title: 'Mindfulness is the foundation of our action',
     desc: 'Kesadaran penuh adalah dasar setiap tindakan kami',
   },
   {
     badge: '3',
-    keyword: 'Innovation',
     title: 'Innovation is the key of our success',
     desc: 'Inovasi adalah kunci keberhasilan kami',
   },
   {
     badge: '4',
-    keyword: 'Strive for Best',
     title: 'Strive to be the best',
     desc: 'Bertekad untuk menjadi yang terbaik',
   },
   {
     badge: '5',
-    keyword: 'Interconnectedness',
     title: 'Interconnectedness is a universal way of life',
     desc: 'Saling keterkaitan adalah panduan hidup kami',
   },
@@ -198,45 +193,36 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </header>
 
           <div className="replica-content-blocks">
-            {/* Blok 1: Kalbe Panca Sradha (5-Pillar Industrial Bento) */}
+            {/* Blok 1: Kalbe Panca Sradha */}
             <div className="content-group">
-              <div className="group-category-header">
-                <span className="group-category-pill">NILAI INTI</span>
-                <span className="group-category-title">KALBE PANCA SRADHA</span>
-              </div>
-              <div className="panca-sradha-strip">
+              <div className="group-category-title">KALBE PANCA SRADHA</div>
+              <ul className="impact-list">
                 {pancaSradhaItems.map((item) => (
-                  <div key={item.badge} className="sradha-pillar-card">
-                    <div className="sradha-pillar-top">
-                      <span className="sradha-pillar-num">{item.badge}</span>
-                      <span className="sradha-pillar-tag">{item.keyword}</span>
+                  <li key={item.badge} className="impact-item">
+                    <span className="impact-badge">{item.badge}</span>
+                    <div className="impact-text">
+                      <strong className="impact-title">{item.title}</strong>
+                      <p className="impact-desc">{item.desc}</p>
                     </div>
-                    <strong className="sradha-pillar-title">{item.title}</strong>
-                    <p className="sradha-pillar-desc">{item.desc}</p>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
 
-            {/* Blok 2: Visi & Misi Bintang Toedjoe (Executive Dual Banner) */}
+            {/* Blok 2: Visi & Misi Bintang Toedjoe */}
             <div className="content-group">
-              <div className="group-category-header">
-                <span className="group-category-pill">KOMITMEN</span>
-                <span className="group-category-title">VISI &amp; MISI BINTANG TOEDJOE</span>
-              </div>
-              <div className="vision-mission-row">
+              <div className="group-category-title">VISI &amp; MISI BINTANG TOEDJOE</div>
+              <ul className="impact-list">
                 {visiMisiItems.map((item) => (
-                  <div key={item.badge} className="vm-card">
-                    <div className="vm-badge-glow">
-                      <span className="vm-badge-letter">{item.badge}</span>
+                  <li key={item.badge} className="impact-item">
+                    <span className="impact-badge">{item.badge}</span>
+                    <div className="impact-text">
+                      <strong className="impact-title">{item.title}</strong>
+                      <p className="impact-desc">{item.desc}</p>
                     </div>
-                    <div className="vm-text">
-                      <strong className="vm-title">{item.title}</strong>
-                      <p className="vm-desc">{item.desc}</p>
-                    </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           </div>
 
