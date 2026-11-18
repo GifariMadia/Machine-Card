@@ -189,7 +189,9 @@ func validateDocument(a Actor, key string, before, after json.RawMessage) error 
 				return ErrForbidden
 			}
 			owner := text(p, "technicianNik")
-			if owner != "" && owner != a.NIK {
+			_, hasHandover := v["riwayatHandover"]
+			isHandoverTakeover := prior == "HANDOVER" || (hasHandover && (status == "IN_PROGRESS" || status == "HANDOVER"))
+			if owner != "" && owner != a.NIK && !isHandoverTakeover {
 				return ErrConflict
 			}
 			if text(v, "technicianNik") != a.NIK {
