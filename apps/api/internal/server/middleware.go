@@ -81,7 +81,11 @@ func SecurityHeadersMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 
 		if r.Body != nil && (r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch) {
-			r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB max body size
+			maxBytes := int64(1 << 20) // 1 MB max body size
+			if r.URL.Path == "/api/state" {
+				maxBytes = 4 << 20 // 4 MB for state document transactions
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 		}
 
 		next.ServeHTTP(w, r)

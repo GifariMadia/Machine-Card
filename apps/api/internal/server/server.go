@@ -39,15 +39,15 @@ func NewRouterWithRateLimit(cfg *config.Config, repo db.Repository, maxReqPerWin
 	mux.HandleFunc("POST /api/shift-report/discord", handler.PostShiftReportDiscord)
 
 	// Susun rantai middleware (Bab 27, Bab 33, Bab 36):
-	// CORS -> RequestID & Observability -> SecurityHeaders -> RateLimiter -> Mux
-	var chain http.Handler = mux
+	// CORS -> RequestID & Observability -> SecurityHeaders -> RateLimiter -> SecureRouter -> Mux
+	runtime, _ := repo.(db.Runtime)
+	var chain http.Handler = SecureRouter(mux, runtime, cfg.WebOrigin)
 	chain = rateLimiter.Middleware(chain)
 	chain = SecurityHeadersMiddleware(chain)
 	chain = RequestIDAndLoggingMiddleware(obs)(chain)
 	chain = CORSMiddleware(cfg.WebOrigin)(chain)
 
-	runtime, _ := repo.(db.Runtime)
-	return SecureRouter(chain, runtime, cfg.WebOrigin)
+	return chain
 }
 
 func New(cfg *config.Config, repo db.Repository) *Server {

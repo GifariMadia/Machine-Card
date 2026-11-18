@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"machine-card/api/internal/config"
 	"machine-card/api/internal/db"
 	"machine-card/api/internal/server"
 )
@@ -55,6 +57,48 @@ func TestRuntimeRouterRejectsUnverifiedAndUnauthorizedRequests(t *testing.T) {
 			router.ServeHTTP(rec, req)
 			if rec.Code != test.want {
 				t.Fatalf("got %d want %d", rec.Code, test.want)
+			}
+		})
+	}
+}
+
+type runtimeRepo struct {
+	*db.MockRepo
+	sessionStore
+}
+
+func TestProductionRouterAppliesMiddlewareToRuntimeEndpoints(t *testing.T) {
+	cfg := &config.Config{
+		Port:        4000,
+		DatabaseURL: "postgres://localhost",
+		WebOrigin:   "http://localhost:5173",
+	}
+	repo := runtimeRepo{MockRepo: db.NewMockRepo(), sessionStore: sessionStore{role: "SUPERVISOR"}}
+	router := server.NewRouterWithRateLimit(cfg, repo, 5, time.Minute)
+
+	for _, path := range []string{"/api/auth/session", "/api/state"} {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			req.RemoteAddr = "10.20.30.40:12345"
+			req.AddCookie(&http.Cookie{Name: "mc_session", Value: "valid"})
+			rec := httptest.NewRecorder()
+
+			router.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("got status %d want 200", rec.Code)
+			}
+			if rec.Header().Get("X-Content-Type-Options") != "nosniff" {
+				t.Errorf("missing X-Content-Type-Options header")
+			}
+			if rec.Header().Get("X-Frame-Options") != "DENY" {
+				t.Errorf("missing X-Frame-Options header")
+			}
+			if rec.Header().Get("X-Request-ID") == "" {
+				t.Errorf("missing X-Request-ID header")
+			}
+			if rec.Header().Get("X-RateLimit-Limit") != "5" {
+				t.Errorf("got X-RateLimit-Limit=%q want 5", rec.Header().Get("X-RateLimit-Limit"))
 			}
 		})
 	}
