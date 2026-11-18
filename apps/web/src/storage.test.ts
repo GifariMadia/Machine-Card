@@ -34,3 +34,33 @@ it('konflik ditampilkan sebagai gagal dan memblokir mutasi lanjutan sampai refre
   expect(() => storage.setItem('machine-card-open-work', '[]')).toThrow();
   window.removeEventListener('mc-sync-status', listener);
 });
+
+it('refreshBusinessData melewati serialisasi ulang saat versi dokumen tidak berubah dan memperbarui secara inkremental saat versi naik', async () => {
+  const docA = [{ ticket: 'A-1' }];
+  const docB = [{ id_mesin: 1 }];
+  const updatedDocB = [{ id_mesin: 1 }, { id_mesin: 2 }];
+  const fetcher = vi.fn()
+    .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ 'machine-card-open-work': { version: 1, value: docA }, 'machine-card-machines': { version: 3, value: docB } }) })
+    .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ 'machine-card-open-work': { version: 1, value: docA }, 'machine-card-machines': { version: 3, value: docB } }) })
+    .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ 'machine-card-open-work': { version: 1, value: docA }, 'machine-card-machines': { version: 4, value: updatedDocB } }) });
+  vi.stubGlobal('fetch', fetcher);
+  const { storage, loadBusinessData, refreshBusinessData } = await import('./storage');
+  await loadBusinessData();
+
+  const stringifySpy = vi.spyOn(JSON, 'stringify');
+  const storageListener = vi.fn();
+  window.addEventListener('storage', storageListener);
+
+  expect(await refreshBusinessData()).toBe(false);
+  expect(stringifySpy).not.toHaveBeenCalled();
+  expect(storageListener).not.toHaveBeenCalled();
+
+  expect(await refreshBusinessData()).toBe(true);
+  expect(stringifySpy).toHaveBeenCalledTimes(1);
+  expect(stringifySpy).toHaveBeenCalledWith(updatedDocB);
+  expect(storageListener).toHaveBeenCalledTimes(1);
+  expect(storage.getItem('machine-card-machines')).toContain('"id_mesin":2');
+
+  window.removeEventListener('storage', storageListener);
+  stringifySpy.mockRestore();
+});

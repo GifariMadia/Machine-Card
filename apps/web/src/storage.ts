@@ -73,6 +73,19 @@ async function flush() {
   }
 }
 
+function hasDocumentChanges(latest: Record<string, Document>, current: Record<string, Document>): boolean {
+  const latestKeys = Object.keys(latest);
+  const currentKeys = Object.keys(current);
+  if (latestKeys.length !== currentKeys.length) return true;
+  for (const key of latestKeys) {
+    const nextDoc = latest[key];
+    const prevDoc = current[key];
+    if (!prevDoc || nextDoc.version !== prevDoc.version) return true;
+    if (nextDoc.version === 0 && encode(nextDoc.value) !== cache[key]) return true;
+  }
+  return false;
+}
+
 export async function refreshBusinessData() {
   if (sending || queued.size || failed || !ready) return false;
   const response = await fetch('/api/state', { credentials: 'same-origin', cache: 'no-store' });
@@ -80,8 +93,14 @@ export async function refreshBusinessData() {
   if (!response.ok) return false;
   const latest: Record<string, Document> = await response.json();
   if (sending || queued.size) return false;
-  if (JSON.stringify(latest) === JSON.stringify(documents)) return false;
-  documents = latest; cache = Object.fromEntries(Object.entries(latest).map(([key, doc]) => [key, encode(doc.value)]));
+  if (!hasDocumentChanges(latest, documents)) return false;
+  const nextCache: Record<string, string> = {};
+  for (const [key, doc] of Object.entries(latest)) {
+    const prev = documents[key];
+    nextCache[key] = prev && prev.version === doc.version && doc.version > 0 && key in cache ? cache[key] : encode(doc.value);
+  }
+  documents = latest;
+  cache = nextCache;
   window.dispatchEvent(new Event('storage'));
   return true;
 }
