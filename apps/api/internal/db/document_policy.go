@@ -77,6 +77,11 @@ func validateDocument(a Actor, key string, before, after json.RawMessage) error 
 		if !assigned {
 			return ErrForbidden
 		}
+		shiftNum := strings.TrimPrefix(strings.TrimSpace(value.Shift), "Shift ")
+		expectedDatedKey := "machine-card-shift-closing-" + a.NIK + "-" + value.Date + "-" + shiftNum
+		if key != "machine-card-shift-closing-"+a.NIK && key != expectedDatedKey {
+			return ErrConflict
+		}
 	}
 	if key == "mc-pending-part-justifications" && a.Role == "TEKNISI" {
 		var old, next []map[string]json.RawMessage
