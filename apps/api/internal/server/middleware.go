@@ -143,6 +143,33 @@ func NewRateLimiter(limit int, window time.Duration, obs *ObservabilityCollector
 	}
 }
 
+const (
+	maxRateLimitClients     = 4096
+	maxIdempotencyCacheSize = 2048
+)
+
+func evictExpiredOrOldest[V any](entries map[string]V, maxEntries int, isExpired func(V) bool, timestamp func(V) time.Time) {
+	if len(entries) < maxEntries {
+		return
+	}
+	var oldestKey string
+	var oldestTime time.Time
+	for k, v := range entries {
+		if isExpired(v) {
+			delete(entries, k)
+			continue
+		}
+		ts := timestamp(v)
+		if oldestKey == "" || ts.Before(oldestTime) {
+			oldestKey = k
+			oldestTime = ts
+		}
+	}
+	if len(entries) >= maxEntries && oldestKey != "" {
+		delete(entries, oldestKey)
+	}
+}
+
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := extractClientIP(r)
@@ -151,6 +178,13 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 		rl.mu.Lock()
 		cw, exists := rl.clients[ip]
 		if !exists || now.After(cw.resetAt) {
+			if !exists {
+				evictExpiredOrOldest(rl.clients, maxRateLimitClients, func(w *clientWindow) bool {
+					return now.After(w.resetAt)
+				}, func(w *clientWindow) time.Time {
+					return w.resetAt
+				})
+			}
 			cw = &clientWindow{
 				count:   0,
 				resetAt: now.Add(rl.window),
@@ -257,6 +291,13 @@ func (s *IdempotencyStore) Save(scope, key, payloadHash string, status int, body
 
 	composite := scope + ":" + key
 	now := time.Now()
+	if _, exists := s.records[composite]; !exists {
+		evictExpiredOrOldest(s.records, maxIdempotencyCacheSize, func(rec IdempotencyRecord) bool {
+			return now.After(rec.ExpiresAt)
+		}, func(rec IdempotencyRecord) time.Time {
+			return rec.CreatedAt
+		})
+	}
 	s.records[composite] = IdempotencyRecord{
 		PayloadHash: payloadHash,
 		Status:      status,

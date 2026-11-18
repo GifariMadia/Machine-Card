@@ -3,6 +3,7 @@ package server_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -631,5 +632,34 @@ func TestBackendConsoleUI(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, "Machine Card Backend Engine") || !strings.Contains(body, "/api/observability") {
 		t.Error("Backend Console HTML missing expected title or endpoint registry")
+	}
+}
+
+func TestIdempotencyStoreEvictsExpiredRecords(t *testing.T) {
+	obs := server.NewObservabilityCollector()
+	store := server.NewIdempotencyStore(20*time.Millisecond, obs)
+
+	store.Save("POST:/api/test", "k-expired", "h1", http.StatusOK, []byte(`{"ok":true}`))
+	time.Sleep(35 * time.Millisecond)
+
+	if _, found, _ := store.Check("POST:/api/test", "k-expired", "h1"); found {
+		t.Fatal("expected expired idempotency record to be evicted")
+	}
+
+	// Pastikan saat penuh, entry dengan CreatedAt paling lama dieviksi secara deterministik.
+	longStore := server.NewIdempotencyStore(time.Hour, obs)
+	longStore.Save("scope", "key-0", "hash", http.StatusOK, []byte(`{}`))
+	time.Sleep(25 * time.Millisecond)
+	for i := 1; i < 2048; i++ {
+		longStore.Save("scope", fmt.Sprintf("key-%d", i), "hash", http.StatusOK, []byte(`{}`))
+	}
+	longStore.Save("scope", "key-2048", "hash-new", http.StatusCreated, []byte(`{"new":true}`))
+
+	if _, found, _ := longStore.Check("scope", "key-0", "hash"); found {
+		t.Fatal("expected oldest entry key-0 to be evicted when exceeding capacity")
+	}
+	rec, found, conflict := longStore.Check("scope", "key-2048", "hash-new")
+	if !found || conflict || rec.Status != http.StatusCreated {
+		t.Fatalf("expected newest entry key-2048 to be preserved, got found=%v conflict=%v status=%d", found, conflict, rec.Status)
 	}
 }
