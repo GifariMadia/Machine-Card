@@ -210,6 +210,7 @@ func (r *PostgresRepo) Login(ctx context.Context, nik, password string) (Actor, 
 		return a, "", err
 	}
 	token := hex.EncodeToString(raw)
+	_, _ = r.pool.Exec(ctx, "DELETE FROM mc_sessions WHERE expires_at<=CURRENT_TIMESTAMP")
 	_, err = r.pool.Exec(ctx, "INSERT INTO mc_sessions(token_hash,username,expires_at) VALUES($1,$2,$3)", tokenHash(token), a.NIK, time.Now().Add(30*time.Minute))
 	if err != nil {
 		return a, "", err
@@ -228,18 +229,12 @@ func (r *PostgresRepo) Session(ctx context.Context, token string) (Actor, error)
 	a.Machines = []string{}
 	// Profile metadata is editable by administrators; credentials never leave the server.
 	var raw []byte
-	if r.pool.QueryRow(ctx, "SELECT value FROM mc_documents WHERE key='machine-card-managed-users'").Scan(&raw) == nil {
-		var users []map[string]json.RawMessage
-		if json.Unmarshal(raw, &users) == nil {
-			for _, u := range users {
-				var nik string
-				_ = json.Unmarshal(u["nik"], &nik)
-				if nik == a.NIK {
-					_ = json.Unmarshal(u["shifts"], &a.Shifts)
-					_ = json.Unmarshal(u["departments"], &a.Departments)
-					_ = json.Unmarshal(u["machines"], &a.Machines)
-				}
-			}
+	if r.pool.QueryRow(ctx, `SELECT elem FROM mc_documents d CROSS JOIN LATERAL jsonb_array_elements(d.value) elem WHERE d.key='machine-card-managed-users' AND elem->>'nik'=$1 LIMIT 1`, a.NIK).Scan(&raw) == nil {
+		var u map[string]json.RawMessage
+		if json.Unmarshal(raw, &u) == nil {
+			_ = json.Unmarshal(u["shifts"], &a.Shifts)
+			_ = json.Unmarshal(u["departments"], &a.Departments)
+			_ = json.Unmarshal(u["machines"], &a.Machines)
 		}
 	}
 	return a, nil
@@ -374,6 +369,7 @@ func (r *PostgresRepo) Commit(ctx context.Context, a Actor, key string, changes 
 	if _, err = tx.Exec(ctx, "INSERT INTO mc_commits(request_key,actor_nik,payload_hash,response) VALUES($1,$2,$3,$4)", key, a.NIK, hash, encoded); err != nil {
 		return nil, err
 	}
+	_, _ = tx.Exec(ctx, "DELETE FROM mc_commits WHERE created_at < CURRENT_TIMESTAMP - interval '7 days'")
 	if len(generatedPasswords) > 0 {
 		base, err := os.UserConfigDir()
 		if err != nil {
