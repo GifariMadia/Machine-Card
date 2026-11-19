@@ -95,3 +95,18 @@ Build menghasilkan JS utama 727,28 kB (gzip 170,29 kB), dengan peringatan chunk 
 ## Batas pemeriksaan
 
 Belum dilakukan uji manual seluruh browser/peran, uji beban, pemulihan cadangan, pengiriman Discord nyata, atau pemindaian dependensi terhadap advisori terkini. Tidak ada klaim bahwa audit ini merupakan penilaian keamanan menyeluruh atau membuktikan adanya kebocoran sebelumnya. Kode produksi belum diperbaiki dalam pekerjaan audit ini.
+
+## Status Penyelesaian & Optimasi Lanjutan
+
+Seluruh temuan `RA-01` s/d `RA-06` beserta peningkatan skalabilitas struktur data telah diselesaikan dan diverifikasi pada branch `fix/feature-improvements`:
+
+| Item | Ringkasan Penyelesaian | Berkas Utama |
+| --- | --- | --- |
+| **RA-01** | Duplikat `vite.config.js` & `vite.config.d.ts` dihapus; Vite dikonsolidasikan ke `vite.config.ts` dengan `host: '127.0.0.1'`, `allowedHosts`, `fs.strict: true`, serta `fs.deny` terhadap `.env`, `.audit-backups`, dan direktori privat. | `apps/web/vite.config.ts` |
+| **RA-02** | State machine `ValidateTicketTransition` dan `validateDocument` mendukung transisi `HANDOVER` serta pengambilalihan lintas shift yang sah dengan jejak `riwayatHandover`, sementara pengambilalihan `IN_PROGRESS` tanpa handover tetap ditolak `ErrConflict`. | `apps/api/internal/domain/openwork.go`, `apps/api/internal/db/document_policy.go` |
+| **RA-03** | Field numerik `durasiTungguMenit`, `durasiPerbaikanMenit`, dan `waktuTungguPartMenit` dari teknisi divalidasi non-negatif (`validateNonNegativeNumbers`), dan nilai tunggu negatif pada `canonicalDocument` di-clamp ke `0`. | `apps/api/internal/db/document_policy.go`, `apps/api/internal/db/document_timestamps.go` |
+| **RA-04** | Koreksi Supervisor atas `durasiPerbaikanMenit`, `waktuTungguPartMenit`, `waktuMulai`, atau `kategori` wajib menyertakan `changeReason` non-kosong. | `apps/api/internal/db/document_policy.go` |
+| **RA-05** | `SecureRouter` dibungkus di dalam rantai middleware bersama (`CORSMiddleware`, `RequestIDAndLoggingMiddleware`, `SecurityHeadersMiddleware`, `RateLimiter`) pada `NewRouterWithRateLimit`, dengan batas payload 4 MB khusus `/api/state` dan pengujian HTTP pada router produksi. | `apps/api/internal/server/server.go`, `apps/api/internal/server/middleware.go`, `apps/api/internal/server/runtime_test.go` |
+| **RA-06** | Validasi dokumen `machine-card-shift-closing-<NIK>-<DATE>-<SHIFT>` mewajibkan kecocokan `date` dan `shift` pada payload JSON terhadap suffix key dokumen. | `apps/api/internal/db/document_policy.go` |
+| **Tes Bukti Audit** | Seluruh 4 sub-test pada `TestReaudit20261027Evidence` dibalik ekspektasinya untuk memverifikasi perilaku penolakan cacat secara permanen. | `apps/api/internal/db/reaudit_20261027_test.go` |
+| **Optimasi DSA & Bundle** | Frontend polling diganti dari diffing `JSON.stringify` penuh menjadi pemeriksaan `version` dokumen O(1) per kunci dan cache inkremental; `RateLimiter` (maks. 4096) & `IdempotencyStore` (maks. 2048) diberi eviksi TTL; lookup profil `Session()` dipindah ke PostgreSQL `jsonb_array_elements` disertai pruning `mc_sessions` dan `mc_commits`; serta `manualChunks` Vite memecah seluruh chunk JS ke bawah 500 kB (terbesar `232.29 kB`). | `apps/web/src/storage.ts`, `apps/api/internal/server/middleware.go`, `apps/api/internal/db/runtime.go`, `apps/web/vite.config.ts` |
