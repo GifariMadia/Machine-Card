@@ -42,4 +42,18 @@ export default defineConfig({
     },
     proxy: { '/api': 'http://localhost:4000' },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) return 'vendor';
+          if (id.includes('maintenance-scenarios')) return 'scenarios';
+          if (id.includes('SupervisorDashboard') || id.includes('SupervisorPMPlanner')) return 'supervisor';
+          if (id.includes('TechnicianDashboard')) return 'technician';
+          if (id.includes('AdminDashboard')) return 'admin';
+          if (id.includes('OperatorDashboard') || id.includes('OpenWorkDrawer')) return 'operator';
+        },
+      },
+    },
+  },
 });
